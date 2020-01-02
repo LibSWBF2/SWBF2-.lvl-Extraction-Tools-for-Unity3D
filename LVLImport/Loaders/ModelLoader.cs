@@ -157,7 +157,7 @@ public class ModelLoader : ScriptableObject {
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = mats;
 
-            boneObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
+            boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
         }
 
         return true;
@@ -174,7 +174,6 @@ public class ModelLoader : ScriptableObject {
             Debug.Log(String.Format("ERROR: Failed to load model: {0}", modelName));
             return false;
         }
-
 
         if (model.IsSkeletalMesh)
         {
@@ -342,7 +341,7 @@ public class ModelLoader : ScriptableObject {
             }            
         }
 
-        newObject.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
+        newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
 
         return true;      
     }
