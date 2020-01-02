@@ -69,8 +69,7 @@ public class ClassLoader : ScriptableObject {
         {
             Animation anim = obj.AddComponent<Animation>();
             anim.AddClip(animClip, animClip.name);
-            anim.wrapMode = WrapMode.Loop;
-            anim[animClip.name].speed = 30.0f;
+            anim.wrapMode = WrapMode.Once;
 
             obj.AddComponent<Door>();        
         }

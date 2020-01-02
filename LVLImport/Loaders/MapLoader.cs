@@ -34,16 +34,16 @@ public class MapLoader : ScriptableObject {
                 switch (baseName)
                 {
                     case "door":
+                    case "animatedprop":
                         obj = ClassLoader.LoadBaseClass_Door(entityClassName);
                         break;
+                    
                     case "prop":
                     case "destructablebuilding":
                     case "armedbuilding":
                         obj = ClassLoader.LoadBaseClass_Prop(entityClassName);
                         break;
-                    //case 
-                    //    obj = ClassLoader.LoadBaseClass_Prop(entityClassName);
-                    //    break;
+
                     default:
                         Debug.Log(String.Format("\tERROR: Encountered unknown base class: {0} subclassed by: {1}", baseName, entityClassName));
                         break; 
