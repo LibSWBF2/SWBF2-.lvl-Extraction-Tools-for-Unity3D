@@ -267,7 +267,11 @@ public class ModelLoader : ScriptableObject {
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-                var boneTransform = new GameObject(curBoneSWBF.name).transform;
+
+                var prim = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                prim.name = curBoneSWBF.name;
+                var boneTransform = prim.transform; //GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
+                                    //new GameObject(curBoneSWBF.name).transform;
 
                 boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
                 boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);

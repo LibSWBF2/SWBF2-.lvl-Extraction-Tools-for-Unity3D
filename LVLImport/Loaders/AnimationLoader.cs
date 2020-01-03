@@ -46,7 +46,7 @@ public class AnimationLoader : ScriptableObject {
 				for (int j = 0; j < values.Length; j++)
 				{
 					int index = (int) inds[j];
-					frames[j] = new Keyframe(index < frameCap ? index / 60.0f : frameCap / 60.0f, values[j]);
+					frames[j] = new Keyframe(index < frameCap ? index / 30.0f : frameCap / 30.0f, values[j]);
 				}
 				var curve = new AnimationCurve(frames);
 				clip.SetCurve(relPath, typeof(Transform), ComponentPaths[i], curve);
