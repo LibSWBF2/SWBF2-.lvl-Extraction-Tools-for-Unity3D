@@ -91,6 +91,8 @@ public class ClassLoader : ScriptableObject {
 
         GameObject obj = new GameObject(name);
 
+        string currentAnimationSet = "";
+
         for (int i = 0; i < properties.Length; i++)
         {
             uint property = properties[i];
@@ -100,20 +102,28 @@ public class ClassLoader : ScriptableObject {
             {
                 case ANIMATIONNAME:
 
-                    string animName = ecWrapper.GetProperty("Animation");
-                    AnimationClip animClip = AnimationLoader.LoadAnimationClip(propertyValue, animName, obj.transform);
+                    currentAnimationSet = propertyValue;
+                    break;
+
+                case ANIMATION:
+
+                    AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
 
                     if (animClip == null)
                     {
-                        Debug.Log(String.Format("\tERROR: Failed to load animation clip {0}", animName));
+                        Debug.Log(String.Format("\tERROR: Failed to load animation clip {0}", propertyValue));
                     }
                     else 
                     {
-                        Animation anim = obj.AddComponent<Animation>();
+                        Animation anim = obj.GetComponent<Animation>();
+
+                        if (anim == null)
+                        {
+                            anim = obj.AddComponent<Animation>();
+                        }
+
                         anim.AddClip(animClip, animClip.name);
                         anim.wrapMode = WrapMode.Once;
-
-                        obj.AddComponent<Door>();        
                     }
                     break;
 
@@ -130,7 +140,8 @@ public class ClassLoader : ScriptableObject {
                     break;
             }
         }
-
+        
+        obj.AddComponent<Door>();
         classObjectDatabase[name] = obj;
         return obj;
     }
@@ -206,7 +217,6 @@ public class ClassLoader : ScriptableObject {
                     }
 
                     break;
-
 
                 default:
                     break;
