@@ -8,7 +8,6 @@ using UnityEditor;
 
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
-//using LibSWBF2.Types;
 using LibSWBF2.Enums;
 
 
@@ -46,8 +45,14 @@ public class MapLoader : ScriptableObject {
                         obj = ClassLoader.LoadBaseClass_Prop(entityClassName);
                         break;
 
+                    case "dusteffect":
+                        break;
+
+                    case "":
+                        break;
+
                     default:
-                        Debug.Log(String.Format("\tERROR: Encountered unknown base class: {0} subclassed by: {1}", baseName, entityClassName));
+                        Debug.LogWarning(String.Format("\tEncountered unknown base class: {0} subclassed by: {1}", baseName, entityClassName));
                         break; 
                 }
 

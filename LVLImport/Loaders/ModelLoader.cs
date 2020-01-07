@@ -161,7 +161,7 @@ public class ModelLoader : ScriptableObject {
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = mats;
 
-            //boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+            boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,1.0f);
         }
 
         return true;
@@ -205,7 +205,7 @@ public class ModelLoader : ScriptableObject {
         Vector3[] positions = new Vector3[totalLength];
         Vector3[] normals = new Vector3[totalLength];
         Vector2[] texcoords = new Vector2[totalLength];
-        BoneWeight1[] weights = new BoneWeight1[model.IsSkeletalMesh ? totalLength : 0];
+        BoneWeight1[] weights = new BoneWeight1[model.IsSkeletalMesh ? totalLength * 4 : 0];
         int[] offsets = new int[segments.Length];
 
         int dataOffset = 0;
@@ -220,13 +220,17 @@ public class ModelLoader : ScriptableObject {
             mats[i] = GetMaterial(texName, matFlags);
 
             // Handle vertex data
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, false);
+            var libVerts = seg.GetVertexBuffer();
+
+            UnityUtils.ConvertSpaceAndFillVec3(libVerts, positions, dataOffset, false);
             UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
             UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
             if (model.IsSkeletalMesh)
             {
-                UnityUtils.FillBoneWeights(seg.GetVertexWeights(), weights, dataOffset);
+                var libWeights = seg.GetVertexWeights(); 
+                Debug.Log(String.Format("Model: {2}, Verts length: {0}, Weights length: {1}", libVerts.Length, libWeights.Length, modelName));
+                UnityUtils.FillBoneWeights(libWeights, weights, dataOffset * 4, (int) (libWeights.Length / seg.GetVertexBufferLength()));
             }
 
             offsets[i] = dataOffset;
@@ -240,12 +244,12 @@ public class ModelLoader : ScriptableObject {
 
         if (model.IsSkeletalMesh)
         {
-            Debug.Log("Num weights: " + weights.Length.ToString() + " Num verts: " + positions.Length.ToString());
+            //Debug.Log("Num weights: " + weights.Length.ToString() + " Num verts: " + positions.Length.ToString());
 
-            byte[] bonesPerVertex = new byte[weights.Length];
-            for (int i = 0; i < weights.Length; i++)
+            byte[] bonesPerVertex = new byte[totalLength];
+            for (int i = 0; i < totalLength; i++)
             {
-                bonesPerVertex[i] = 1;
+                bonesPerVertex[i] = 4;
             }
 
             var bonesPerVertexArray = new NativeArray<byte>(bonesPerVertex, Allocator.Temp);
@@ -272,10 +276,13 @@ public class ModelLoader : ScriptableObject {
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
 
+                
                 var prim = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 prim.name = curBoneSWBF.name;
-                var boneTransform = prim.transform; //GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
-                                    //new GameObject(curBoneSWBF.name).transform;
+                var boneTransform = prim.transform; 
+                
+
+                //var boneTransform = new GameObject(curBoneSWBF.name).transform;
 
                 boneTransform.localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
                 boneTransform.localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
@@ -283,22 +290,35 @@ public class ModelLoader : ScriptableObject {
                 transformMap[curBoneSWBF.name] = boneTransform;
             }
 
-            Debug.Log("\tSetting bind poses");
+            //Debug.Log("\tSetting bind poses");
 
+
+            /*
+            Set bones
+            */
             Transform[] bones = new Transform[bonesSWBF.Length];
-            Matrix4x4[] bindPoses = new Matrix4x4[bonesSWBF.Length];
 
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-
-                Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
-
+                //Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
                 bones[boneNum] = transformMap[curBoneSWBF.name];
                 bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? transformMap[curBoneSWBF.parentName] : newObject.transform, false);
-
-                bindPoses[boneNum] = Matrix4x4.identity;//bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
             }
+
+
+            /*
+            Set bindposes...
+            */
+            Matrix4x4[] bindPoses = new Matrix4x4[bonesSWBF.Length];
+
+            for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
+            {
+                bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
+                //bindPoses[boneNum] = Matrix4x4.identity;
+            }
+
+
 
             mesh.bindposes = bindPoses;
 
@@ -309,8 +329,8 @@ public class ModelLoader : ScriptableObject {
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-                transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
+                transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
             }
         }
         else
@@ -349,7 +369,7 @@ public class ModelLoader : ScriptableObject {
             }            
         }
 
-        //newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+        newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,1.0f);
 
         return true;      
     }
