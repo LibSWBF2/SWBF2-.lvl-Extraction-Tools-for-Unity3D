@@ -71,7 +71,7 @@ public class ClassLoader : ScriptableObject {
 
     public static GameObject LoadBaseClass_Door(string name)
     {
-        Debug.Log(String.Format("Loading door: {0}...", name));
+        //Debug.Log(String.Format("Loading door: {0}...", name));
 
         if (classObjectDatabase.ContainsKey(name))
         {
@@ -108,11 +108,13 @@ public class ClassLoader : ScriptableObject {
             {
                 case ANIMATIONNAME:
 
+                    //currentAnimationSet = "rep_walk_atte";
                     currentAnimationSet = propertyValue;
                     break;
 
                 case ANIMATION:
 
+                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "death01", obj.transform);
                     AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
 
                     if (animClip == null)
@@ -135,6 +137,7 @@ public class ClassLoader : ScriptableObject {
 
                 case GEOMETRYNAME:
 
+					//if (!ModelLoader.AddModelComponents(ref obj, "rep_walk_atte"))
                     if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
                     {
                         Debug.Log(String.Format("\tERROR: Failed to load model used by: {0}", name));
@@ -157,7 +160,7 @@ public class ClassLoader : ScriptableObject {
 
     public static GameObject LoadBaseClass_Prop(string name)
     {
-        Debug.Log(String.Format("Loading prop: {0}...", name));
+        //Debug.Log(String.Format("Loading prop: {0}...", name));
 
         if (classObjectDatabase.ContainsKey(name))
         {
