@@ -22,7 +22,8 @@ public class lvlImportMenu : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/geo/geo1.lvl");
+        //Level level = Level.FromFile(@"/home/will/Desktop/hole.lvl");
         LibSWBF2.Wrappers.Terrain terrain = level.GetTerrain();
 
         foreach (var str in terrain.Names)
@@ -54,23 +55,24 @@ public class lvlImportMenu : ScriptableObject {
             Debug.Log(printStr);
         }
 
+        float[] heightsRaw = terrain.Heights;
+        int dim = terrain.width;
         
         TerrainData terData = new TerrainData();
-        terData.heightmapResolution = 256 + 1;
-        terData.size = new Vector3(16 * 9, 15, 16 * 9);
+        terData.heightmapResolution = terrain.width + 1;
+        Debug.Log("Terrain width " + terrain.width);
+        terData.size = new Vector3(terrain.width, 15, dim);
 
         terData.baseMapResolution = 1024;
         terData.SetDetailResolution(1024, 8);
 
 
-        float[] heightsRaw = terrain.Heights;
-
         Debug.Log("Length of heights = " + heightsRaw.Length);
 
-        float[,] heights = new float[16*9,16*9];
-        for (int x = 0; x < 16 * 9; x++){
-            for (int y = 0; y < 16 * 9; y++){
-                heights[x,y] = heightsRaw[x * 16 * 9 + y];
+        float[,] heights = new float[terrain.width,terrain.height];
+        for (int x = 0; x < terrain.width; x++){
+            for (int y = 0; y < terrain.height; y++){
+                heights[x,y] = heightsRaw[x * terrain.width + y];
             }
         }
 
