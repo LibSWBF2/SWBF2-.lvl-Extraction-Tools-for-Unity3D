@@ -10,20 +10,11 @@ using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class lvlImportMenu : ScriptableObject {
+public class TerrainLoader : ScriptableObject {
 
     [MenuItem("SWBF2/Import Terrain", false, 1)]
-    public static void ImportTerrain() {
+    public static void ImportTerrain(Level level) {
 
-        LibSWBF2.Logging.Logger.SetLogLevel(ELogType.Warning);
-        LibSWBF2.Logging.Logger.OnLog += (LoggerEntry logEntry) => 
-        {
-            Debug.Log(logEntry.ToString());
-        };
-
-        Debug.Log("Loading... This might take a while...");
-        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/geo/geo1.lvl");
-        //Level level = Level.FromFile(@"/home/will/Desktop/hole.lvl");
         LibSWBF2.Wrappers.Terrain terrain = level.GetTerrain();
 
         foreach (var str in terrain.Names)
@@ -32,10 +23,8 @@ public class lvlImportMenu : ScriptableObject {
                 continue;
             }
 
-            string printStr = "Texture name: " + str;
             if (level.GetTexture(str, out byte[] data, out int width, out int height))
             {
-                printStr += (" width: " + width + " height: " + height + " bytes length: " + data.Length);
                 Texture2D tex = new Texture2D(width,height);
                 Color[] colors = tex.GetPixels(0);
                 for (int i = 0; i < height * width; i++)
@@ -45,14 +34,13 @@ public class lvlImportMenu : ScriptableObject {
                 tex.SetPixels(colors,0);
                 tex.Apply();
                 byte[] pngBytes = tex.EncodeToPNG();
-                //UnityEngine.Object.DestroyImmediate(tex);
                 File.WriteAllBytes(Application.dataPath + "/Textures/" + Regex.Replace(str, @"\s+", "") + ".png", pngBytes);
             }
             else 
             {
-                printStr += " lookup failed.";
+                Debug.Log("Terrain Import Failed!");
+                return;
             }
-            Debug.Log(printStr);
         }
 
         float[] heightsRaw = terrain.Heights;
@@ -60,14 +48,9 @@ public class lvlImportMenu : ScriptableObject {
         
         TerrainData terData = new TerrainData();
         terData.heightmapResolution = terrain.width + 1;
-        Debug.Log("Terrain width " + terrain.width);
         terData.size = new Vector3(terrain.width, 15, dim);
-
         terData.baseMapResolution = 1024;
         terData.SetDetailResolution(1024, 8);
-
-
-        Debug.Log("Length of heights = " + heightsRaw.Length);
 
         float[,] heights = new float[terrain.width,terrain.height];
         for (int x = 0; x < terrain.width; x++){
@@ -83,6 +66,6 @@ public class lvlImportMenu : ScriptableObject {
         
         AssetDatabase.Refresh();
 
-        Debug.Log("Done");
+        Debug.Log("Terrain Imported!");
     }
 }
