@@ -37,3 +37,10 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+#Mac/Linux ignores
+*.so
+*.dylib
+*.dll
+
+
