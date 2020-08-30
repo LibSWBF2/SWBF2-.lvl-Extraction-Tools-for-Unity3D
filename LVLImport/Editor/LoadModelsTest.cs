@@ -35,7 +35,7 @@ public class ModelLoader : ScriptableObject {
         return vectors;
     }
 
-    public static GameObject GameObjectFromModel(Model model)
+    public static GameObject GameObjectFromModel(Level level, Model model)
     {
         GameObject newObject = new GameObject();
         newObject.AddComponent<MeshRenderer>();
@@ -52,7 +52,7 @@ public class ModelLoader : ScriptableObject {
 //          Debug.Log("Num verts: " + seg.GetVertexBuffer().Length / 3);
 //          Debug.Log("Index buffer length: " + seg.GetIndexBuffer().Length);
 
-            if (texName == "")// || seg.GetTopology() != 4)
+            if (texName == "")
             {
                 continue;
             }
@@ -74,13 +74,24 @@ public class ModelLoader : ScriptableObject {
 
             MeshFilter filter = childObject.AddComponent<MeshFilter>();
             filter.sharedMesh = objectMesh;
+            
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            childRenderer.material.color = Color.white;
+            Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
+
+            if (importedTex == null)
+            {
+                childRenderer.material.color = Color.white;
+            }
+            else 
+            {
+                childRenderer.material.mainTexture = importedTex;
+            }
+
             childObject.transform.SetParent(newObject.transform);
             childObject.name = childName;
 
             //PrefabUtility.SaveAsPrefabAsset(childObject, Application.dataPath + "/Models/" + childName + ".prefab");
-            //AssetDatabase.Refresh();  
+            AssetDatabase.Refresh();  
         }  
 
         return newObject;      
@@ -96,7 +107,7 @@ public class ModelLoader : ScriptableObject {
         {
             if (model.Name.Contains("LOWD")) continue;
 
-            GameObject newObject = ModelLoader.GameObjectFromModel(model);
+            GameObject newObject = ModelLoader.GameObjectFromModel(level, model);
 
             PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, Application.dataPath + "/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
             AssetDatabase.Refresh();  
