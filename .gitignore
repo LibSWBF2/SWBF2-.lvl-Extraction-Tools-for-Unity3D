@@ -42,5 +42,7 @@ sysinfo.txt
 *.so
 *.dylib
 *.dll
+*.DS_Store
+*.sh
 
 
