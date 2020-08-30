@@ -12,6 +12,8 @@ using LibSWBF2.Wrappers;
 
 public class ModelLoader : ScriptableObject {
 
+    static int modelCounter = 0;
+
     //The below 2 methods will be replaced with the NativeArray<T> ones...
     public static Vector3[] floatToVec3Array(float[] floats)
     {
@@ -35,60 +37,69 @@ public class ModelLoader : ScriptableObject {
 
     public static GameObject GameObjectFromModel(Model model)
     {
-        GameObject newObject = new Gameobject();
-        newObject.name = model.GetName();
+        GameObject newObject = new GameObject();
+        newObject.AddComponent<MeshRenderer>();
+        newObject.name = model.Name;
 
         Segment[] segments = model.GetSegments(); 
 
+        int segCount = 0;
         foreach (Segment seg in segments)
         {
             string texName = seg.GetMaterialTexName();
-            if (texName == "")
+
+//          Debug.Log("Segment topology: " + seg.GetTopology());
+//          Debug.Log("Num verts: " + seg.GetVertexBuffer().Length / 3);
+//          Debug.Log("Index buffer length: " + seg.GetIndexBuffer().Length);
+
+            if (texName == "")// || seg.GetTopology() != 4)
             {
                 continue;
             }
+
+            string childName = newObject.name + "segment" + segCount++;
 
             Vector3[] vertexBuffer = ModelLoader.floatToVec3Array(seg.GetVertexBuffer()); 
             Vector2[] UVs = ModelLoader.floatToVec2Array(seg.GetUVBuffer());
             Vector3[] normalsBuffer = ModelLoader.floatToVec3Array(seg.GetNormalsBuffer());
             int[] indexBuffer = seg.GetIndexBuffer();
 
-            Mesh objectMesh = new Mesh();
+            GameObject childObject = new GameObject();
 
+            Mesh objectMesh = new Mesh();
             objectMesh.SetVertices(vertexBuffer);
             objectMesh.SetUVs(0,UVs);
             objectMesh.SetNormals(normalsBuffer);
-            objectMesh.SetIndicies(indexBuffer, MeshTopology.Triangles);
+            objectMesh.SetIndices(indexBuffer, MeshTopology.Triangles, 0);
 
-            GameObject childObject = new Gameobject();
-            childObject.AddComponent<Mesh>(objectMesh);
-
+            MeshFilter filter = childObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = objectMesh;
+            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
+            childRenderer.material.color = Color.white;
             childObject.transform.SetParent(newObject.transform);
+            childObject.name = childName;
+
+            //PrefabUtility.SaveAsPrefabAsset(childObject, Application.dataPath + "/Models/" + childName + ".prefab");
+            //AssetDatabase.Refresh();  
         }  
 
         return newObject;      
     }
 
-
-
-
-    [MenuItem("SWBF2/Import Models", false, 1)]
+    //[MenuItem("SWBF2/Import Models", false, 1)]
     public static void ImportModels(Level level)
     {
         Model[] models = level.GetModels();
         
+        int i = 0;
         foreach (Model model in models)
         {
-            if (model.Name.Contains("LOWD") || model.GetTopology != 4) continue;
+            if (model.Name.Contains("LOWD")) continue;
 
             GameObject newObject = ModelLoader.GameObjectFromModel(model);
 
-            Object prefab = EditorUtility.CreateEmptyPrefab("Assets/Models/"+newObject.name+".prefab");
-            EditorUtility.ReplacePrefab(newObject, prefab, ReplacePrefabOptions.ConnectToPrefab);
-
-                   
+            PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, Application.dataPath + "/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
+            AssetDatabase.Refresh();  
         } 
-
-        
     }
 }

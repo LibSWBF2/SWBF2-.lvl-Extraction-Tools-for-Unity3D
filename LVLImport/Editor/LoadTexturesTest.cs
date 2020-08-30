@@ -15,16 +15,17 @@ public class TextureLoader : ScriptableObject {
     public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
     public static bool imported = false;
 
-    public static Texture2D ImportTexture(Level level, string name) {
 
+    public static Texture2D ImportTexture(Level level, string name, bool reuse=true) 
+    {
         string texturePath = Application.dataPath + "/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
 
-        if (File.Exists(texturePath) && reuse)
+        /*if (File.Exists(texturePath) && reuse)
         {
 
-        }
+        }*/
 
-        if (level.GetTexture(str, out byte[] data, out int width, out int height))
+        if (level.GetTexture(name, out byte[] data, out int width, out int height))
         {
             Texture2D tex = new Texture2D(width,height);
             Color[] colors = tex.GetPixels(0);
@@ -34,13 +35,13 @@ public class TextureLoader : ScriptableObject {
             }
             tex.SetPixels(colors,0);
             tex.Apply();
-            File.WriteAllBytes(texturePath, tex.EncodeToPNG());
+            return tex;
+            //File.WriteAllBytes(texturePath, tex.EncodeToPNG());
         }
         else 
         {
             Debug.Log("Texture Import Failed!");
             return null;
         }
-        
     }
 }
