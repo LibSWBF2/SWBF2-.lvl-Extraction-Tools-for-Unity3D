@@ -20,12 +20,23 @@ public class TextureLoader : ScriptableObject {
     {
         string texturePath = Application.dataPath + "/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
 
-        /*if (File.Exists(texturePath) && reuse)
+        if (texDataBase.ContainsKey(name))
         {
+            return texDataBase[name];
+        }
 
-        }*/
 
-        if (level.GetTexture(name, out byte[] data, out int width, out int height))
+        if (File.Exists(texturePath))
+        {
+            Texture2D tex = new Texture2D(2,2);
+            byte[] texBytes = File.ReadAllBytes(texturePath);
+            tex.LoadImage(texBytes);
+
+            texDataBase[name] = tex;
+            return tex;
+
+        }
+        else if (level.GetTexture(name, out byte[] data, out int width, out int height))
         {
             Texture2D tex = new Texture2D(width,height);
             Color[] colors = tex.GetPixels(0);
@@ -35,8 +46,10 @@ public class TextureLoader : ScriptableObject {
             }
             tex.SetPixels(colors,0);
             tex.Apply();
+            File.WriteAllBytes(texturePath, tex.EncodeToPNG());
+
+            texDataBase[name] = tex;
             return tex;
-            //File.WriteAllBytes(texturePath, tex.EncodeToPNG());
         }
         else 
         {
