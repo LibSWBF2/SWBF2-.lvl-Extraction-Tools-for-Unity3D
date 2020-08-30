@@ -44,5 +44,6 @@ sysinfo.txt
 *.dll
 *.DS_Store
 *.sh
+*.log
 
 
