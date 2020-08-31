@@ -14,6 +14,8 @@ public class ModelLoader : ScriptableObject {
 
     static int modelCounter = 0;
 
+    static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
+
     //The below 2 methods will be replaced with the NativeArray<T> ones...
     public static Vector3[] floatToVec3Array(float[] floats)
     {
@@ -57,8 +59,9 @@ public class ModelLoader : ScriptableObject {
                 continue;
             }
 
-            string childName = newObject.name + "segment" + segCount++;
+            string childName = newObject.name + "_segment_" + segCount++;
 
+            //Handle mesh
             Vector3[] vertexBuffer = ModelLoader.floatToVec3Array(seg.GetVertexBuffer()); 
             Vector2[] UVs = ModelLoader.floatToVec2Array(seg.GetUVBuffer());
             Vector3[] normalsBuffer = ModelLoader.floatToVec3Array(seg.GetNormalsBuffer());
@@ -72,26 +75,37 @@ public class ModelLoader : ScriptableObject {
             objectMesh.SetNormals(normalsBuffer);
             objectMesh.SetIndices(indexBuffer, MeshTopology.Triangles, 0);
 
+            AssetDatabase.CreateAsset(objectMesh, "Assets/Meshes/" + childName + ".asset");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
             MeshFilter filter = childObject.AddComponent<MeshFilter>();
             filter.sharedMesh = objectMesh;
-            
-            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
+          
+            //Handle material
             Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
+            var tempMat = new Material(swbf2Mat);
 
             if (importedTex == null)
             {
-                childRenderer.material.color = Color.white;
+                tempMat.color = Color.black;
             }
             else 
             {
-                childRenderer.material.mainTexture = importedTex;
+                tempMat.mainTexture = importedTex;
             }
+
+            AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
+            childRenderer.material = tempMat;
 
             childObject.transform.SetParent(newObject.transform);
             childObject.name = childName;
 
             //PrefabUtility.SaveAsPrefabAsset(childObject, Application.dataPath + "/Models/" + childName + ".prefab");
-            AssetDatabase.Refresh();  
         }  
 
         return newObject;      
@@ -109,7 +123,8 @@ public class ModelLoader : ScriptableObject {
 
             GameObject newObject = ModelLoader.GameObjectFromModel(level, model);
 
-            PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, Application.dataPath + "/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
+            PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, "Assets/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
+            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();  
         } 
     }

@@ -22,12 +22,12 @@ public class lvlImportMenu : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/geo/geo1.lvl");
-        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
-        
-        //TerrainLoader.ImportTerrain(level);
+        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/yav/yav1.lvl");
+        //Level level = Level.FromFile(@"/home/will/Desktop/geo1.lvl");
+        AssetDatabase.StartAssetEditing();
+        TerrainLoader.ImportTerrain(level);
         ModelLoader.ImportModels(level);
-
+        AssetDatabase.StopAssetEditing();
         Debug.Log("Done");
     }
 }

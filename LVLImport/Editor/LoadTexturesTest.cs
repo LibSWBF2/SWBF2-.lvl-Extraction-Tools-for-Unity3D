@@ -18,7 +18,7 @@ public class TextureLoader : ScriptableObject {
 
     public static Texture2D ImportTexture(Level level, string name, bool reuse=true) 
     {
-        string texturePath = Application.dataPath + "/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
+        string texturePath = "Assets/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
 
         if (texDataBase.ContainsKey(name))
         {
