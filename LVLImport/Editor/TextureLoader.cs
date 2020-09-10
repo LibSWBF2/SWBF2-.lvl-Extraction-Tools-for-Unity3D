@@ -34,7 +34,6 @@ public class TextureLoader : ScriptableObject {
 
             texDataBase[name] = tex;
             return tex;
-
         }
         else if (level.GetTexture(name, out byte[] data, out int width, out int height))
         {

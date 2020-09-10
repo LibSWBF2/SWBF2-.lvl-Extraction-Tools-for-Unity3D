@@ -14,7 +14,7 @@ public class ModelLoader : ScriptableObject {
 
     static int modelCounter = 0;
 
-    static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
+    //static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
 
     //The below 2 methods will be replaced with the NativeArray<T> ones...
     public static Vector3[] floatToVec3Array(float[] floats)
@@ -41,9 +41,16 @@ public class ModelLoader : ScriptableObject {
     {
         GameObject newObject = new GameObject();
         newObject.AddComponent<MeshRenderer>();
-        newObject.name = model.Name;
 
-        Segment[] segments = model.GetSegments(); 
+        Segment[] segments;
+
+        try {
+            newObject.name = model.Name;
+            segments = model.GetSegments(); 
+        } catch (Exception e)
+        {
+            return newObject;
+        }
 
         int segCount = 0;
         foreach (Segment seg in segments)
@@ -75,32 +82,34 @@ public class ModelLoader : ScriptableObject {
             objectMesh.SetNormals(normalsBuffer);
             objectMesh.SetIndices(indexBuffer, MeshTopology.Triangles, 0);
 
-            AssetDatabase.CreateAsset(objectMesh, "Assets/Meshes/" + childName + ".asset");
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            //AssetDatabase.CreateAsset(objectMesh, "Assets/Meshes/" + childName + ".asset");
+            //AssetDatabase.SaveAssets();
+            //AssetDatabase.Refresh();
 
             MeshFilter filter = childObject.AddComponent<MeshFilter>();
             filter.sharedMesh = objectMesh;
           
             //Handle material
             Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
-            var tempMat = new Material(swbf2Mat);
+            //Material tempMat = new Material();
+
+            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
+            //childRenderer.material = tempMat;
 
             if (importedTex == null)
             {
-                tempMat.color = Color.black;
+                childRenderer.material.color = Color.black;
             }
             else 
             {
-                tempMat.mainTexture = importedTex;
+                childRenderer.material.mainTexture = importedTex;
             }
 
-            AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            //AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
+            //AssetDatabase.SaveAssets();
+            //AssetDatabase.Refresh();
 
-            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            childRenderer.material = tempMat;
+
 
             childObject.transform.SetParent(newObject.transform);
             childObject.name = childName;
@@ -116,16 +125,19 @@ public class ModelLoader : ScriptableObject {
     {
         Model[] models = level.GetModels();
         
-        int i = 0;
+        //int i = 0;
         foreach (Model model in models)
         {
+
+           //if (i++ > 10) return;
+
             if (model.Name.Contains("LOWD")) continue;
 
             GameObject newObject = ModelLoader.GameObjectFromModel(level, model);
 
-            PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, "Assets/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();  
+            //PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, "Assets/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
+            //AssetDatabase.SaveAssets();
+            //AssetDatabase.Refresh();  
         } 
     }
 }
