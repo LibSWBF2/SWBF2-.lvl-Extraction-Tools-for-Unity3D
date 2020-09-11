@@ -52,12 +52,13 @@ public class MapLoader : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        Level level = Level.FromFile(@"/Users/will/Desktop/hole.lvl");
+        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
 
-        World[] worlds = level.GetWorlds();
-
         /*
+        World[] worlds = level.GetWorlds();
+        
         foreach (World world in worlds)
         {
             Instance[] instances = world.GetInstances();
@@ -85,6 +86,7 @@ public class MapLoader : ScriptableObject {
             }
         }
         */
+        
 
         //ModelLoader.ImportModels(level);
 

@@ -17,29 +17,26 @@ public class TerrainLoader : ScriptableObject {
         LibSWBF2.Wrappers.Terrain terrain = level.GetTerrain();
 
         //Read heightmap
-        float[] heightsRaw = terrain.Heights;
-        int dim = terrain.width;
+        terrain.GetHeightMap(out uint dim, out uint dimScale, out float heightScale, out float[] heightsRaw);
         
         TerrainData terData = new TerrainData();
-        terData.heightmapResolution = terrain.width + 1;
-        terData.size = new Vector3(terrain.width, 15, dim);
+        terData.heightmapResolution = (int) dim + 1;
+        terData.size = new Vector3(dim * dimScale, heightScale, dim * dimScale);
         terData.baseMapResolution = 1024;
         terData.SetDetailResolution(1024, 8);
 
-        float[,] heights = new float[terrain.width,terrain.height];
-        for (int x = 0; x < terrain.width; x++){
-            for (int y = 0; y < terrain.height; y++){
-                heights[x,y] = heightsRaw[x * terrain.width + y];
+        float[,] heights = new float[dim,dim];
+        for (int x = 0; x < dim; x++){
+            for (int y = 0; y < dim; y++){
+                heights[x,y] = heightsRaw[x * dim + y];
             }
         }
-
         terData.SetHeights(0, 0, heights);
 
 
         //Get list of textures used
         List<Texture2D> terTextures = new List<Texture2D>();
-        int realNumLayers = 0;
-        foreach (string texName in terrain.TextureNames)
+        foreach (string texName in terrain.GetTextureNames())
         {
             Texture2D tex = TextureLoader.ImportTexture(level,texName);
             if (tex == null)
@@ -50,13 +47,10 @@ public class TerrainLoader : ScriptableObject {
             {
             	Debug.Log("adding texture " + texName);
                 terTextures.Add(tex);  
-                realNumLayers++;              
             }
         }
 
-        byte[] splatMapRaw = terrain.GetBlendMap(out int blendDim, out int numLayers);  
-
-        numLayers = realNumLayers;
+        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
 
 
         //Assign layers
@@ -72,7 +66,7 @@ public class TerrainLoader : ScriptableObject {
 
 
         //Read splatmap
-        float[,,] splatMap = new float[blendDim, blendDim, numLayers];
+        float[,,] blendMap = new float[blendDim, blendDim, numLayers];
 
         Debug.Log("Terrain data length " + blendDim + " with " + numLayers + " layers");
 
@@ -80,20 +74,23 @@ public class TerrainLoader : ScriptableObject {
         {
             for (int x = 0; x < blendDim; x++)
             {
-                int baseIndex = numLayers * (y * blendDim + x);
+                int baseIndex = (int) (numLayers * (y * blendDim + x));
                 for (int z = 0; z < numLayers; z++)
                 {
-                    splatMap[x,y,z] = ((float) splatMapRaw[baseIndex + z]) / 255.0f;    
+                    blendMap[y,x,z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;    
                 }
             }
         }
-        terData.alphamapResolution = blendDim;
-        terData.SetAlphamaps(0, 0, splatMap);
+
+        terData.alphamapResolution = (int) blendDim;
+        terData.SetAlphamaps(0, 0, blendMap);
         terData.SetBaseMapDirty();
 
 
         //Save terrain/create gameobj
         GameObject terrainObj = UnityEngine.Terrain.CreateTerrainGameObject(terData);
+        int dimOffset = -1 * ((int) (dimScale * dim)) / 2;
+        terrainObj.transform.position = new Vector3(dimOffset,0,dimOffset);
         //PrefabUtility.SaveAsPrefabAsset(terrainObj, Application.dataPath + "/Terrain/terrain.prefab");
         //AssetDatabase.Refresh();
 
