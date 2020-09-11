@@ -17,17 +17,20 @@ public class TerrainLoader : ScriptableObject {
         LibSWBF2.Wrappers.Terrain terrain = level.GetTerrain();
 
         //Read heightmap
-        terrain.GetHeightMap(out uint dim, out uint dimScale, out float heightScale, out float[] heightsRaw);
+        terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
+        terrain.GetHeightBounds(out float floor, out float ceiling);
         
         TerrainData terData = new TerrainData();
         terData.heightmapResolution = (int) dim + 1;
-        terData.size = new Vector3(dim * dimScale, heightScale, dim * dimScale);
-        terData.baseMapResolution = 1024;
-        terData.SetDetailResolution(1024, 8);
+        terData.size = new Vector3(dim * dimScale, ceiling - floor, dim * dimScale);
+        terData.baseMapResolution = 512;
+        terData.SetDetailResolution(512, 8);
 
         float[,] heights = new float[dim,dim];
-        for (int x = 0; x < dim; x++){
-            for (int y = 0; y < dim; y++){
+        for (int x = 0; x < dim; x++)
+        {
+            for (int y = 0; y < dim; y++)
+            {
                 heights[x,y] = heightsRaw[x * dim + y];
             }
         }
@@ -90,7 +93,7 @@ public class TerrainLoader : ScriptableObject {
         //Save terrain/create gameobj
         GameObject terrainObj = UnityEngine.Terrain.CreateTerrainGameObject(terData);
         int dimOffset = -1 * ((int) (dimScale * dim)) / 2;
-        terrainObj.transform.position = new Vector3(dimOffset,0,dimOffset);
+        terrainObj.transform.position = new Vector3(dimOffset,floor,dimOffset);
         //PrefabUtility.SaveAsPrefabAsset(terrainObj, Application.dataPath + "/Terrain/terrain.prefab");
         //AssetDatabase.Refresh();
 

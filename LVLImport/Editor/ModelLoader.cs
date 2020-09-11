@@ -44,20 +44,24 @@ public class ModelLoader : ScriptableObject {
 
         try {
             newObject.name = model.Name;
-            segments = model.GetSegments(); 
         } catch (Exception e)
         {
-            return newObject;
+        	Debug.Log("Exception in gameobj from model: " + e.ToString());
+            DestroyImmediate(newObject);
+            return null;
         }
+
+        segments = model.GetSegments(); 
+
 
         int segCount = 0;
         foreach (Segment seg in segments)
         {
             string texName = seg.GetMaterialTexName();
 
-//          Debug.Log("Segment topology: " + seg.GetTopology());
-//          Debug.Log("Num verts: " + seg.GetVertexBuffer().Length / 3);
-//          Debug.Log("Index buffer length: " + seg.GetIndexBuffer().Length);
+			//Debug.Log("Segment topology: " + seg.GetTopology());
+			//Debug.Log("Num verts: " + seg.GetVertexBuffer().Length / 3);
+			//Debug.Log("Index buffer length: " + seg.GetIndexBuffer().Length);
 
             if (texName == "")
             {
