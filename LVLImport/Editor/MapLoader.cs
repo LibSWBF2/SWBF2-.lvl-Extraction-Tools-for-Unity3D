@@ -52,11 +52,13 @@ public class MapLoader : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/home/will/Desktop/geo1.lvl");
+        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/pol/pol1.lvl");
+        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
 
-        /*
+        
         World[] worlds = level.GetWorlds();
         
         foreach (World world in worlds)
@@ -83,9 +85,13 @@ public class MapLoader : ScriptableObject {
                         newObj.transform.rotation = MapLoader.QuatFromLib(inst.GetRotation());
                     }
                 }
+                else 
+                {
+                	Debug.Log("Model not found!");
+                }
             }
         }
-        */
+        
         
 
         //ModelLoader.ImportModels(level);
