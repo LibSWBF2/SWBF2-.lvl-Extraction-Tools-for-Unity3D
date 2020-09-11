@@ -12,8 +12,6 @@ using LibSWBF2.Wrappers;
 
 public class ModelLoader : ScriptableObject {
 
-    static int modelCounter = 0;
-
     //static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
 
     //The below 2 methods will be replaced with the NativeArray<T> ones...
@@ -108,8 +106,6 @@ public class ModelLoader : ScriptableObject {
             //AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
             //AssetDatabase.SaveAssets();
             //AssetDatabase.Refresh();
-
-
 
             childObject.transform.SetParent(newObject.transform);
             childObject.name = childName;
