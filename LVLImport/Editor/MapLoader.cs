@@ -43,8 +43,8 @@ public class MapLoader : ScriptableObject {
     }
 
     [MenuItem("SWBF2/Import Map", false, 1)]
-    public static void ImportMap() {
-
+    public static void ImportMap()
+    {
         LibSWBF2.Logging.Logger.SetLogLevel(ELogType.Warning);
         LibSWBF2.Logging.Logger.OnLog += (LoggerEntry logEntry) => 
         {
@@ -71,7 +71,7 @@ public class MapLoader : ScriptableObject {
                 try {
                     model = level.GetModel(inst.Name);
                 } catch (Exception e){
-                    Debug.Log("Model not found");
+                    Debug.Log("Model not found: " + e.ToString());
                     continue;
                 }
 
