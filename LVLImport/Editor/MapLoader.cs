@@ -33,7 +33,7 @@ public class MapLoader : ScriptableObject {
         return newVec;
     }
 
-    public static UnityEngine.Vector4 Vec3FromLib(LibSWBF2.Types.Vector4 vec)
+    public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
     {
         UnityEngine.Vector4 newVec = new UnityEngine.Vector4();
         newVec.x = vec.X;
@@ -53,9 +53,9 @@ public class MapLoader : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        //Level level = Level.FromFile(@"/home/will/Desktop/geo1.lvl");
-        //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/pol/pol1.lvl");
-        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/home/will/Desktop/MLC.lvl");
+        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");
+        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
 
@@ -75,7 +75,7 @@ public class MapLoader : ScriptableObject {
                 Model model = null;
                 try {
                     model = level.GetModel(inst.Name);
-                    //string tstname = model.Name;
+                    string tstname = model.Name;
                 } catch (Exception e){
                     Debug.Log("Model not found: " + inst.Name);
                     continue;
@@ -93,40 +93,39 @@ public class MapLoader : ScriptableObject {
                 }
                 else 
                 {
-                	//Debug.Log("Model not found!");
+                    //Debug.Log("Model not found!");
                 }
             }
         }
            
 
-        TerrainLoader.ImportTerrain(level);
+        //TerrainLoader.ImportTerrain(level);
 
-
-        //Basic lights
         foreach (var light in level.GetLights()) 
         {
-            switch (light.lightType) 
-            {
-                GameObject lightObj = new GameObject();
-                lightObj.transform.position = Vec3FromLib(light.position);
-                lightObj.transform.rotation = Vec4FromLib(light.rotation);
+            GameObject lightObj = new GameObject();
+            lightObj.transform.position = Vec3FromLib(light.position);
+            lightObj.transform.rotation = QuatFromLib(light.rotation);
+            lightObj.name = light.name;
 
+            LibSWBF2.Enums.LightType ltype = light.lightType;
+
+            if (ltype == LibSWBF2.Enums.LightType.Omni)
+            {   
                 UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
-
-                case LightType.Omni:
-                    lightComp.color = Vec3FromLib(light.color);
-                    lightComp.type  = UnityEngine.LightType.Point;
-                    lightComp.range = light.range; 
-                    break;
-
-                case LightType.Spot:
-                    lightComp.type      = UnityEngine.LightType.Spot;
-                    lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;
-                    break;
-
-                default:
-                    DestroyImmediate(newObject);
-                    break;
+                lightComp.type = UnityEngine.LightType.Point;
+                lightComp.range = light.range;
+            }
+            else if (ltype == LibSWBF2.Enums.LightType.Spot)
+            {
+                UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
+                lightComp.type = UnityEngine.LightType.Spot;
+                lightComp.range = light.range;
+                lightComp.spotAngle = light.spotAngles.X;   
+            }
+            else 
+            {
+                DestroyImmediate(lightObj);
             }
         }
     }
