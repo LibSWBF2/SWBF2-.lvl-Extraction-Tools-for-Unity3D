@@ -14,7 +14,7 @@ public class TerrainLoader : ScriptableObject {
 
     public static void ImportTerrain(Level level) {
 
-        LibSWBF2.Wrappers.Terrain terrain = level.GetTerrain();
+        LibSWBF2.Wrappers.Terrain terrain = level.GetTerrains()[0];
 
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
@@ -27,14 +27,23 @@ public class TerrainLoader : ScriptableObject {
         terData.SetDetailResolution(512, 8);
 
         float[,] heights = new float[dim,dim];
+        bool[,] holes    = new bool[dim,dim];
         for (int x = 0; x < dim; x++)
         {
             for (int y = 0; y < dim; y++)
             {
-                heights[x,y] = heightsRaw[x * dim + y];
+                float h = heightsRaw[x * dim + y];
+
+                heights[x,y] = h < -0.1 ? 0 : h;
+                //if (y % 6 == 0)
+                //{
+                holes[x,y] = h < -0.1 ? false : true;
+
+                //}
             }
         }
         terData.SetHeights(0, 0, heights);
+        terData.SetHoles(0,0,holes);
 
 
         //Get list of textures used
@@ -44,11 +53,11 @@ public class TerrainLoader : ScriptableObject {
             Texture2D tex = TextureLoader.ImportTexture(level,texName);
             if (tex == null)
             {
-                Debug.Log("Couldnt find texture: " + texName);
+                //Debug.Log("Couldnt find texture: " + texName);
             }
             else 
             {
-            	Debug.Log("adding texture " + texName);
+            	//Debug.Log("adding texture " + texName);
                 terTextures.Add(tex);  
             }
         }
@@ -63,6 +72,7 @@ public class TerrainLoader : ScriptableObject {
         {
         	TerrainLayer newLayer = new TerrainLayer();
             newLayer.diffuseTexture = terTextures[i];
+            newLayer.tileSize = new Vector2(10,10);
             terrainLayers[i] = newLayer;
         }
         terData.SetTerrainLayersRegisterUndo(terrainLayers,"Undo");
