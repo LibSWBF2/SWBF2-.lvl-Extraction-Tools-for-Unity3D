@@ -9,6 +9,7 @@ using UnityEditor;
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Types;
+using LibSWBF2.Enums;
 
 
 public class MapLoader : ScriptableObject {
@@ -96,7 +97,37 @@ public class MapLoader : ScriptableObject {
                 }
             }
         }
-                
+           
+
         TerrainLoader.ImportTerrain(level);
+
+
+        //Basic lights
+        foreach (var light in level.GetLights()) 
+        {
+            switch (light.lightType) 
+            {
+                GameObject lightObj = new GameObject();
+                lightObj.transform.position = Vec3FromLib(light.position);
+                lightObj.transform.rotation = Vec4FromLib(light.rotation);
+
+                UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
+
+                case LightType.Omni:
+                    lightComp.color = Vec3FromLib(light.color);
+                    lightComp.type  = UnityEngine.LightType.Point;
+                    lightComp.range = light.range; 
+                    break;
+
+                case LightType.Spot:
+                    lightComp.type      = UnityEngine.LightType.Spot;
+                    lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;
+                    break;
+
+                default:
+                    DestroyImmediate(newObject);
+                    break;
+            }
+        }
     }
 }
