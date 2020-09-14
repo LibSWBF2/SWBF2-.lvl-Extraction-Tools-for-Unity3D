@@ -53,16 +53,20 @@ public class MapLoader : ScriptableObject {
 
         Debug.Log("Loading... This might take a while...");
         //Level level = Level.FromFile(@"/home/will/Desktop/geo1.lvl");
-        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/pol/pol1.lvl");
-        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/pol/pol1.lvl");
+        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
 
-        
+        Debug.Log("Read lvl file!");
+
         World[] worlds = level.GetWorlds();
         
+        int i = 0;
+
         foreach (World world in worlds)
         {
+            Debug.Log("On world number " + i++);
             Instance[] instances = world.GetInstances();
 
             foreach (Instance inst in instances)
@@ -70,8 +74,9 @@ public class MapLoader : ScriptableObject {
                 Model model = null;
                 try {
                     model = level.GetModel(inst.Name);
+                    //string tstname = model.Name;
                 } catch (Exception e){
-                    Debug.Log("Model not found: " + e.ToString());
+                    Debug.Log("Model not found: " + inst.Name);
                     continue;
                 }
 
@@ -87,17 +92,11 @@ public class MapLoader : ScriptableObject {
                 }
                 else 
                 {
-                	Debug.Log("Model not found!");
+                	//Debug.Log("Model not found!");
                 }
             }
         }
-        
-        
-
-        //ModelLoader.ImportModels(level);
-
+                
         TerrainLoader.ImportTerrain(level);
-        
-        Debug.Log("Done");
     }
 }
