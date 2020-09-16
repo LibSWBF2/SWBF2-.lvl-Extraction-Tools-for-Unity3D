@@ -25,7 +25,6 @@ public class TextureLoader : ScriptableObject {
             return texDataBase[name];
         }
 
-
         if (File.Exists(texturePath))
         {
             Texture2D tex = new Texture2D(2,2);

@@ -14,26 +14,6 @@ public class ModelLoader : ScriptableObject {
 
     //static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
 
-    //The below 2 methods will be replaced with the NativeArray<T> ones...
-    public static Vector3[] floatToVec3Array(float[] floats)
-    {
-        Vector3[] vectors = new Vector3[floats.Length / 3];
-        for (int i = 0; i < floats.Length; i+=3)
-        {
-            vectors[i / 3] = new Vector3(floats[i],floats[i+1],floats[i+2]);
-        }
-        return vectors;
-    }
-
-    public static Vector2[] floatToVec2Array(float[] floats)
-    {
-        Vector2[] vectors = new Vector2[floats.Length / 2];
-        for (int i = 0; i < floats.Length; i+=2)
-        {
-            vectors[i / 2] = new Vector2(floats[i],floats[i+1]);
-        }
-        return vectors;
-    }
 
     public static GameObject GameObjectFromModel(Level level, Model model)
     {
@@ -71,9 +51,9 @@ public class ModelLoader : ScriptableObject {
             string childName = newObject.name + "_segment_" + segCount++;
 
             //Handle mesh
-            Vector3[] vertexBuffer = ModelLoader.floatToVec3Array(seg.GetVertexBuffer()); 
-            Vector2[] UVs = ModelLoader.floatToVec2Array(seg.GetUVBuffer());
-            Vector3[] normalsBuffer = ModelLoader.floatToVec3Array(seg.GetNormalsBuffer());
+            Vector3[] vertexBuffer = UnityUtils.FloatToVec3Array(seg.GetVertexBuffer()); 
+            Vector2[] UVs = UnityUtils.FloatToVec2Array(seg.GetUVBuffer());
+            Vector3[] normalsBuffer = UnityUtils.FloatToVec3Array(seg.GetNormalsBuffer());
             int[] indexBuffer = seg.GetIndexBuffer();
 
             GameObject childObject = new GameObject();
