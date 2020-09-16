@@ -33,13 +33,8 @@ public class TerrainLoader : ScriptableObject {
 	            for (int y = 0; y < dim; y++)
 	            {
 	                float h = heightsRaw[x * dim + y];
-
 	                heights[x,y] = h < -0.1 ? 0 : h;
-	                //if (y % 6 == 0)
-	                //{
 	                holes[x,y] = h < -0.1 ? false : true;
-
-	                //}
 	            }
 	        }
 	        terData.SetHeights(0, 0, heights);
@@ -72,10 +67,10 @@ public class TerrainLoader : ScriptableObject {
 	        {
 	        	TerrainLayer newLayer = new TerrainLayer();
 	            newLayer.diffuseTexture = terTextures[i];
-	            newLayer.tileSize = new Vector2(10,10);
+	            newLayer.tileSize = new Vector2(32,32);
 	            terrainLayers[i] = newLayer;
 	        }
-	        
+
 	        terData.SetTerrainLayersRegisterUndo(terrainLayers,"Undo");
 
 
