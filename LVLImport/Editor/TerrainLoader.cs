@@ -75,6 +75,7 @@ public class TerrainLoader : ScriptableObject {
 	            newLayer.tileSize = new Vector2(10,10);
 	            terrainLayers[i] = newLayer;
 	        }
+	        
 	        terData.SetTerrainLayersRegisterUndo(terrainLayers,"Undo");
 
 

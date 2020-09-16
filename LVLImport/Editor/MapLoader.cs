@@ -53,11 +53,12 @@ public class MapLoader : ScriptableObject {
         };
 
         Debug.Log("Loading... This might take a while...");
-        //Level level = Level.FromFile(@"/home/will/Desktop/MLC.lvl");
-        Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");
-        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/Users/will/Desktop/MLC.lvl");
+        //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");
+        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
+        //Level level = Level.FromFile(@"/Volumes/bootable/stockdata/_lvl_pc/mus/mus1.lvl");
 
         Debug.Log("Read lvl file!");
 
@@ -70,11 +71,13 @@ public class MapLoader : ScriptableObject {
             Debug.Log("On world number " + i++);
             Instance[] instances = world.GetInstances();
 
+
             foreach (Instance inst in instances)
             {
                 Model model = null;
+                string geometryName = inst.GetModelName();
                 try {
-                    model = level.GetModel(inst.Name);
+                    model = level.GetModel(geometryName);
                     string tstname = model.Name;
                 } catch (Exception e){
                     Debug.Log("Model not found: " + inst.Name);
@@ -98,34 +101,68 @@ public class MapLoader : ScriptableObject {
             }
         }
            
+        TerrainLoader.ImportTerrain(level);
 
-        //TerrainLoader.ImportTerrain(level);
+
+
+        /*
+        Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
+        */
 
         foreach (var light in level.GetLights()) 
         {
             GameObject lightObj = new GameObject();
+            light.position.Z *= -1.0f;
             lightObj.transform.position = Vec3FromLib(light.position);
             lightObj.transform.rotation = QuatFromLib(light.rotation);
             lightObj.name = light.name;
+
+            UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
+            lightComp.color = new Color(light.color.X, light.color.Y, light.color.Z);
+            lightComp.intensity = 20;
 
             LibSWBF2.Enums.LightType ltype = light.lightType;
 
             if (ltype == LibSWBF2.Enums.LightType.Omni)
             {   
-                UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
                 lightComp.type = UnityEngine.LightType.Point;
                 lightComp.range = light.range;
             }
             else if (ltype == LibSWBF2.Enums.LightType.Spot)
             {
-                UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
                 lightComp.type = UnityEngine.LightType.Spot;
                 lightComp.range = light.range;
-                lightComp.spotAngle = light.spotAngles.X;   
+                lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
             }
             else 
             {
                 DestroyImmediate(lightObj);
+            }
+        }
+
+        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.white;
+
+
+        /*
+        Basic skybox loading
+        */
+
+        foreach (var model in level.GetModels())
+        {
+            GameObject newObj = null;
+            try {
+                if (model.Name.Contains("sky"))
+                {
+                    newObj = ModelLoader.GameObjectFromModel(level,model);
+                }
+            } catch {
+                Debug.Log("Couldn't load sky...");
+                continue;
+            }
+
+            if (newObj != null){
+                newObj.transform.localScale = new UnityEngine.Vector3(200,200,200);
             }
         }
     }
