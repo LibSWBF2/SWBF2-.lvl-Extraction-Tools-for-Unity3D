@@ -8,7 +8,9 @@ using System.Security;
 using System.Runtime.InteropServices.WindowsRuntime;
 
 using UnityEngine;
-using LibSWBF2.Tyes;
+
+
+using LibSWBF2.Types;
 
 
 static class UnityUtils {
@@ -42,22 +44,22 @@ static class UnityUtils {
         return newVec;
     }
 
-    public static Vector3[] floatToVec3Array(float[] floats)
+    public static UnityEngine.Vector3[] FloatToVec3Array(float[] floats)
     {
-        Vector3[] vectors = new Vector3[floats.Length / 3];
+        UnityEngine.Vector3[] vectors = new UnityEngine.Vector3[floats.Length / 3];
         for (int i = 0; i < floats.Length; i+=3)
         {
-            vectors[i / 3] = new Vector3(floats[i],floats[i+1],floats[i+2]);
+            vectors[i / 3] = new UnityEngine.Vector3(floats[i],floats[i+1],floats[i+2]);
         }
         return vectors;
     }
 
-    public static Vector2[] floatToVec2Array(float[] floats)
+    public static UnityEngine.Vector2[] FloatToVec2Array(float[] floats)
     {
-        Vector2[] vectors = new Vector2[floats.Length / 2];
+        UnityEngine.Vector2[] vectors = new UnityEngine.Vector2[floats.Length / 2];
         for (int i = 0; i < floats.Length; i+=2)
         {
-            vectors[i / 2] = new Vector2(floats[i],floats[i+1]);
+            vectors[i / 2] = new UnityEngine.Vector2(floats[i],floats[i+1]);
         }
         return vectors;
     }

@@ -76,8 +76,8 @@ public class MapLoader : ScriptableObject {
 
                     if (newObj != null)
                     {
-                        newObj.transform.position = MapLoader.Vec3FromLib(inst.GetPosition());
-                        newObj.transform.rotation = MapLoader.QuatFromLib(inst.GetRotation());
+                        newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
+                        newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
                     }
                 }
                 else 
