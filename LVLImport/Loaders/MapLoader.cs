@@ -14,36 +14,7 @@ using LibSWBF2.Enums;
 
 public class MapLoader : ScriptableObject {
 
-    public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
-    {
-        UnityEngine.Quaternion newVec = new UnityEngine.Quaternion();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        newVec.w = vec.W;
-        return newVec;
-    }
-
-    public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
-    {
-        UnityEngine.Vector3 newVec = new UnityEngine.Vector3();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        return newVec;
-    }
-
-    public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
-    {
-        UnityEngine.Vector4 newVec = new UnityEngine.Vector4();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        newVec.w = vec.W;
-        return newVec;
-    }
-
-    [MenuItem("SWBF2/Import Map", false, 1)]
+    //[MenuItem("SWBF2/Import Map", false, 1)]
     public static void ImportMap()
     {
         LibSWBF2.Logging.Logger.SetLogLevel(ELogType.Warning);
@@ -52,15 +23,31 @@ public class MapLoader : ScriptableObject {
             Debug.Log(logEntry.ToString());
         };
 
-        Debug.Log("Loading... This might take a while...");
+        Level level;
+        string fileName = EditorUtility.OpenFilePanelWithFilters("Open LVL File", "", new string[] { "SWBF2 LVL File", "lvl" });
+        
+        FileInfo file = new FileInfo(fileName);
+
+        if (file.Exists) {
+            
+            level = Level.FromFile(fileName);
+
+            if (level == null) {
+                EditorUtility.DisplayDialog("Error", "Error while opening " + file.FullName, "ok");
+                return;
+            }
+        }
+        else {
+            EditorUtility.DisplayDialog("Not found!", fileName + " could not be found!", "ok");
+            return;
+        }
+
         //Level level = Level.FromFile(@"/Users/will/Desktop/MLC.lvl");
         //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");
-        Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
+        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
         //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
-        //Level level = Level.FromFile(@"/Volumes/bootable/stockdata/_lvl_pc/mus/mus1.lvl");
-
-        Debug.Log("Read lvl file!");
+        //Level level = Level.FromFile(@"/Volumes/bootable/stockdata/_lvl_pc/fel/fel1.lvl");
 
         World[] worlds = level.GetWorlds();
         
@@ -70,7 +57,6 @@ public class MapLoader : ScriptableObject {
         {
             Debug.Log("On world number " + i++);
             Instance[] instances = world.GetInstances();
-
 
             foreach (Instance inst in instances)
             {
@@ -113,8 +99,8 @@ public class MapLoader : ScriptableObject {
         {
             GameObject lightObj = new GameObject();
             light.position.Z *= -1.0f;
-            lightObj.transform.position = Vec3FromLib(light.position);
-            lightObj.transform.rotation = QuatFromLib(light.rotation);
+            lightObj.transform.position = UnityUtils.Vec3FromLib(light.position);
+            lightObj.transform.rotation = UnityUtils.QuatFromLib(light.rotation);
             lightObj.name = light.name;
 
             UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
