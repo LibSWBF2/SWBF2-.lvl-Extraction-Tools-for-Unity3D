@@ -15,7 +15,7 @@ using LibSWBF2.Enums;
 public class MapLoader : ScriptableObject {
 
     //[MenuItem("SWBF2/Import Map", false, 1)]
-    public static void ImportMap()
+    public static void ImportMap(string path)
     {
         LibSWBF2.Logging.Logger.SetLogLevel(ELogType.Warning);
         LibSWBF2.Logging.Logger.OnLog += (LoggerEntry logEntry) => 
@@ -23,24 +23,7 @@ public class MapLoader : ScriptableObject {
             Debug.Log(logEntry.ToString());
         };
 
-        Level level;
-        string fileName = EditorUtility.OpenFilePanelWithFilters("Open LVL File", "", new string[] { "SWBF2 LVL File", "lvl" });
-        
-        FileInfo file = new FileInfo(fileName);
-
-        if (file.Exists) {
-            
-            level = Level.FromFile(fileName);
-
-            if (level == null) {
-                EditorUtility.DisplayDialog("Error", "Error while opening " + file.FullName, "ok");
-                return;
-            }
-        }
-        else {
-            EditorUtility.DisplayDialog("Not found!", fileName + " could not be found!", "ok");
-            return;
-        }
+        Level level = Level.FromFile(path);
 
         //Level level = Level.FromFile(@"/Users/will/Desktop/MLC.lvl");
         //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");

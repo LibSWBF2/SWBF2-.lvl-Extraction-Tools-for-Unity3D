@@ -44,7 +44,7 @@ public class TextureLoader : ScriptableObject {
             }
             tex.SetPixels(colors,0);
             tex.Apply();
-            File.WriteAllBytes(texturePath, tex.EncodeToPNG());
+            //File.WriteAllBytes(texturePath, tex.EncodeToPNG());
 
             texDataBase[name] = tex;
             return tex;

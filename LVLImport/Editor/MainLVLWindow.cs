@@ -64,7 +64,7 @@ public class LVLImportWindow : EditorWindow {
            path = tempPath;
         }
 
-        if (GUILayout.Button("Browse",GUILayout.Width(50)))
+        if (GUILayout.Button("Browse",GUILayout.Width(55)))
         {
             path = EditorUtility.OpenFilePanel("Select lvl file(s)", "", "lvl");
             path = String.Compare(path,"") == 0 ? null : path;
@@ -124,32 +124,23 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
 
-
         saveAllPrefabs = EditorGUILayout.Toggle(new GUIContent("Save All Assets", saveAllPrefabsTip), saveAllPrefabs);
         importLighting = EditorGUILayout.Toggle(new GUIContent("Import Lighting", importMeshTerrainTip), importLighting);
         importMeshTerrain = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", importMeshTerrainTip), importMeshTerrain);
 
-
         AddSpaces(5);
-
-
+        
         currentlyLoading = GUILayout.Button("Import!",GUILayout.Width(100));
-
         GUI.enabled = true;
+
 
         if (currentlyLoading)
         {
             foreach (string path in filesToLoad)
             {
-                if (path != filesToLoad.Last())
-                {
-
-                }
+                Debug.Log("Loading " + path);
+                MapLoader.ImportMap(path);
             }
         }
-
-
-
-
     }
 }
