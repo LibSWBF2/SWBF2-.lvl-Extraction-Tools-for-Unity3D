@@ -12,7 +12,7 @@ using LibSWBF2.Wrappers;
 
 public class ModelLoader : ScriptableObject {
 
-    //static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
+    static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
 
 
     public static GameObject GameObjectFromModel(Level level, Model model)
@@ -76,7 +76,7 @@ public class ModelLoader : ScriptableObject {
             //Material tempMat = new Material();
 
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            //childRenderer.material = tempMat;
+            childRenderer.material = swbf2Mat;
 
             if (importedTex == null)
             {
