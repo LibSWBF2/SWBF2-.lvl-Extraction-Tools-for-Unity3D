@@ -87,8 +87,8 @@ public class MapLoader : ScriptableObject {
             lightObj.name = light.name;
 
             UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
-            lightComp.color = new Color(light.color.X, light.color.Y, light.color.Z);
-            lightComp.intensity = 20;
+            lightComp.color = UnityUtils.ColorFromLib(light.color);
+            lightComp.intensity = 15;
 
             LibSWBF2.Enums.LightType ltype = light.lightType;
 

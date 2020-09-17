@@ -17,31 +17,24 @@ static class UnityUtils {
 
 	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
-        UnityEngine.Quaternion newVec = new UnityEngine.Quaternion();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        newVec.w = vec.W;
-        return newVec;
+        return new UnityEngine.Quaternion(vec.X, vec.Y,vec.Z,vec.W);
     }
 
     public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
     {
-        UnityEngine.Vector3 newVec = new UnityEngine.Vector3();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        return newVec;
+        return new UnityEngine.Vector3(vec.X,vec.Y,vec.Z);
     }
+
+
+    public static UnityEngine.Color ColorFromLib(LibSWBF2.Types.Vector3 vec)
+    {
+        return new UnityEngine.Color(vec.X,vec.Y,vec.Z);
+    }
+
 
     public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
     {
-        UnityEngine.Vector4 newVec = new UnityEngine.Vector4();
-        newVec.x = vec.X;
-        newVec.y = vec.Y;
-        newVec.z = vec.Z;
-        newVec.w = vec.W;
-        return newVec;
+        return new UnityEngine.Vector4(vec.X,vec.Y,vec.Z,vec.W);
     }
 
     public static UnityEngine.Vector3[] FloatToVec3Array(float[] floats)
