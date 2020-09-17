@@ -39,7 +39,7 @@ public class TerrainLoader : ScriptableObject {
 	        }
 	        terData.SetHeights(0, 0, heights);
 	        terData.SetHoles(0,0,holes);
-
+	        
 
 	        //Get list of textures used
 	        List<Texture2D> terTextures = new List<Texture2D>();
