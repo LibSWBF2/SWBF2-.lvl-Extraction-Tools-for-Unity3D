@@ -12,7 +12,7 @@ using LibSWBF2.Wrappers;
 
 public class ModelLoader : ScriptableObject {
 
-    static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
+    public static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
 
 
     public static GameObject GameObjectFromModel(Level level, Model model)
@@ -76,15 +76,15 @@ public class ModelLoader : ScriptableObject {
             //Material tempMat = new Material();
 
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            childRenderer.material = swbf2Mat;
+            childRenderer.sharedMaterial = new Material( swbf2Mat );
 
             if (importedTex == null)
             {
-                childRenderer.material.color = Color.black;
+                childRenderer.sharedMaterial.color = Color.black;
             }
             else 
             {
-                childRenderer.material.mainTexture = importedTex;
+                childRenderer.sharedMaterial.mainTexture = importedTex;
             }
 
             //AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
