@@ -48,7 +48,7 @@ public class ModelLoader : ScriptableObject {
                 continue;
             }
 
-            string childName = newObject.name + "_segment_" + segCount++;
+            string childName = newObject.name + "_segment_" + segCount++;// + "_" + seg.GetMaterialFlags();
 
             //Handle mesh
             Vector3[] vertexBuffer = UnityUtils.FloatToVec3Array(seg.GetVertexBuffer()); 
