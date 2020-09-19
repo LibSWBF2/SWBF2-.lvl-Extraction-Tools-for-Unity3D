@@ -27,7 +27,7 @@ static class MaterialsUtils {
 
     public static bool IsScrolling(uint flags)
     {
-        return (flags & (uint)16777216 != 0;
+        return (flags & (uint)16777216) != 0;
     }
 }
 
