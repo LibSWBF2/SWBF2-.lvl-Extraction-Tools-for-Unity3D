@@ -77,8 +77,6 @@ public class TerrainLoader : ScriptableObject {
 	        //Read splatmap
 	        float[,,] blendMap = new float[blendDim, blendDim, numLayers];
 
-	        Debug.Log("Terrain data length " + blendDim + " with " + numLayers + " layers");
-
 	        for (int y = 0; y < blendDim; y++)
 	        {
 	            for (int x = 0; x < blendDim; x++)
@@ -102,8 +100,6 @@ public class TerrainLoader : ScriptableObject {
 	        terrainObj.transform.position = new Vector3(dimOffset,floor,dimOffset);
 	        //PrefabUtility.SaveAsPrefabAsset(terrainObj, Application.dataPath + "/Terrain/terrain.prefab");
 	        //AssetDatabase.Refresh();
-
-	        Debug.Log("Terrain Imported!");
     	}
     }
 }
