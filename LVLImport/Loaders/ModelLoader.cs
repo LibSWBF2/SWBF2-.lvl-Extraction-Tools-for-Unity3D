@@ -77,7 +77,7 @@ public class ModelLoader : ScriptableObject {
 
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
             
-            Material newMat = new Material( swbf2Mat );
+            Material newMat = new Material(swbf2Mat);
             newMat.name = "mat_" + texName;
             newMat.SetInt("_ZWrite", 1);
 

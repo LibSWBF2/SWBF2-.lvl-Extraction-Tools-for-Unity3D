@@ -13,7 +13,7 @@ using UnityEngine;
 using LibSWBF2.Types;
 
 
-static class MaterialsUtils {
+public static class MaterialsUtils {
 
 	public static bool IsEmissive(uint flags)
     {

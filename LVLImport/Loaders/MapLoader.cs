@@ -38,7 +38,7 @@ public class MapLoader : ScriptableObject {
 
         foreach (World world in worlds)
         {
-            Debug.Log("On world number " + i++);
+            //Debug.Log("On world number " + i++);
             Instance[] instances = world.GetInstances();
 
             foreach (Instance inst in instances)
@@ -49,7 +49,7 @@ public class MapLoader : ScriptableObject {
                     model = level.GetModel(geometryName);
                     string tstname = model.Name;
                 } catch (Exception e){
-                    Debug.Log("Model not found: " + inst.Name);
+                    //Debug.Log("Model not found: " + inst.Name);
                     continue;
                 }
 
@@ -103,15 +103,36 @@ public class MapLoader : ScriptableObject {
                 lightComp.range = light.range;
                 lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
             }
+            else if (ltype == LibSWBF2.Enums.LightType.Dir)
+            {
+                lightComp.type = UnityEngine.LightType.Directional;
+                //lightComp.intensity = 
+                //lightComp.range = light.range;
+                //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
+            }
             else 
             {
                 DestroyImmediate(lightObj);
             }
         }
 
-        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = Color.white;
+        
+        level.GetGlobalLightingConfig(out LibSWBF2.Types.Vector3 topColor, 
+                                      out LibSWBF2.Types.Vector3 bottomColor,
+                                      out LibSWBF2.Wrappers.Light l1,
+                                      out LibSWBF2.Wrappers.Light l2);
+        
+        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = UnityUtils.ColorFromLib(topColor);
+        RenderSettings.ambientGroundColor = UnityUtils.ColorFromLib(bottomColor);
+        //RenderSettings.ambientLight = Color.white;
 
+        try {
+            Debug.Log("Global light 1: " + l1.name);
+        } catch (Exception e){}
+        try {
+            Debug.Log("Global light 2: " + l2.name);
+        } catch (Exception e){}
 
         /*
         Basic skybox loading
