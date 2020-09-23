@@ -22,7 +22,6 @@ public class LVLImportWindow : EditorWindow {
                                 "using the heightmap representation only for collision."
                                 );
                                 
-
     string importLightingTip = String.Join(
                                 " ",
                                 "Lighting still has some issues,",
@@ -130,9 +129,12 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
         
-        currentlyLoading = GUILayout.Button("Import!",GUILayout.Width(100));
-        GUI.enabled = true;
+        GUILayout.BeginHorizontal();
+        currentlyLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
+        GUILayout.Button("Import Objects",GUILayout.Width(100));
+        GUILayout.EndHorizontal();
 
+        GUI.enabled = true;
 
         if (currentlyLoading)
         {
@@ -141,6 +143,8 @@ public class LVLImportWindow : EditorWindow {
                 Debug.Log("Loading " + path);
                 MapLoader.ImportMap(path);
             }
+
+            currentlyLoading = false;
         }
     }
 }

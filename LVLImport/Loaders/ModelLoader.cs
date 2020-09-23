@@ -18,6 +18,7 @@ public class ModelLoader : ScriptableObject {
     public static GameObject GameObjectFromModel(Level level, Model model)
     {
         GameObject newObject = new GameObject();
+        newObject.isStatic   = true;
         newObject.AddComponent<MeshRenderer>();
 
         Segment[] segments;
@@ -101,6 +102,27 @@ public class ModelLoader : ScriptableObject {
 
             //PrefabUtility.SaveAsPrefabAsset(childObject, Application.dataPath + "/Models/" + childName + ".prefab");
         }  
+
+        
+        CollisionMesh collMesh = model.GetCollisionMesh();
+        int[] indBuffer = collMesh.GetIndices();
+
+        try {
+
+            if (indBuffer.Length > 2)
+            {
+                Mesh mesh = new Mesh();
+                mesh.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices());
+                mesh.triangles = indBuffer;
+
+                MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
+                meshCollider.sharedMesh = mesh;
+            }
+        } catch (Exception e)
+        {
+            Debug.Log(e.ToString() + " while creating mesh collider...");
+        }
+        
 
         return newObject;      
     }
