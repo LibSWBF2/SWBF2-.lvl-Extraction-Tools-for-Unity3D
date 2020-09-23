@@ -13,6 +13,8 @@ using LibSWBF2.Wrappers;
 public class ModelLoader : ScriptableObject {
 
     public static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
+    public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
+    public static Material defaultMaterial = new Material(Shader.Find("Standard"));
 
 
     public static GameObject GameObjectFromModel(Level level, Model model)
@@ -40,16 +42,15 @@ public class ModelLoader : ScriptableObject {
         {
             string texName = seg.GetMaterialTexName();
 
-			//Debug.Log("Segment topology: " + seg.GetTopology());
-			//Debug.Log("Num verts: " + seg.GetVertexBuffer().Length / 3);
-			//Debug.Log("Index buffer length: " + seg.GetIndexBuffer().Length);
-
             if (texName == "")
             {
                 continue;
             }
 
-            string childName = newObject.name + "_segment_" + segCount++;// + "_" + seg.GetMaterialFlags();
+            uint matFlags = seg.GetMaterialFlags();
+            string materialName = texName + "_" + matFlags.ToString();
+
+            string childName = newObject.name + "_segment_" + segCount++;
 
             //Handle mesh
             Vector3[] vertexBuffer = UnityUtils.FloatToVec3Array(seg.GetVertexBuffer()); 
@@ -78,11 +79,29 @@ public class ModelLoader : ScriptableObject {
 
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
             
-            Material newMat = new Material(swbf2Mat);
-            newMat.name = "mat_" + texName;
-            newMat.SetInt("_ZWrite", 1);
 
-            childRenderer.sharedMaterial = newMat;
+            Material material;
+            if (materialDataBase.ContainsKey(materialName))
+            {
+                material = materialDataBase[materialName];
+            }
+            else
+            {
+                material = new Material(defaultMaterial);
+                material.name = materialName;
+                materialDataBase[materialName] = material;
+            }
+
+            if (MaterialsUtils.IsCutout(matFlags))
+            {
+                MaterialsUtils.SetRenderMode(ref material, 1);
+            }
+            else if (MaterialsUtils.IsTransparent(matFlags))
+            {
+                MaterialsUtils.SetRenderMode(ref material, 3);
+            }
+
+            childRenderer.sharedMaterial = material;
 
             if (importedTex == null)
             {

@@ -38,7 +38,7 @@ public class TerrainLoader : ScriptableObject {
 	            }
 	        }
 	        terData.SetHeights(0, 0, heights);
-	        terData.SetHoles(0,0,holes);
+	        //terData.SetHoles(0,0,holes);
 	        
 
 	        //Get list of textures used
@@ -46,14 +46,9 @@ public class TerrainLoader : ScriptableObject {
 	        foreach (string texName in terrain.GetTextureNames())
 	        {
 	            Texture2D tex = TextureLoader.ImportTexture(level,texName);
-	            if (tex == null)
+	            if (tex != null)
 	            {
-	                //Debug.Log("Couldnt find texture: " + texName);
-	            }
-	            else 
-	            {
-	            	//Debug.Log("adding texture " + texName);
-	                terTextures.Add(tex);  
+	            	terTextures.Add(tex);  
 	            }
 	        }
 
