@@ -38,9 +38,8 @@ public class MapLoader : ScriptableObject {
 
         foreach (World world in worlds)
         {
-            //Debug.Log("On world number " + i++);
+            
             Instance[] instances = world.GetInstances();
-
             foreach (Instance inst in instances)
             {
                 Model model = null;
@@ -65,7 +64,6 @@ public class MapLoader : ScriptableObject {
                 }
                 else 
                 {
-                    //Debug.Log("Model not found!");
                 }
             }
         }
@@ -116,7 +114,7 @@ public class MapLoader : ScriptableObject {
             }
         }
 
-        
+        /*        
         level.GetGlobalLightingConfig(out LibSWBF2.Types.Vector3 topColor, 
                                       out LibSWBF2.Types.Vector3 bottomColor,
                                       out LibSWBF2.Wrappers.Light l1,
@@ -125,14 +123,16 @@ public class MapLoader : ScriptableObject {
         RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = UnityUtils.ColorFromLib(topColor);
         RenderSettings.ambientGroundColor = UnityUtils.ColorFromLib(bottomColor);
-        //RenderSettings.ambientLight = Color.white;
-
+        */
+        RenderSettings.ambientLight = Color.white;
+        /*
         try {
             Debug.Log("Global light 1: " + l1.name);
         } catch (Exception e){}
         try {
             Debug.Log("Global light 2: " + l2.name);
         } catch (Exception e){}
+        */
 
         /*
         Basic skybox loading

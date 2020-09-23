@@ -29,6 +29,11 @@ public static class MaterialsUtils {
     {
         return (flags & (uint)16777216) != 0;
     }
+
+    public static bool IsCutout(uint flags)
+    {
+        return (flags & (uint)2) != 0;
+    }
 }
 
 
