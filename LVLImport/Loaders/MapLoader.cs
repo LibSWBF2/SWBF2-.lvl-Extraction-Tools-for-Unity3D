@@ -25,16 +25,8 @@ public class MapLoader : ScriptableObject {
 
         Level level = Level.FromFile(path);
 
-        //Level level = Level.FromFile(@"/Users/will/Desktop/MLC.lvl");
-        //Level level = Level.FromFile(@"/home/will/.wine32bit/drive_c/Program Files/Steam/steamapps/common/Star Wars Battlefront II/GameData/data/_lvl_pc/mus/mus1.lvl");
-        //Level level = Level.FromFile(@"/Users/will/Desktop/geo1.lvl");
-        //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Tex3_Tex2_Blended.lvl");
-        //Level level = Level.FromFile(@"/Users/will/Desktop/terrainblendinglvls/TST_Square_Tex1_Tex2_Blended.lvl");
-        //Level level = Level.FromFile(@"/Volumes/bootable/stockdata/_lvl_pc/fel/fel1.lvl");
-
         World[] worlds = level.GetWorlds();
         
-        int i = 0;
 
         foreach (World world in worlds)
         {
@@ -86,7 +78,7 @@ public class MapLoader : ScriptableObject {
 
             UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
             lightComp.color = UnityUtils.ColorFromLib(light.color);
-            lightComp.intensity = 15;
+            lightComp.intensity = 3;
 
             LibSWBF2.Enums.LightType ltype = light.lightType;
 
@@ -94,6 +86,7 @@ public class MapLoader : ScriptableObject {
             {   
                 lightComp.type = UnityEngine.LightType.Point;
                 lightComp.range = light.range;
+                
             }
             else if (ltype == LibSWBF2.Enums.LightType.Spot)
             {
@@ -104,7 +97,7 @@ public class MapLoader : ScriptableObject {
             else if (ltype == LibSWBF2.Enums.LightType.Dir)
             {
                 lightComp.type = UnityEngine.LightType.Directional;
-                //lightComp.intensity = 
+                lightComp.intensity = 1;
                 //lightComp.range = light.range;
                 //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
             }
@@ -114,25 +107,7 @@ public class MapLoader : ScriptableObject {
             }
         }
 
-        /*        
-        level.GetGlobalLightingConfig(out LibSWBF2.Types.Vector3 topColor, 
-                                      out LibSWBF2.Types.Vector3 bottomColor,
-                                      out LibSWBF2.Wrappers.Light l1,
-                                      out LibSWBF2.Wrappers.Light l2);
-        
-        RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = UnityUtils.ColorFromLib(topColor);
-        RenderSettings.ambientGroundColor = UnityUtils.ColorFromLib(bottomColor);
-        */
         RenderSettings.ambientLight = Color.white;
-        /*
-        try {
-            Debug.Log("Global light 1: " + l1.name);
-        } catch (Exception e){}
-        try {
-            Debug.Log("Global light 2: " + l2.name);
-        } catch (Exception e){}
-        */
 
         /*
         Basic skybox loading
@@ -142,7 +117,7 @@ public class MapLoader : ScriptableObject {
         {
             GameObject newObj = null;
             try {
-                if (model.Name.Contains("sky"))
+                if (model.Name.Contains("sky")) //best effort
                 {
                     newObj = ModelLoader.GameObjectFromModel(level,model);
                 }
