@@ -12,7 +12,6 @@ using LibSWBF2.Wrappers;
 
 public class ModelLoader : ScriptableObject {
 
-    public static Material swbf2Mat = (Material) AssetDatabase.LoadAssetAtPath("Assets/Materials/swbf2.mat", typeof(Material));
     public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
     public static Material defaultMaterial = new Material(Shader.Find("Standard"));
 
@@ -27,7 +26,8 @@ public class ModelLoader : ScriptableObject {
 
         try {
             newObject.name = model.Name;
-        } catch (Exception e)
+        } 
+        catch (Exception e)
         {
         	Debug.Log("Exception in gameobj from model: " + e.ToString());
             DestroyImmediate(newObject);
@@ -66,21 +66,14 @@ public class ModelLoader : ScriptableObject {
             objectMesh.SetNormals(normalsBuffer);
             objectMesh.SetIndices(indexBuffer, MeshTopology.Triangles, 0);
 
-            //AssetDatabase.CreateAsset(objectMesh, "Assets/Meshes/" + childName + ".asset");
-            //AssetDatabase.SaveAssets();
-            //AssetDatabase.Refresh();
-
             MeshFilter filter = childObject.AddComponent<MeshFilter>();
             filter.sharedMesh = objectMesh;
           
             //Handle material
             Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
-            //Material tempMat = new Material();
-
             MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            
-
             Material material;
+
             if (materialDataBase.ContainsKey(materialName))
             {
                 material = materialDataBase[materialName];
@@ -92,6 +85,7 @@ public class ModelLoader : ScriptableObject {
                 materialDataBase[materialName] = material;
             }
 
+            
             if (MaterialsUtils.IsCutout(matFlags))
             {
                 MaterialsUtils.SetRenderMode(ref material, 1);
@@ -100,6 +94,7 @@ public class ModelLoader : ScriptableObject {
             {
                 MaterialsUtils.SetRenderMode(ref material, 3);
             }
+            
 
             childRenderer.sharedMaterial = material;
 
@@ -112,14 +107,8 @@ public class ModelLoader : ScriptableObject {
                 childRenderer.sharedMaterial.mainTexture = importedTex;
             }
 
-            //AssetDatabase.CreateAsset(tempMat, "Assets/Materials/" + childName + "_mat.mat");
-            //AssetDatabase.SaveAssets();
-            //AssetDatabase.Refresh();
-
             childObject.transform.SetParent(newObject.transform);
             childObject.name = childName;
-
-            //PrefabUtility.SaveAsPrefabAsset(childObject, Application.dataPath + "/Models/" + childName + ".prefab");
         }  
 
         
@@ -137,11 +126,11 @@ public class ModelLoader : ScriptableObject {
                 MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                 meshCollider.sharedMesh = mesh;
             }
-        } catch (Exception e)
+        } 
+        catch (Exception e)
         {
             Debug.Log(e.ToString() + " while creating mesh collider...");
         }
-        
 
         return newObject;      
     }
@@ -154,16 +143,8 @@ public class ModelLoader : ScriptableObject {
         //int i = 0;
         foreach (Model model in models)
         {
-
-           //if (i++ > 10) return;
-
             if (model.Name.Contains("LOWD")) continue;
-
             GameObject newObject = ModelLoader.GameObjectFromModel(level, model);
-
-            //PrefabUtility.SaveAsPrefabAssetAndConnect(newObject, "Assets/Models/" + newObject.name + ".prefab",  InteractionMode.UserAction);
-            //AssetDatabase.SaveAssets();
-            //AssetDatabase.Refresh();  
         } 
     }
 }
