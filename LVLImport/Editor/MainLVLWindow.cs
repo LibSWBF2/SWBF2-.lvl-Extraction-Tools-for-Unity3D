@@ -8,11 +8,16 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor;
 
+using LibSWBF2.Wrappers;
+
 
 public class LVLImportWindow : EditorWindow {
 
     bool saveAllPrefabs, importLighting,
-    currentlyLoading, buttonStatus, importMeshTerrain;
+    currentlyLoading, startLoading, buttonStatus, importMeshTerrain;
+
+
+    Container container = new Container();
 
     
     string importMeshTerrainTip = String.Join(
@@ -37,6 +42,7 @@ public class LVLImportWindow : EditorWindow {
                                 );
 
     List<string> filesToLoad = new List<string>();
+    List<uint>   fileHandles = new List<uint>();
 
 
 
@@ -130,21 +136,49 @@ public class LVLImportWindow : EditorWindow {
         AddSpaces(5);
         
         GUILayout.BeginHorizontal();
-        currentlyLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
+        startLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
         GUILayout.Button("Import Objects",GUILayout.Width(100));
         GUILayout.EndHorizontal();
 
         GUI.enabled = true;
 
-        if (currentlyLoading)
+        if (startLoading)
         {
+            fileHandles = new List<uint>();
+
             foreach (string path in filesToLoad)
             {
-                Debug.Log("Loading " + path);
-                MapLoader.ImportMap(path);
+                Debug.Log("Adding " + path);
+                fileHandles.Add(container.AddLevel(path));
             }
 
-            currentlyLoading = false;
+            container.LoadLevels();
+            currentlyLoading = true;
+            startLoading = false;
+        }
+
+        if (currentlyLoading)
+        {
+            for (int i = 0; i < filesToLoad.Count; i++)
+            {
+                uint handle = fileHandles[i];
+                float progress = container.GetProgress(handle);
+                EditorGUI.ProgressBar(new Rect(3, 250 + 30 * i, position.width - 6, 20), progress, filesToLoad[i]);
+            }
+
+            if (container.IsDone())
+            {
+                currentlyLoading = false;
+                foreach (uint handle in fileHandles)
+                {
+                    Level level = container.GetLevel(handle);
+                    foreach (World world in level.GetWorlds())
+                    {
+                        Console.WriteLine("New world: " + world.Name);
+                    }
+                    MapLoader.ImportMap(level);
+                }
+            }
         }
     }
 }

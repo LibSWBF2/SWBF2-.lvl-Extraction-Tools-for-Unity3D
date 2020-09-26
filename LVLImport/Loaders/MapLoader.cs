@@ -15,18 +15,9 @@ using LibSWBF2.Enums;
 public class MapLoader : ScriptableObject {
 
     //[MenuItem("SWBF2/Import Map", false, 1)]
-    public static void ImportMap(string path)
+    public static void ImportMap(Level level)
     {
-        LibSWBF2.Logging.Logger.SetLogLevel(ELogType.Warning);
-        LibSWBF2.Logging.Logger.OnLog += (LoggerEntry logEntry) => 
-        {
-            Debug.Log(logEntry.ToString());
-        };
-
-        Level level = Level.FromFile(path);
-
         World[] worlds = level.GetWorlds();
-        
 
         foreach (World world in worlds)
         {
