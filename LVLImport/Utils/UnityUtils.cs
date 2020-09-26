@@ -17,12 +17,13 @@ static class UnityUtils {
 
 	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
-        return new UnityEngine.Quaternion(vec.X, vec.Y,vec.Z,vec.W);
+        return new UnityEngine.Quaternion(-vec.X, vec.Y,vec.Z,vec.W);
     }
+
 
     public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
     {
-        return new UnityEngine.Vector3(vec.X,vec.Y,vec.Z);
+        return new UnityEngine.Vector3(-vec.X,vec.Y,vec.Z);
     }
 
 
@@ -34,18 +35,21 @@ static class UnityUtils {
 
     public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
     {
-        return new UnityEngine.Vector4(vec.X,vec.Y,vec.Z,vec.W);
+        return new UnityEngine.Vector4(-vec.X,vec.Y,vec.Z,vec.W);
     }
 
-    public static UnityEngine.Vector3[] FloatToVec3Array(float[] floats)
+
+    public static UnityEngine.Vector3[] FloatToVec3Array(float[] floats, bool flipX=false)
     {
+        float mult = flipX ? -1.0f : 1.0f;
         UnityEngine.Vector3[] vectors = new UnityEngine.Vector3[floats.Length / 3];
         for (int i = 0; i < floats.Length; i+=3)
         {
-            vectors[i / 3] = new UnityEngine.Vector3(floats[i],floats[i+1],floats[i+2]);
+            vectors[i / 3] = mult * new UnityEngine.Vector3(flipX ? floats[i] : -floats[i],floats[i+1],floats[i+2]);
         }
         return vectors;
     }
+
 
     public static UnityEngine.Vector2[] FloatToVec2Array(float[] floats)
     {

@@ -32,7 +32,7 @@ public class TerrainLoader : ScriptableObject {
 	        {
 	            for (int y = 0; y < dim; y++)
 	            {
-	                float h = heightsRaw[x * dim + y];
+	                float h = heightsRaw[x * dim + (dim - y - 1)];
 	                heights[x,y] = h < -0.1 ? 0 : h;
 	                holes[x,y] = h < -0.1 ? false : true;
 	            }

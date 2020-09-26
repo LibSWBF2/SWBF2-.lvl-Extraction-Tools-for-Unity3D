@@ -47,7 +47,7 @@ public class ModelLoader : ScriptableObject {
                 continue;
             }
 
-            uint matFlags = seg.GetMaterialFlags();
+            uint matFlags = 2;//seg.GetMaterialFlags();
             string materialName = texName + "_" + matFlags.ToString();
 
             string childName = newObject.name + "_segment_" + segCount++;
@@ -113,7 +113,7 @@ public class ModelLoader : ScriptableObject {
 
         
         CollisionMesh collMesh = model.GetCollisionMesh();
-        int[] indBuffer = collMesh.GetIndices();
+        uint[] indBuffer = collMesh.GetIndices();
 
         try {
 
@@ -121,7 +121,9 @@ public class ModelLoader : ScriptableObject {
             {
                 Mesh mesh = new Mesh();
                 mesh.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices());
-                mesh.triangles = indBuffer;
+                
+                mesh.SetIndexBufferParams(indBuffer.Length, UnityEngine.Rendering.IndexFormat.UInt32);
+                mesh.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);
 
                 MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                 meshCollider.sharedMesh = mesh;
