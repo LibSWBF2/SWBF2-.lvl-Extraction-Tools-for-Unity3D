@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using UnityEngine;
+using UnityEngine.Rendering;
+//using UnityEngine;
 using UnityEditor;
 
 using LibSWBF2.Logging;
@@ -16,13 +18,52 @@ public class ModelLoader : ScriptableObject {
     public static Material defaultMaterial = new Material(Shader.Find("Standard"));
 
 
+
+    public static Material GetMaterial(Level level, string texName, uint matFlags)
+    {
+        if (texName == "")
+        {
+            return defaultMaterial;
+        } 
+        else 
+        {
+            string materialName = texName + "_" + matFlags.ToString();
+
+            if (!materialDataBase.ContainsKey(materialName))
+            {
+                Material material = new Material(defaultMaterial);
+                material.name = materialName;
+
+                if (MaterialsUtils.IsCutout(matFlags))
+                {
+                    MaterialsUtils.SetRenderMode(ref material, 1);
+                }
+                else if (MaterialsUtils.IsTransparent(matFlags))
+                {
+                    MaterialsUtils.SetRenderMode(ref material, 3);
+                }
+
+                Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
+                if (importedTex != null)
+                {
+                    material.mainTexture = importedTex;
+                }
+
+                materialDataBase[materialName] = material;
+            }
+
+            return materialDataBase[materialName];
+        }
+    }
+
+
     public static GameObject GameObjectFromModel(Level level, Model model)
     {
-        GameObject newObject = new GameObject();
-        newObject.isStatic   = true;
-        newObject.AddComponent<MeshRenderer>();
-
-        Segment[] segments;
+        GameObject newObject  = new GameObject();
+        MeshRenderer renderer = newObject.AddComponent<MeshRenderer>();
+        Mesh mesh             = new Mesh();
+        MeshFilter filter     = newObject.AddComponent<MeshFilter>();
+        newObject.isStatic    = true;
 
         try {
             newObject.name = model.Name;
@@ -34,84 +75,65 @@ public class ModelLoader : ScriptableObject {
             return null;
         }
 
-        segments = model.GetSegments(); 
+        Segment[] segments = model.GetSegments(); 
+
+        Material[] mats = new Material[segments.Length];
+
+        mesh.subMeshCount = segments.Length;
 
 
-        int segCount = 0;
+        int totalLength = 0;
         foreach (Segment seg in segments)
         {
+            totalLength += (int) seg.GetVertexBufferLength();
+        }
+
+        Vector3[] positions = new Vector3[totalLength];
+        Vector3[] normals = new Vector3[totalLength];
+        Vector2[] texcoords = new Vector2[totalLength];
+        int[] offsets = new int[segments.Length];
+
+
+        int dataOffset = 0;
+
+        for (int i = 0; i < segments.Length; i++)
+        {
+            Segment seg = segments[i];
+
+
+            // Handle material data
             string texName = seg.GetMaterialTexName();
-
-            if (texName == "")
-            {
-                continue;
-            }
-
             uint matFlags = 2;//seg.GetMaterialFlags();
-            string materialName = texName + "_" + matFlags.ToString();
+            mats[i] = GetMaterial(level, texName, matFlags);
 
-            string childName = newObject.name + "_segment_" + segCount++;
 
-            //Handle mesh
-            Vector3[] vertexBuffer = UnityUtils.FloatToVec3Array(seg.GetVertexBuffer()); 
-            Vector2[] UVs = UnityUtils.FloatToVec2Array(seg.GetUVBuffer());
-            Vector3[] normalsBuffer = UnityUtils.FloatToVec3Array(seg.GetNormalsBuffer());
-            int[] indexBuffer = seg.GetIndexBuffer();
+            // Handle vertex data
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset);
+            UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
-            GameObject childObject = new GameObject();
+            offsets[i] = dataOffset;
 
-            Mesh objectMesh = new Mesh();
-            objectMesh.SetVertices(vertexBuffer);
-            objectMesh.SetUVs(0,UVs);
-            objectMesh.SetNormals(normalsBuffer);
-            objectMesh.SetIndices(indexBuffer, MeshTopology.Triangles, 0);
+            dataOffset += (int) seg.GetVertexBufferLength();
+        }
 
-            MeshFilter filter = childObject.AddComponent<MeshFilter>();
-            filter.sharedMesh = objectMesh;
-          
-            //Handle material
-            Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
-            MeshRenderer childRenderer = childObject.AddComponent<MeshRenderer>();
-            Material material;
+        mesh.SetVertices(positions);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0,texcoords);
 
-            if (materialDataBase.ContainsKey(materialName))
-            {
-                material = materialDataBase[materialName];
-            }
-            else
-            {
-                material = new Material(defaultMaterial);
-                material.name = materialName;
-                materialDataBase[materialName] = material;
-            }
+        renderer.sharedMaterials = mats;
 
-            
-            if (MaterialsUtils.IsCutout(matFlags))
-            {
-                MaterialsUtils.SetRenderMode(ref material, 1);
-            }
-            else if (MaterialsUtils.IsTransparent(matFlags))
-            {
-                MaterialsUtils.SetRenderMode(ref material, 3);
-            }
-            
 
-            childRenderer.sharedMaterial = material;
+        int j = 0;
+        foreach (Segment seg in segments)
+        {
+            mesh.SetTriangles(seg.GetIndexBuffer(), j, true, offsets[j]);
+            j++;
+        }
 
-            if (importedTex == null)
-            {
-                childRenderer.sharedMaterial.color = Color.black;
-            }
-            else 
-            {
-                childRenderer.sharedMaterial.mainTexture = importedTex;
-            }
+        filter.sharedMesh = mesh;
 
-            childObject.transform.SetParent(newObject.transform);
-            childObject.name = childName;
-        }  
 
-        
         CollisionMesh collMesh = model.GetCollisionMesh();
         uint[] indBuffer = collMesh.GetIndices();
 
@@ -119,14 +141,14 @@ public class ModelLoader : ScriptableObject {
 
             if (indBuffer.Length > 2)
             {
-                Mesh mesh = new Mesh();
-                mesh.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices());
+                Mesh collMeshUnity = new Mesh();
+                collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices());
                 
-                mesh.SetIndexBufferParams(indBuffer.Length, UnityEngine.Rendering.IndexFormat.UInt32);
-                mesh.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);
+                collMeshUnity.SetIndexBufferParams(indBuffer.Length, IndexFormat.UInt32);
+                collMeshUnity.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);
 
                 MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
-                meshCollider.sharedMesh = mesh;
+                meshCollider.sharedMesh = collMeshUnity;
             }
         } 
         catch (Exception e)
@@ -142,7 +164,6 @@ public class ModelLoader : ScriptableObject {
     {
         Model[] models = level.GetModels();
         
-        //int i = 0;
         foreach (Model model in models)
         {
             if (model.Name.Contains("LOWD")) continue;
