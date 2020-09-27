@@ -60,6 +60,27 @@ static class UnityUtils {
         }
         return vectors;
     }
+
+
+    public static void ConvertSpaceAndFillVec3(float[] floats, UnityEngine.Vector3[] vectors, int offset=0)
+    {
+        if (floats != null){
+            for (int i = 0; i < floats.Length; i+=3)
+            {
+                vectors[i / 3 + offset] = new UnityEngine.Vector3(-floats[i],floats[i+1],floats[i+2]);
+            }
+        } 
+    }
+
+    public static void FillVec2(float[] floats, UnityEngine.Vector2[] vectors, int offset=0)
+    {
+        if (floats != null){
+            for (int i = 0; i < floats.Length; i+=2)
+            {
+                vectors[i / 2 + offset] = new UnityEngine.Vector2(floats[i],floats[i+1]);
+            }
+        } 
+    }
 }
 
 
