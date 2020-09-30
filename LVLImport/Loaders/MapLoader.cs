@@ -21,6 +21,10 @@ public class MapLoader : ScriptableObject {
 
         foreach (World world in worlds)
         {
+        	Debug.Log("On world: " + world.Name);
+
+        	GameObject worldRoot = new GameObject();
+        	worldRoot.name = world.Name;
             
             Instance[] instances = world.GetInstances();
             foreach (Instance inst in instances)
@@ -41,8 +45,9 @@ public class MapLoader : ScriptableObject {
 
                     if (newObj != null)
                     {
-                        newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
+                        newObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
                         newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
+                        newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
                     }
                 }
                 else 
@@ -62,9 +67,8 @@ public class MapLoader : ScriptableObject {
         foreach (var light in level.GetLights()) 
         {
             GameObject lightObj = new GameObject();
-            light.position.Z *= -1.0f;
-            lightObj.transform.position = UnityUtils.Vec3FromLib(light.position);
             lightObj.transform.rotation = UnityUtils.QuatFromLib(light.rotation);
+            lightObj.transform.position = UnityUtils.Vec3FromLib(light.position);
             lightObj.name = light.name;
 
             UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
@@ -88,7 +92,7 @@ public class MapLoader : ScriptableObject {
             else if (ltype == LibSWBF2.Enums.LightType.Dir)
             {
                 lightComp.type = UnityEngine.LightType.Directional;
-                lightComp.intensity = 1;
+                lightComp.intensity = 3;
                 //lightComp.range = light.range;
                 //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
             }
@@ -102,7 +106,6 @@ public class MapLoader : ScriptableObject {
 
         /*
         Basic skybox loading
-        */
 
         foreach (var model in level.GetModels())
         {
@@ -121,5 +124,6 @@ public class MapLoader : ScriptableObject {
                 newObj.transform.localScale = new UnityEngine.Vector3(200,200,200);
             }
         }
+        */
     }
 }

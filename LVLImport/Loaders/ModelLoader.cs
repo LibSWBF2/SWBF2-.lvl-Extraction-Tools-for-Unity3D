@@ -103,13 +103,13 @@ public class ModelLoader : ScriptableObject {
 
             // Handle material data
             string texName = seg.GetMaterialTexName();
-            uint matFlags = 2;//seg.GetMaterialFlags();
+            uint matFlags = seg.GetMaterialFlags();
             mats[i] = GetMaterial(level, texName, matFlags);
 
 
             // Handle vertex data
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, false);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
             UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
             offsets[i] = dataOffset;
@@ -142,7 +142,7 @@ public class ModelLoader : ScriptableObject {
             if (indBuffer.Length > 2)
             {
                 Mesh collMeshUnity = new Mesh();
-                collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices());
+                collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), false);
                 
                 collMeshUnity.SetIndexBufferParams(indBuffer.Length, IndexFormat.UInt32);
                 collMeshUnity.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);

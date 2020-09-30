@@ -28,11 +28,12 @@ public class TerrainLoader : ScriptableObject {
 
 	        float[,] heights = new float[dim,dim];
 	        bool[,] holes    = new bool[dim,dim];
+
 	        for (int x = 0; x < dim; x++)
 	        {
 	            for (int y = 0; y < dim; y++)
 	            {
-	                float h = heightsRaw[x * dim + (dim - y - 1)];
+	                float h = heightsRaw[(dim - 1 - x) * dim + y];
 	                heights[x,y] = h < -0.1 ? 0 : h;
 	                holes[x,y] = h < -0.1 ? false : true;
 	            }
