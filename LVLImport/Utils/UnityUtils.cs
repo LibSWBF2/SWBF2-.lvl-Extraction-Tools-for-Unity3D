@@ -17,7 +17,14 @@ static class UnityUtils {
 
 	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
-        return new UnityEngine.Quaternion(vec.X, vec.Y, -vec.Z, -vec.W);
+        //return new UnityEngine.Quaternion(vec.Y, -vec.Z, vec.W, -vec.X);
+        //return new UnityEngine.Quaternion(vec.Y, -vec.Z, vec.W, -vec.X);
+        return new UnityEngine.Quaternion(-vec.X, vec.W, -vec.Z, vec.Y);
+    }
+
+    public static UnityEngine.Quaternion QuatFromLibLGT(LibSWBF2.Types.Vector4 vec)
+    {
+        return new UnityEngine.Quaternion(vec.Y, vec.Z, vec.W, vec.X);   
     }
 
 
