@@ -76,6 +76,7 @@ public class MapLoader : ScriptableObject {
             lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(light.rotation);
 
             light.position.Z *= -1.0f;
+            light.position.Y += .2f;
             lightObj.transform.position = UnityUtils.Vec3FromLib(light.position);
 
             lightObj.name = light.name;
@@ -112,10 +113,10 @@ public class MapLoader : ScriptableObject {
             }
         }
 
-        RenderSettings.ambientLight = Color.white;
+        //RenderSettings.ambientLight = Color.white;
 
-        /*
-        Basic skybox loading
+        
+        //Basic skybox loading
 
         foreach (var model in level.GetModels())
         {
@@ -131,9 +132,8 @@ public class MapLoader : ScriptableObject {
             }
 
             if (newObj != null){
-                newObj.transform.localScale = new UnityEngine.Vector3(200,200,200);
+                newObj.transform.localScale = new UnityEngine.Vector3(-200,200,200);
             }
         }
-        */
     }
 }
