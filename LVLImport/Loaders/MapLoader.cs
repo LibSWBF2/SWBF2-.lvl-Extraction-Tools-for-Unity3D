@@ -14,7 +14,6 @@ using LibSWBF2.Enums;
 
 public class MapLoader : ScriptableObject {
 
-    //[MenuItem("SWBF2/Import Map", false, 1)]
     public static void ImportMap(Level level)
     {
         World[] worlds = level.GetWorlds();
@@ -30,8 +29,15 @@ public class MapLoader : ScriptableObject {
             foreach (Instance inst in instances)
             {
                 Model model = null;
-                string geometryName = inst.GetModelName();
+                var ec = level.GetEntityClass(inst.GetEntityClassName());
+
+                if (ec == null)
+                {
+                    continue;
+                }
+
                 try {
+                    string geometryName = ec.GetProperty("GeometryName");
                     model = level.GetModel(geometryName);
                     string tstname = model.Name;
                 } catch (Exception e){
