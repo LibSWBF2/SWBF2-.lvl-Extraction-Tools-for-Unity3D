@@ -1,3 +1,6 @@
+/*
+
+
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -18,14 +21,12 @@ public class CentralLoader : ScriptableObject {
     private ModelLoader modelLoader;
     private 
 
-
-
     private Container containerWrapper = null;
 
     public CentralLoader(Container levelContainer)
     {
-
-
     }
 
 }
+
+*/
