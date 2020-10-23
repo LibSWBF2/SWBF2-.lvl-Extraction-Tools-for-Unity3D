@@ -20,7 +20,7 @@ public class MapLoader : ScriptableObject {
 
         foreach (World world in worlds)
         {
-        	Debug.Log("On world: " + world.Name);
+        	//Debug.Log("On world: " + world.Name);
 
         	GameObject worldRoot = new GameObject();
         	worldRoot.name = world.Name;
@@ -47,20 +47,55 @@ public class MapLoader : ScriptableObject {
 
                 if (model != null)
                 {
-                    GameObject newObj = ModelLoader.GameObjectFromModel(level, model);
+                    string objectName = inst.Name.Equals("") ? model.Name : inst.Name;
+                    GameObject newObj = new GameObject(objectName);
 
-                    if (newObj != null)
+                    if (ModelLoader.AddModelComponents(level, ref newObj, model))
                     {
-                        Debug.Log("Object: " + newObj.name + "\n\tRotation: " + UnityUtils.QuatFromLib(inst.GetRotation()).ToString() + "\n\tLocation: " + UnityUtils.Vec3FromLib(inst.GetPosition()).ToString() );
-
                         newObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
                         newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
                         newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
                         newObj.transform.parent = worldRoot.transform;
                     }
+                    else 
+                    {
+                        DestroyImmediate(newObj);
+                    }
                 }
                 else 
                 {
+                }
+
+                var attached = ec.GetProperty("AttachODF");
+                if (attached != null && attached != "")
+                {
+                    var attachedEC = level.GetEntityClass(attached);
+                    
+                    if (attachedEC != null)
+                    {
+                        string gName = attachedEC.GetProperty("GeometryName");
+                        Model attachedModel = level.GetModel(gName);
+
+                        try {
+
+                            if (gName != "")
+                            {
+                                GameObject attachedObj = new GameObject(gName);
+                                ModelLoader.AddModelComponents(level, ref attachedObj, attachedModel);
+
+                                //attachedObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
+                                //newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
+                                //newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
+                                //attachedObj.transform.parent = worldRoot.transform;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Log("Failed to load skinned model: " + gName);
+                            Debug.Log("Exception string: " + e.ToString());
+                        }
+
+                    }   
                 }
             }
         }
@@ -118,19 +153,22 @@ public class MapLoader : ScriptableObject {
                 DestroyImmediate(lightObj);
             }
         }
-
-        //RenderSettings.ambientLight = Color.white;
-
         
-        //Basic skybox loading
 
+        //Basic skybox loading
         foreach (var model in level.GetModels())
         {
             GameObject newObj = null;
             try {
                 if (model.Name.Contains("sky")) //best effort
                 {
-                    newObj = ModelLoader.GameObjectFromModel(level,model);
+                    newObj = new GameObject(model.Name);
+
+                    if (!ModelLoader.AddModelComponents(level, ref newObj, model))
+                    {
+                        DestroyImmediate(newObj);
+                        continue;
+                    }
                 }
             } catch {
                 Debug.Log("Couldn't load sky...");

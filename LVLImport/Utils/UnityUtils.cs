@@ -11,6 +11,7 @@ using UnityEngine;
 
 
 using LibSWBF2.Types;
+using LibSWBF2.Wrappers;
 
 
 static class UnityUtils {
@@ -86,6 +87,18 @@ static class UnityUtils {
                 vectors[i / 2 + offset] = new UnityEngine.Vector2(floats[i],floats[i+1]);
             }
         } 
+    }
+
+    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset=0)
+    {
+        if (vws != null)
+        {
+            for (int i = offset; i < vws.Length; i++)
+            {
+                boneWeights[i].boneIndex = (int) vws[i].index;
+                boneWeights[i].weight    = vws[i].weight;
+            }
+        }
     }
 }
 
