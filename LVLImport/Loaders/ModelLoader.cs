@@ -171,10 +171,8 @@ public class ModelLoader : ScriptableObject {
                 bones[boneNum] = transformMap[curBoneSWBF.name];
                 bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? transformMap[curBoneSWBF.parentName] : newObject.transform, false);
 
-                bindPoses[boneNum] = Matrix4x4.identity;// bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
+                bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
             }
-
-            //Debug.Log(message);
 
             mesh.bindposes = bindPoses;
 

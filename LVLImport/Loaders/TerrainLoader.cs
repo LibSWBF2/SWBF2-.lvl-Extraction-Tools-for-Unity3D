@@ -14,7 +14,7 @@ public class TerrainLoader : ScriptableObject {
 
     public static void ImportTerrain(Level level) {
 
-        foreach (LibSWBF2.Wrappers.Terrain terrain in level.GetTerrains() )
+        foreach (LibSWBF2.Wrappers.Terrain terrain in level.GetTerrains())
         {
 	        //Read heightmap
 	        terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
@@ -59,7 +59,7 @@ public class TerrainLoader : ScriptableObject {
 	        //Assign layers
 	        TerrainLayer[] terrainLayers = new TerrainLayer[numLayers];
 	        
-	        for (int i = 0; i < numLayers; i++)
+	        for (int i = 0; i < numLayers && i < terTextures.Count; i++)
 	        {
 	        	TerrainLayer newLayer = new TerrainLayer();
 	            newLayer.diffuseTexture = terTextures[i];

@@ -38,12 +38,18 @@ sysinfo.txt
 *.apk
 *.unitypackage
 
-#Mac/Linux ignores
+# Mac/Linux ignores
 *.so
 *.dylib
 *.dll
 *.DS_Store
 *.sh
+
+# LibSWBF2 logs
 *.log
 
+
+# Asset Ignores
+*.fbx
+*.tga
 
