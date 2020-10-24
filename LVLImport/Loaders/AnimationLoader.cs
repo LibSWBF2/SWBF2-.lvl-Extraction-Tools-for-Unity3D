@@ -102,5 +102,3 @@ public class AnimationLoader : ScriptableObject {
     	}
     }
 }
-
-
