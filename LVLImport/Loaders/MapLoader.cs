@@ -16,7 +16,30 @@ public class MapLoader : ScriptableObject {
 
     public static void ImportMap(Level level)
     {
+
+        AnimationLoader.LoadAndAttachAnimation(level, "grab", "tat3_bldg_rancor");
+        return;
+
+
         World[] worlds = level.GetWorlds();
+
+        Debug.Log("=============Testing Native Vectors=============");
+
+        UnityEngine.Vector3[] vecs = new UnityEngine.Vector3[4];
+
+        unsafe
+        {
+            fixed (UnityEngine.Vector3* destPtr = vecs)
+            {
+                Model.TestNativeVectors((void *) destPtr, 4);
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.Log("\nTest vector = " + vecs[i].ToString());
+        }
+
 
         foreach (World world in worlds)
         {
@@ -56,6 +79,9 @@ public class MapLoader : ScriptableObject {
                         newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
                         newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
                         newObj.transform.parent = worldRoot.transform;
+
+
+
                     }
                     else 
                     {
