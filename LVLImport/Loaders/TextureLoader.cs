@@ -16,7 +16,7 @@ public class TextureLoader : ScriptableObject {
     public static bool imported = false;
 
 
-    public static Texture2D ImportTexture(Level level, string name, bool reuse=true) 
+    public static Texture2D ImportTexture(string name, bool reuse=true) 
     {
         string texturePath = "Assets/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
 
@@ -27,31 +27,37 @@ public class TextureLoader : ScriptableObject {
 
         if (File.Exists(texturePath))
         {
-            Texture2D tex = new Texture2D(2,2);
+            Texture2D tex2D = new Texture2D(2,2);
             byte[] texBytes = File.ReadAllBytes(texturePath);
-            tex.LoadImage(texBytes);
+            tex2D.LoadImage(texBytes);
 
-            texDataBase[name] = tex;
-            return tex;
+            texDataBase[name] = tex2D;
+            return tex2D;
         }
-        else if (level.GetTexture(name, out int width, out int height, out byte[] data))
+
+
+        LibSWBF2.Wrappers.Texture tex = CentralLoader.GetTexture(name);
+
+        if (tex != null && tex.width * tex.width > 0)
         {
-            Texture2D tex = new Texture2D(width,height);
-            Color[] colors = tex.GetPixels(0);
-            for (int i = 0; i < height * width; i++)
+            Texture2D newTexture = new Texture2D(tex.width,tex.height);
+            byte[] data = tex.GetBytesRGBA();
+
+            Color[] colors = newTexture.GetPixels(0);
+            for (int i = 0; i < tex.height * tex.width; i++)
             {
                 colors[i] = new Color(data[i*4]/255.0f,data[i*4 + 1]/255.0f,data[i*4 + 2]/255.0f,data[i*4 + 3]/255.0f);
             }
-            tex.SetPixels(colors,0);
-            tex.Apply();
-            //File.WriteAllBytes(texturePath, tex.EncodeToPNG());
+            newTexture.SetPixels(colors,0);
+            newTexture.Apply();
+            //File.WriteAllBytes(texturePath, newTexture.EncodeToPNG());
 
-            texDataBase[name] = tex;
-            return tex;
+            texDataBase[name] = newTexture;
+            return newTexture;
         }
         else 
         {
-            Debug.Log("Texture Import Failed!");
+            Debug.Log(String.Format("ERROR: Texture: {0} failed to load!", name));
             return null;
         }
     }

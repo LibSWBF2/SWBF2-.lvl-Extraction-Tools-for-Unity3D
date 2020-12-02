@@ -1,32 +1,47 @@
-/*
-
-
 using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-using UnityEngine;
-using UnityEngine.Rendering;
-//using UnityEngine;
 using UnityEditor;
+//using UnityEngine.ScriptableObject;
 
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class CentralLoader : ScriptableObject {
+public class CentralLoader : UnityEngine.ScriptableObject {
 
+    private static LibSWBF2.Wrappers.Container container = null;
 
-    private ModelLoader modelLoader;
-    private 
-
-    private Container containerWrapper = null;
-
-    public CentralLoader(Container levelContainer)
+    public static bool SetContainer(Container lvlContainer)
     {
+    	container = lvlContainer;
+    	return true;
     }
 
+    public static LibSWBF2.Wrappers.Texture GetTexture(string name)
+    {
+    	if (container == null) return null;
+    	return container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
+    }
+
+    public static Model GetModel(string name)
+    {
+	   	if (container == null) return null;
+	   	return container.FindWrapper<Model>(name);
+    }
+
+    public static EntityClass GetEntityClass(string name)
+    {
+	   	if (container == null) return null;
+    	return container.FindWrapper<EntityClass>(name);
+    }
+
+    public static AnimationSet GetAnimationSet(string name)
+    {
+    	if (container == null) return null;
+    	return container.FindWrapper<AnimationSet>(name);
+    }
 }
 
-*/

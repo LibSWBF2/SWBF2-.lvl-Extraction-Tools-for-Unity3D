@@ -1,5 +1,3 @@
-
-
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -14,11 +12,9 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 
 
-
-
 public class AnimationLoader : ScriptableObject {
 
-    //private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
+    private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
 
 
     private static string[] ComponentPaths = {  "localRotation.x",
@@ -37,7 +33,7 @@ public class AnimationLoader : ScriptableObject {
 		
     	string relPath = curPath + bone.name;
 
-    	Debug.Log("Setting up path: " + relPath);
+    	//Debug.Log("Setting up path: " + relPath);
 
     	animSet.GetAnimationMetadata(animHash, out int frameCap, out int numBones);
 
@@ -66,39 +62,43 @@ public class AnimationLoader : ScriptableObject {
 
 
 
-    public static void LoadAndAttachAnimation(Level level, string animationName, string animSetName)
+    public static AnimationClip LoadAnimationClip(string animSetName, string animationName, Transform objectTransform)
     {
-    	var animSet = level.GetAnimationSet(animSetName);
+    	uint animID = HashUtils.GetCRC(animSetName + "/" + animationName);
+
+    	if (animDatabase.ContainsKey(animID))
+    	{
+    		return animDatabase[animID];
+    	}
+
+    	var animSet = CentralLoader.GetAnimationSet(animSetName);
 
     	if (animSet == null)
     	{
-    		Debug.Log("Couldn't find animation set!");
-    		return;
-    	}
-
-    	GameObject rancor = GameObject.Find("tat3_bldg_rancor");
-
-    	if (rancor == null)
-    	{
-    		Debug.Log("Couldn't find the rancor!");
-    		return;
+    		Debug.Log(String.Format("ERROR: AnimationSet {0} failed to load!", animSetName));
+    		return null;
     	}
 
     	uint animCRC = HashUtils.GetCRC(animationName);
 
-    	if (animSet.GetAnimationMetadata(animCRC, out int numFrames, out int numBones))
+    	if (objectTransform != null && animSet.GetAnimationMetadata(animCRC, out int numFrames, out int numBones))
     	{
-    		var anim = rancor.GetComponent<Animation>();
     		var clip = new AnimationClip();
     		clip.legacy = true;
 
-    		for (int i = 0; i < rancor.transform.childCount; i++)
+    		for (int i = 0; i < objectTransform.childCount; i++)
     		{
-	    		WalkSkeletonAndCreateCurves(ref clip, animSet, rancor.transform.GetChild(i), "", animCRC);
+	    		WalkSkeletonAndCreateCurves(ref clip, animSet, objectTransform.GetChild(i), "", animCRC);
     		}
 
-    		anim.AddClip(clip, clip.name);
-        	//anim.Play(clip.name);
+    		animDatabase[animID] = clip;
+
+    		return clip;
+    	}
+    	else 
+    	{
+    		Debug.Log(String.Format("ERROR: AnimationSet {0} does contain the animation: {1}!", animSetName, animationName));
+    		return null;
     	}
     }
 }

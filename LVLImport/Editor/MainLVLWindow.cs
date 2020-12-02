@@ -148,7 +148,6 @@ public class LVLImportWindow : EditorWindow {
 
             foreach (string path in filesToLoad)
             {
-                Debug.Log("Adding " + path);
                 fileHandles.Add(container.AddLevel(path));
             }
 
@@ -169,13 +168,15 @@ public class LVLImportWindow : EditorWindow {
             if (container.IsDone())
             {
                 currentlyLoading = false;
+                CentralLoader.SetContainer(container);
+
                 foreach (uint handle in fileHandles)
                 {
                     Level level = container.GetLevel(handle);
-                    foreach (World world in level.GetWorlds())
-                    {
-                        Console.WriteLine("New world: " + world.Name);
-                    }
+
+                    if (level == null)
+                        continue;
+
                     MapLoader.ImportMap(level);
                 }
             }
