@@ -18,19 +18,19 @@ public class AnimatedProp : MonoBehaviour {
 
 
     public Animator animator;
-
     public Transform trigger1;
 
 
     public Start()
     {
     	animator = GameObjects.AddComponent<Animator>();
+    	
 
 
     }
 
 
-    public 
+    public OnTrigger()
 
 
 

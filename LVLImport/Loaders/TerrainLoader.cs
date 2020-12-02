@@ -46,7 +46,7 @@ public class TerrainLoader : ScriptableObject {
 	        List<Texture2D> terTextures = new List<Texture2D>();
 	        foreach (string texName in terrain.GetTextureNames())
 	        {
-	            Texture2D tex = TextureLoader.ImportTexture(level,texName);
+	            Texture2D tex = TextureLoader.ImportTexture(texName);
 	            if (tex != null)
 	            {
 	            	terTextures.Add(tex);  

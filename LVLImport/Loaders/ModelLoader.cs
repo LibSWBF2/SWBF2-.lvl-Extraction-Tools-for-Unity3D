@@ -19,7 +19,7 @@ public class ModelLoader : ScriptableObject {
 
 
 
-    public static Material GetMaterial(Level level, string texName, uint matFlags)
+    public static Material GetMaterial(string texName, uint matFlags)
     {
         if (texName == "")
         {
@@ -43,7 +43,7 @@ public class ModelLoader : ScriptableObject {
                     MaterialsUtils.SetRenderMode(ref material, 3);
                 }
 
-                Texture2D importedTex = TextureLoader.ImportTexture(level, texName);
+                Texture2D importedTex = TextureLoader.ImportTexture(texName);
                 if (importedTex != null)
                 {
                     material.mainTexture = importedTex;
@@ -57,15 +57,136 @@ public class ModelLoader : ScriptableObject {
     }
 
 
-
-    public static bool AddModelComponents(Level level, ref GameObject newObject, Model model)
+    public static bool AddModelComponentsHierarchical(ref GameObject newObject, Model model)
     {
-        Mesh mesh = new Mesh();
+        LibSWBF2.Wrappers.Bone[] hierarchy = model.GetSkeleton();
+        Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
+
+        foreach (var node in hierarchy)
+        {
+            var nodeTransform = new GameObject(node.name).transform;
+            nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
+            nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
+            hierarchyMap[node.name] = nodeTransform;
+        }
+
+        foreach (var node in hierarchy)
+        {   
+            if (node.parentName.Equals(""))
+            {
+                hierarchyMap[node.name].SetParent(newObject.transform, false);
+            }
+            else 
+            {
+                hierarchyMap[node.name].SetParent(hierarchyMap[node.parentName], false);   
+            }
+        }
+
+        Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
+        foreach (var segment in model.GetSegments())
+        {
+            string boneName = segment.GetBone();
+
+            if (boneName.Equals("")) continue;
+
+            if (!segmentMap.ContainsKey(boneName))
+            {
+                segmentMap[boneName] = new List<Segment>();
+            }
+            
+            segmentMap[boneName].Add(segment);
+        }
+
+
+        foreach (string boneName in segmentMap.Keys)
+        {
+            GameObject boneObj = hierarchyMap[boneName].gameObject;
+            List<Segment> segments = segmentMap[boneName];
+
+            Mesh mesh = new Mesh();
+            Material[] mats = new Material[segments.Count];
+
+            mesh.subMeshCount = segments.Count;
+
+            int totalLength = 0;
+            foreach (Segment seg in segments)
+            {
+                totalLength += (int) seg.GetVertexBufferLength();
+            }
+
+            Vector3[] positions = new Vector3[totalLength];
+            Vector3[] normals = new Vector3[totalLength];
+            Vector2[] texcoords = new Vector2[totalLength];
+            int[] offsets = new int[segments.Count];
+
+            int dataOffset = 0;
+
+            for (int i = 0; i < segments.Count; i++)
+            {
+                Segment seg = segments[i];
+
+                // Handle material data
+                string texName = seg.GetMaterialTexName();
+                uint matFlags = seg.GetMaterialFlags();
+                mats[i] = GetMaterial(texName, matFlags);
+
+                // Handle vertex data
+                UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, false);
+                UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
+                UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
+
+                offsets[i] = dataOffset;
+
+                dataOffset += (int) seg.GetVertexBufferLength();
+            }
+
+            mesh.SetVertices(positions);
+            mesh.SetNormals(normals);
+            mesh.SetUVs(0,texcoords);
+
+            int j = 0;
+            foreach (Segment seg in segments)
+            {
+                mesh.SetTriangles(seg.GetIndexBuffer(), j, true, offsets[j]);
+                j++;
+            }
+
+            MeshFilter filter = boneObj.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+
+            MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = mats;
+
+            boneObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
+        }
+
+        return true;
+    }
+
+
+
+    public static bool AddModelComponents(ref GameObject newObject, string modelName)
+    {   
+        Model model = CentralLoader.GetModel(modelName);
+
+        if (model == null)
+        {
+            Debug.Log(String.Format("ERROR: Failed to load model: {0}", modelName));
+            return false;
+        }
+
 
         if (model.IsSkeletalMesh)
         {
-            Debug.Log("Setting up skinned mesh + renderer for " + model.Name);
+            Debug.Log(String.Format("Setting up skinned mesh + renderer for " + model.Name));
         }
+
+        if (model.HasNonTrivialHierarchy && !model.IsSkeletalMesh)
+        {
+            return AddModelComponentsHierarchical(ref newObject, model);
+        }
+
+        Mesh mesh = new Mesh();
 
         Segment[] segments = model.GetSegments(); 
         Material[] mats = new Material[segments.Length];
@@ -90,12 +211,10 @@ public class ModelLoader : ScriptableObject {
         {
             Segment seg = segments[i];
 
-
             // Handle material data
             string texName = seg.GetMaterialTexName();
             uint matFlags = seg.GetMaterialFlags();
-            mats[i] = GetMaterial(level, texName, matFlags);
-
+            mats[i] = GetMaterial(texName, matFlags);
 
             // Handle vertex data
             UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, false);
@@ -151,8 +270,8 @@ public class ModelLoader : ScriptableObject {
                 var curBoneSWBF = bonesSWBF[boneNum];
                 var boneTransform = new GameObject(curBoneSWBF.name).transform;
 
-                //boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                //boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
+                boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
 
                 transformMap[curBoneSWBF.name] = boneTransform;
             }
@@ -222,6 +341,8 @@ public class ModelLoader : ScriptableObject {
                 return false;
             }            
         }
+
+        newObject.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
 
         return true;      
     }

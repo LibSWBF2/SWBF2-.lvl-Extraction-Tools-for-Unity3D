@@ -16,102 +16,56 @@ public class MapLoader : ScriptableObject {
 
     public static void ImportMap(Level level)
     {
-
-        AnimationLoader.LoadAndAttachAnimation(level, "grab", "tat3_bldg_rancor");
-        return;
-
-
         World[] worlds = level.GetWorlds();
 
 
         foreach (World world in worlds)
         {
-        	//Debug.Log("On world: " + world.Name);
-
-        	GameObject worldRoot = new GameObject();
-        	worldRoot.name = world.Name;
+        	GameObject worldRoot = new GameObject(world.Name);
             
             Instance[] instances = world.GetInstances();
             foreach (Instance inst in instances)
             {
-                Model model = null;
-                var ec = level.GetEntityClass(inst.GetEntityClassName());
+                string entityClassName = inst.GetEntityClassName();
+                string baseName = ClassLoader.GetBaseClassName(entityClassName);
 
-                if (ec == null)
+                GameObject obj = null;
+
+                switch (baseName)
+                {
+                    case "door":
+                        obj = ClassLoader.LoadBaseClass_Door(entityClassName);
+                        break;
+                    case "prop":
+                    case "destructablebuilding":
+                    case "armedbuilding":
+                        obj = ClassLoader.LoadBaseClass_Prop(entityClassName);
+                        break;
+                    //case 
+                    //    obj = ClassLoader.LoadBaseClass_Prop(entityClassName);
+                    //    break;
+                    default:
+                        Debug.Log(String.Format("\tERROR: Encountered unknown base class: {0} subclassed by: {1}", baseName, entityClassName));
+                        break; 
+                }
+
+                if (obj == null)
                 {
                     continue;
                 }
 
-                try {
-                    string geometryName = ec.GetProperty("GeometryName");
-                    model = level.GetModel(geometryName);
-                    string tstname = model.Name;
-                } catch (Exception e){
-                    //Debug.Log("Model not found: " + inst.Name);
-                    continue;
-                }
-
-                if (model != null)
+                if (!inst.Name.Equals(""))
                 {
-                    string objectName = inst.Name.Equals("") ? model.Name : inst.Name;
-                    GameObject newObj = new GameObject(objectName);
-
-                    if (ModelLoader.AddModelComponents(level, ref newObj, model))
-                    {
-                        newObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
-                        newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
-                        newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
-                        newObj.transform.parent = worldRoot.transform;
-
-
-
-                    }
-                    else 
-                    {
-                        DestroyImmediate(newObj);
-                    }
-                }
-                else 
-                {
+                    obj.name = inst.Name;
                 }
 
-                var attached = ec.GetProperty("AttachODF");
-                if (attached != null && attached != "")
-                {
-                    var attachedEC = level.GetEntityClass(attached);
-                    
-                    if (attachedEC != null)
-                    {
-                        string gName = attachedEC.GetProperty("GeometryName");
-                        Model attachedModel = level.GetModel(gName);
-
-                        try {
-
-                            if (gName != "")
-                            {
-                                GameObject attachedObj = new GameObject(gName);
-                                ModelLoader.AddModelComponents(level, ref attachedObj, attachedModel);
-
-                                //attachedObj.transform.localScale = new UnityEngine.Vector3(-1.0f,1.0f,1.0f);
-                                //newObj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
-                                //newObj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
-                                //attachedObj.transform.parent = worldRoot.transform;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.Log("Failed to load skinned model: " + gName);
-                            Debug.Log("Exception string: " + e.ToString());
-                        }
-
-                    }   
-                }
+                obj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
+                obj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
+                obj.transform.parent = worldRoot.transform;
             }
         }
            
         TerrainLoader.ImportTerrain(level);
-
-
 
         /*
         Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
@@ -173,7 +127,7 @@ public class MapLoader : ScriptableObject {
                 {
                     newObj = new GameObject(model.Name);
 
-                    if (!ModelLoader.AddModelComponents(level, ref newObj, model))
+                    if (!ModelLoader.AddModelComponents(ref newObj, model.Name))
                     {
                         DestroyImmediate(newObj);
                         continue;
