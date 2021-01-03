@@ -122,7 +122,7 @@ public class ClassLoader : ScriptableObject {
                             anim = obj.AddComponent<Animation>();
                         }
 
-                        anim.AddClip(animClip, animClip.name);
+                        anim.AddClip(animClip, propertyValue);
                         anim.wrapMode = WrapMode.Once;
                     }
                     break;
@@ -140,7 +140,7 @@ public class ClassLoader : ScriptableObject {
                     break;
             }
         }
-        
+
         obj.AddComponent<Door>();
         classObjectDatabase[name] = obj;
         return obj;
