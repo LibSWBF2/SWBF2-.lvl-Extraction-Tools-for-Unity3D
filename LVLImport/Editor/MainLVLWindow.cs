@@ -14,25 +14,13 @@ using LibSWBF2.Wrappers;
 public class LVLImportWindow : EditorWindow {
 
     bool saveAllPrefabs, importLighting,
-    currentlyLoading, startLoading, buttonStatus, importMeshTerrain;
+    currentlyLoading, startLoading, buttonStatus;
 
 
     Container container = new Container();
-
-    
-    string importMeshTerrainTip = String.Join(
-                                " ",
-                                "If toggled, will import and draw the terrain as a mesh",
-                                "detached from any terrain component,",
-                                "using the heightmap representation only for collision."
-                                );
                                 
-    string importLightingTip = String.Join(
-                                " ",
-                                "Lighting still has some issues,",
-                                "light transforms will have incorrect rotations",
-                                "and intensities are hardcoded at an estimate of 10"
-                                );
+
+    string importLightingTip = "Best effort.  Directional lights are not converted well...";
 
     string saveAllPrefabsTip = String.Join(
                                 " ",
@@ -129,15 +117,14 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
 
-        saveAllPrefabs = EditorGUILayout.Toggle(new GUIContent("Save All Assets", saveAllPrefabsTip), saveAllPrefabs);
-        importLighting = EditorGUILayout.Toggle(new GUIContent("Import Lighting", importMeshTerrainTip), importLighting);
-        importMeshTerrain = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", importMeshTerrainTip), importMeshTerrain);
+        saveAllPrefabs = EditorGUILayout.Toggle(new GUIContent("Save Prefabs", saveAllPrefabsTip), saveAllPrefabs);
+        importLighting = EditorGUILayout.Toggle(new GUIContent("Import Lighting", importLightingTip), importLighting);
 
         AddSpaces(5);
         
         GUILayout.BeginHorizontal();
         startLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
-        GUILayout.Button("Import Objects",GUILayout.Width(100));
+        //GUILayout.Button("Import Objects",GUILayout.Width(100));
         GUILayout.EndHorizontal();
 
         GUI.enabled = true;
