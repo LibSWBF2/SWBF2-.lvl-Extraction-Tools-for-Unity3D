@@ -23,6 +23,12 @@ public class ClassLoader : ScriptableObject {
     public const uint ANIMATION = 3779456605;
 
 
+    public static void ResetDB()
+    {
+        classObjectDatabase.Clear();
+    }
+
+
     private static Transform FindChildTransform(Transform trans, string childName)
     {
         for (int j = 0; j < trans.childCount; j++)

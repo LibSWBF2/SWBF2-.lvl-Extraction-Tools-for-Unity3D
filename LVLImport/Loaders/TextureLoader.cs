@@ -15,6 +15,10 @@ public class TextureLoader : ScriptableObject {
     public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
     public static bool imported = false;
 
+    public static void ResetDB()
+    {
+        texDataBase.Clear();
+    }
 
     public static Texture2D ImportTexture(string name, bool reuse=true) 
     {

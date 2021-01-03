@@ -17,6 +17,10 @@ public class ModelLoader : ScriptableObject {
     public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
     public static Material defaultMaterial = new Material(Shader.Find("Standard"));
 
+    public static void ResetDB()
+    {
+        materialDataBase.Clear();
+    }
 
 
     public static Material GetMaterial(string texName, uint matFlags)
@@ -273,8 +277,8 @@ public class ModelLoader : ScriptableObject {
                 var boneTransform = prim.transform; //GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
                                     //new GameObject(curBoneSWBF.name).transform;
 
-                boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                //boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
+                //boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
 
                 transformMap[curBoneSWBF.name] = boneTransform;
             }
@@ -293,7 +297,7 @@ public class ModelLoader : ScriptableObject {
                 bones[boneNum] = transformMap[curBoneSWBF.name];
                 bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? transformMap[curBoneSWBF.parentName] : newObject.transform, false);
 
-                bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
+                bindPoses[boneNum] = Matrix4x4.identity;//bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
             }
 
             mesh.bindposes = bindPoses;
@@ -305,8 +309,8 @@ public class ModelLoader : ScriptableObject {
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-                transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                //transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
+                //transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
             }
         }
         else

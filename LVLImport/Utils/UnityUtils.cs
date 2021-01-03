@@ -9,7 +9,6 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 using UnityEngine;
 
-
 using LibSWBF2.Types;
 using LibSWBF2.Wrappers;
 
