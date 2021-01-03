@@ -17,6 +17,12 @@ public class CentralLoader : UnityEngine.ScriptableObject {
     public static bool SetContainer(Container lvlContainer)
     {
     	container = lvlContainer;
+
+        ModelLoader.ResetDB();
+        AnimationLoader.ResetDB();
+        TextureLoader.ResetDB();
+        ClassLoader.ResetDB();
+
     	return true;
     }
 

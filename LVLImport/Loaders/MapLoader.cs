@@ -39,6 +39,7 @@ public class MapLoader : ScriptableObject {
                         break;
                     
                     case "prop":
+                    //case "building":
                     case "destructablebuilding":
                     case "armedbuilding":
                         obj = ClassLoader.LoadBaseClass_Prop(entityClassName);

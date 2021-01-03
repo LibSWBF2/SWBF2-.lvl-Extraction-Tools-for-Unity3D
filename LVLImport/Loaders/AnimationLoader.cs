@@ -16,7 +16,7 @@ public class AnimationLoader : ScriptableObject {
 
     private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
 
-
+    /*
     private static string[] ComponentPaths = {  "localRotation.x",
 											    "localRotation.y",
 											    "localRotation.z",
@@ -24,7 +24,29 @@ public class AnimationLoader : ScriptableObject {
     										    "localPosition.x",
     										    "localPosition.y",
     										    "localPosition.z"  };
+    */
 
+    private static string[] ComponentPaths = {  "localRotation.x",
+                                                "localRotation.y",
+                                                "localRotation.z",
+                                                "localRotation.w",
+                                                "localPosition.x",
+                                                "localPosition.y",
+                                                "localPosition.z"  };
+
+    private static float[] ComponentMultipliers = {  1.0f,
+                                                      1.0f,
+                                                     -1.0f,
+                                                      1.0f,
+                                                      1.0f,
+                                                      1.0f,
+                                                     -1.0f  };    
+
+
+    public static void ResetDB()
+    {
+        animDatabase.Clear();
+    }
 
     private static void WalkSkeletonAndCreateCurves(ref AnimationClip clip, AnimationSet animSet,
     										Transform bone, string curPath, uint animHash)
@@ -39,6 +61,8 @@ public class AnimationLoader : ScriptableObject {
 
     	for (int i = 0; i < 7; i++)
     	{
+            float mult = ComponentMultipliers[i];
+
 			if (animSet.GetCurve(animHash, boneHash, (uint) i,
 	                    out ushort[] inds, out float[] values))
 			{
@@ -46,7 +70,7 @@ public class AnimationLoader : ScriptableObject {
 				for (int j = 0; j < values.Length; j++)
 				{
 					int index = (int) inds[j];
-					frames[j] = new Keyframe(index < frameCap ? index / 30.0f : frameCap / 30.0f, values[j]);
+					frames[j] = new Keyframe(index < frameCap ? index / 30.0f : frameCap / 30.0f, mult * values[j]);
 				}
 				var curve = new AnimationCurve(frames);
 				clip.SetCurve(relPath, typeof(Transform), ComponentPaths[i], curve);
