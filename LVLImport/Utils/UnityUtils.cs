@@ -15,11 +15,35 @@ using LibSWBF2.Wrappers;
 
 static class UnityUtils {
 
+    /*
 	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
         //return new UnityEngine.Quaternion(vec.Y, -vec.Z, vec.W, -vec.X);
         return new UnityEngine.Quaternion(-vec.X, vec.W, -vec.Z, vec.Y);
     }
+    */
+
+
+    public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
+    {
+        return new UnityEngine.Quaternion(vec.X, vec.Y, -vec.Z, -vec.W);
+    }
+
+
+
+
+    public static UnityEngine.Quaternion QuatFromLibSkel(LibSWBF2.Types.Vector4 vec)
+    {
+        return new UnityEngine.Quaternion(vec.X, vec.Y, vec.Z, vec.W);
+    }
+
+    public static UnityEngine.Vector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
+    {
+        return new UnityEngine.Vector3(vec.X,vec.Y,vec.Z);
+    }
+
+
+
 
     public static UnityEngine.Quaternion QuatFromLibLGT(LibSWBF2.Types.Vector4 vec)
     {

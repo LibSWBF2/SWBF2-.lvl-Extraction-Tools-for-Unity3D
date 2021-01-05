@@ -69,8 +69,8 @@ public class ModelLoader : ScriptableObject {
         foreach (var node in hierarchy)
         {
             var nodeTransform = new GameObject(node.name).transform;
-            nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
-            nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
+            nodeTransform.localRotation = UnityUtils.QuatFromLibSkel(node.rotation);
+            nodeTransform.localPosition = UnityUtils.Vec3FromLibSkel(node.location);
             hierarchyMap[node.name] = nodeTransform;
         }
 
@@ -161,7 +161,7 @@ public class ModelLoader : ScriptableObject {
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = mats;
 
-            boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+            //boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
         }
 
         return true;
@@ -277,8 +277,8 @@ public class ModelLoader : ScriptableObject {
                 var boneTransform = prim.transform; //GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
                                     //new GameObject(curBoneSWBF.name).transform;
 
-                //boneTransform.localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                //boneTransform.localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                boneTransform.localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
+                boneTransform.localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
 
                 transformMap[curBoneSWBF.name] = boneTransform;
             }
@@ -309,8 +309,8 @@ public class ModelLoader : ScriptableObject {
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-                //transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-                //transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+                transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
+                transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
             }
         }
         else
@@ -349,7 +349,7 @@ public class ModelLoader : ScriptableObject {
             }            
         }
 
-        newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+        //newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
 
         return true;      
     }
