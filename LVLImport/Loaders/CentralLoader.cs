@@ -44,10 +44,10 @@ public class CentralLoader : UnityEngine.ScriptableObject {
     	return container.FindWrapper<EntityClass>(name);
     }
 
-    public static AnimationSet GetAnimationSet(string name)
+    public static AnimationBank GetAnimationBank(string name)
     {
     	if (container == null) return null;
-    	return container.FindWrapper<AnimationSet>(name);
+    	return container.FindWrapper<AnimationBank>(name);
     }
 }
 
