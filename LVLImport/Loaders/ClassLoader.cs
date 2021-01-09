@@ -173,13 +173,13 @@ public class ClassLoader : ScriptableObject {
         var ecWrapper = CentralLoader.GetEntityClass(name);
         if (ecWrapper == null)
         {
-            Debug.Log(String.Format("\tERROR: Failed to load prop object: {0}", name));
+            Debug.LogError(String.Format("\tFailed to load prop object: {0}", name));
             return null;
         }
 
         if (!ecWrapper.GetOverriddenProperties(out uint[] properties, out string[] values))
         {
-            Debug.Log(String.Format("\tERROR: Failed to load door object: {0}", name));
+            Debug.LogError(String.Format("\tFailed to load door object: {0}", name));
             return null;
         }
 
@@ -198,7 +198,7 @@ public class ClassLoader : ScriptableObject {
 
                     if (!ModelLoader.AddModelComponents(ref obj, ecWrapper.GetProperty("GeometryName")))
                     {
-                        Debug.Log(String.Format("\tERROR: Failed to load model used by: {0}", name));
+                        Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                     }
                     break;
 
@@ -217,7 +217,7 @@ public class ClassLoader : ScriptableObject {
 
                     if (childTx == null)
                     {
-                        Debug.Log("\tERROR: Couldnt find hardpoint: " + propertyValue);
+                        Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
                         lastAttached.transform.SetParent(obj.transform, false);
                     }
                     else 

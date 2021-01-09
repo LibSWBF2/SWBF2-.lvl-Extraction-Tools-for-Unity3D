@@ -93,7 +93,7 @@ public class ModelLoader : ScriptableObject {
 
 
 
-    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh)
+    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh, bool broken = false)
     {
         var segments = model.GetSegments();
 
@@ -114,7 +114,7 @@ public class ModelLoader : ScriptableObject {
         foreach (Segment seg in segments)
         {           
             //Debug.Log(String.Format("Model: {2}, Verts length: {0}, Weights length: {1}", libVerts.Length, libWeights.Length, modelName));
-            UnityUtils.FillBoneWeights(seg.GetVertexWeights(), weights, dataOffset);            
+            UnityUtils.FillBoneWeights(seg.GetVertexWeights(), weights, dataOffset, broken ? -1 : 0);            
             dataOffset += (int) seg.GetVertexBufferLength() * bonesPerVert;
         }
         var weightsArray = new NativeArray<BoneWeight1>(weights, Allocator.Temp);
@@ -298,7 +298,7 @@ public class ModelLoader : ScriptableObject {
 
         if (model.IsSkeletalMesh)
         {
-            int skinType = AddWeights(ref newObject, model, ref mesh);
+            int skinType = AddWeights(ref newObject, model, ref mesh, model.IsSkeletonBroken);
             if (skinType == 0)
             {
                 Debug.Log("Failed to add weights....");

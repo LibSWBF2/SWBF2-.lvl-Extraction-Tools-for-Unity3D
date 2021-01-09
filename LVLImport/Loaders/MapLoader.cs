@@ -145,7 +145,7 @@ public class MapLoader : ScriptableObject {
                     int baseIndex = (int) (numLayers * (y * blendDim + x));
                     for (int z = 0; z < numLayers; z++)
                     {
-                        blendMap[y,x,z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;    
+                        blendMap[blendDim - y - 1,x,z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;    
                     }
                 }
             }
