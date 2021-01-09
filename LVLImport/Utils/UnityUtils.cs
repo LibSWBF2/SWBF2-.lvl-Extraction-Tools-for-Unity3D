@@ -115,12 +115,12 @@ static class UnityUtils {
         } 
     }
 
-    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset, int weightsPerVert)
+    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset)
     {
         if (vws != null)
         {
             //Debug.Log(String.Format("Weights per vert: {0}, VW Buffer length: {1}, Unity BW buffer length: {2}", weightsPerVert, vws.Length, boneWeights.Length));
-
+            /*
             for (int i = 0; i < vws.Length; i+=weightsPerVert)
             {
                 for (int j = 0; j < 4; j++)
@@ -143,6 +143,18 @@ static class UnityUtils {
                         boneWeights[k].weight = wvalue;                          
                     }                  
                 }
+            }
+            */
+
+            for (int i = 0; i < vws.Length; i++)
+            {
+                int windex = (int) vws[i].index;
+                float wvalue = vws[i].weight;
+
+                //Debug.Log(String.Format("\tIndex: {0}, Value: {1}", windex, wvalue));
+
+                boneWeights[offset + i].boneIndex = windex;
+                boneWeights[offset + i].weight = wvalue;                                   
             }
         }
     }
