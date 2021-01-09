@@ -115,7 +115,7 @@ static class UnityUtils {
         } 
     }
 
-    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset)
+    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset, int fix = 0)
     {
         if (vws != null)
         {
@@ -153,7 +153,7 @@ static class UnityUtils {
 
                 //Debug.Log(String.Format("\tIndex: {0}, Value: {1}", windex, wvalue));
 
-                boneWeights[offset + i].boneIndex = windex;
+                boneWeights[offset + i].boneIndex = windex + fix;
                 boneWeights[offset + i].weight = wvalue;                                   
             }
         }
