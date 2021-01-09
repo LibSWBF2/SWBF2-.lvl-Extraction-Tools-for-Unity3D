@@ -108,13 +108,13 @@ public class ClassLoader : ScriptableObject {
             {
                 case ANIMATIONNAME:
 
-                    //currentAnimationSet = "rep_walk_atte";
+                    //currentAnimationSet = "human_0";
                     currentAnimationSet = propertyValue;
                     break;
 
                 case ANIMATION:
 
-                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "death01", obj.transform);
+                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "human_rifle_stand_death_left", obj.transform);
                     AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
 
                     if (animClip == null)
@@ -137,7 +137,7 @@ public class ClassLoader : ScriptableObject {
 
                 case GEOMETRYNAME:
 
-					//if (!ModelLoader.AddModelComponents(ref obj, "rep_walk_atte"))
+					//if (!ModelLoader.AddModelComponents(ref obj, "rep_inf_macewindu"))
                     if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
                     {
                         Debug.Log(String.Format("\tERROR: Failed to load model used by: {0}", name));

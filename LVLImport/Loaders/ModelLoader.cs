@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -61,7 +62,7 @@ public class ModelLoader : ScriptableObject {
     }
 
 
-    public static bool AddModelComponentsHierarchical(ref GameObject newObject, Model model)
+    private static bool AddHierarchy(ref GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
         LibSWBF2.Wrappers.Bone[] hierarchy = model.GetSkeleton();
         Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
@@ -86,6 +87,52 @@ public class ModelLoader : ScriptableObject {
             }
         }
 
+        skeleton = hierarchyMap;
+        return true;
+    }
+
+
+
+    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh)
+    {
+        var segments = model.GetSegments();
+
+        int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
+        int txStatus = segments.Sum(item => item.IsPretransformed() ? 1 : 0);
+
+        if (txStatus != 0 && txStatus != segments.Length)
+        {
+            Debug.LogError(String.Format("Model {0} has heterogeneous pretransformation!", model.Name));
+            return 0;
+        }
+
+        byte bonesPerVert = (byte) (txStatus == 0 ? 3 : 1);  
+
+        BoneWeight1[] weights = new BoneWeight1[totalLength * bonesPerVert];
+
+        int dataOffset = 0;
+        foreach (Segment seg in segments)
+        {           
+            //Debug.Log(String.Format("Model: {2}, Verts length: {0}, Weights length: {1}", libVerts.Length, libWeights.Length, modelName));
+            UnityUtils.FillBoneWeights(seg.GetVertexWeights(), weights, dataOffset);            
+            dataOffset += (int) seg.GetVertexBufferLength() * bonesPerVert;
+        }
+        var weightsArray = new NativeArray<BoneWeight1>(weights, Allocator.Temp);
+
+        byte[] bonesPerVertex = Enumerable.Repeat<byte>(bonesPerVert, totalLength).ToArray();
+        var bonesPerVertexArray = new NativeArray<byte>(bonesPerVertex, Allocator.Temp);
+
+        mesh.SetBoneWeights(bonesPerVertexArray, weightsArray);
+
+        return (int) bonesPerVert;
+    }
+
+
+
+
+    public static bool AddModelComponentsHierarchical(ref GameObject newObject, Model model,
+                                                    Dictionary<string, Transform> skeleton)
+    {
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
         foreach (var segment in model.GetSegments())
         {
@@ -104,7 +151,7 @@ public class ModelLoader : ScriptableObject {
 
         foreach (string boneName in segmentMap.Keys)
         {
-            GameObject boneObj = hierarchyMap[boneName].gameObject;
+            GameObject boneObj = skeleton[boneName].gameObject;
             List<Segment> segments = segmentMap[boneName];
 
             Mesh mesh = new Mesh();
@@ -179,14 +226,14 @@ public class ModelLoader : ScriptableObject {
             return false;
         }
 
-        if (model.IsSkeletalMesh)
+        if (!AddHierarchy(ref newObject, model, out Dictionary<string, Transform> skeleton))
         {
-            Debug.Log(String.Format("Setting up skinned mesh + renderer for " + model.Name));
+            return false;
         }
 
         if (model.HasNonTrivialHierarchy && !model.IsSkeletalMesh)
         {
-            return AddModelComponentsHierarchical(ref newObject, model);
+            return AddModelComponentsHierarchical(ref newObject, model, skeleton);
         }
 
         Mesh mesh = new Mesh();
@@ -196,16 +243,13 @@ public class ModelLoader : ScriptableObject {
 
         mesh.subMeshCount = segments.Length;
 
-        int totalLength = 0;
-        foreach (Segment seg in segments)
-        {
-            totalLength += (int) seg.GetVertexBufferLength();
-        }
+        int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
+
 
         Vector3[] positions = new Vector3[totalLength];
         Vector3[] normals = new Vector3[totalLength];
         Vector2[] texcoords = new Vector2[totalLength];
-        BoneWeight1[] weights = new BoneWeight1[model.IsSkeletalMesh ? totalLength * 4 : 0];
+        //BoneWeight1[] weights = new BoneWeight1[model.IsSkeletalMesh ? totalLength * 4 : 0];
         int[] offsets = new int[segments.Length];
 
         int dataOffset = 0;
@@ -226,13 +270,6 @@ public class ModelLoader : ScriptableObject {
             UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
             UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
-            if (model.IsSkeletalMesh)
-            {
-                var libWeights = seg.GetVertexWeights(); 
-                Debug.Log(String.Format("Model: {2}, Verts length: {0}, Weights length: {1}", libVerts.Length, libWeights.Length, modelName));
-                UnityUtils.FillBoneWeights(libWeights, weights, dataOffset * 4, (int) (libWeights.Length / seg.GetVertexBufferLength()));
-            }
-
             offsets[i] = dataOffset;
 
             dataOffset += (int) seg.GetVertexBufferLength();
@@ -244,20 +281,14 @@ public class ModelLoader : ScriptableObject {
 
         if (model.IsSkeletalMesh)
         {
-            //Debug.Log("Num weights: " + weights.Length.ToString() + " Num verts: " + positions.Length.ToString());
-
-            byte[] bonesPerVertex = new byte[totalLength];
-            for (int i = 0; i < totalLength; i++)
+            /*
+            if (!AddWeights(ref newObject, model, ref mesh, out bool isPretransformed))
             {
-                bonesPerVertex[i] = 4;
+                Debug.Log("Failed to add weights....");
             }
-
-            var bonesPerVertexArray = new NativeArray<byte>(bonesPerVertex, Allocator.Temp);
-            var weightsArray = new NativeArray<BoneWeight1>(weights, Allocator.Temp);
-
-            mesh.SetBoneWeights(bonesPerVertexArray, weightsArray);
+            */
         }
-
+        
         int j = 0;
         foreach (Segment seg in segments)
         {
@@ -267,58 +298,44 @@ public class ModelLoader : ScriptableObject {
 
         if (model.IsSkeletalMesh)
         {
-            SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
-
-            LibSWBF2.Wrappers.Bone[] bonesSWBF = model.GetSkeleton();
-            Dictionary<string, Transform> transformMap = new Dictionary<string, Transform>();
-
-            for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
+            int skinType = AddWeights(ref newObject, model, ref mesh);
+            if (skinType == 0)
             {
-                var curBoneSWBF = bonesSWBF[boneNum];
-
-                
-                var prim = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                prim.name = curBoneSWBF.name;
-                var boneTransform = prim.transform; 
-                
-
-                //var boneTransform = new GameObject(curBoneSWBF.name).transform;
-
-                boneTransform.localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
-                boneTransform.localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
-
-                transformMap[curBoneSWBF.name] = boneTransform;
+                Debug.Log("Failed to add weights....");
             }
 
-            //Debug.Log("\tSetting bind poses");
-
+            SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
+            LibSWBF2.Wrappers.Bone[] bonesSWBF = model.GetSkeleton();
 
             /*
             Set bones
             */
             Transform[] bones = new Transform[bonesSWBF.Length];
-
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
                 //Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
-                bones[boneNum] = transformMap[curBoneSWBF.name];
-                bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? transformMap[curBoneSWBF.parentName] : newObject.transform, false);
+                bones[boneNum] = skeleton[curBoneSWBF.name];
+                bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? skeleton[curBoneSWBF.parentName] : newObject.transform, false);
             }
-
 
             /*
             Set bindposes...
             */
             Matrix4x4[] bindPoses = new Matrix4x4[bonesSWBF.Length];
-
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
-                bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[boneNum].parent.localToWorldMatrix;
-                //bindPoses[boneNum] = Matrix4x4.identity;
+                if (skinType == 1)
+                {
+                    //For pretransformed skins...
+                    bindPoses[boneNum] = Matrix4x4.identity;
+                }
+                else 
+                {
+                    bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[0].parent.localToWorldMatrix;
+                }
+                //But what works for sarlacctentacle?
             }
-
-
 
             mesh.bindposes = bindPoses;
 
@@ -329,8 +346,8 @@ public class ModelLoader : ScriptableObject {
             for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
             {
                 var curBoneSWBF = bonesSWBF[boneNum];
-                transformMap[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
-                transformMap[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
+                skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
+                skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
             }
         }
         else
