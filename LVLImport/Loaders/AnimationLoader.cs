@@ -16,15 +16,6 @@ public class AnimationLoader : ScriptableObject {
 
     private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
 
-    /*
-    private static string[] ComponentPaths = {  "localRotation.x",
-											    "localRotation.y",
-											    "localRotation.z",
-											    "localRotation.w",
-    										    "localPosition.x",
-    										    "localPosition.y",
-    										    "localPosition.z"  };
-    */
 
     private static string[] ComponentPaths = {  "localRotation.x",
                                                 "localRotation.y",
@@ -34,11 +25,11 @@ public class AnimationLoader : ScriptableObject {
                                                 "localPosition.y",
                                                 "localPosition.z"  };
 
-    private static float[] ComponentMultipliers = {   1.0f,
+    private static float[] ComponentMultipliers = {  -1.0f,
                                                       1.0f,
                                                      1.0f,
-                                                     1.0f,
-                                                      1.0f,
+                                                     -1.0f,
+                                                      -1.0f,
                                                       1.0f,
                                                      1.0f  };    
 
@@ -55,7 +46,6 @@ public class AnimationLoader : ScriptableObject {
 		
     	string relPath = curPath + bone.name;
 
-    	//Debug.Log("Setting up path: " + relPath);
 
     	animBank.GetAnimationMetadata(animHash, out int frameCap, out int numBones);
 
@@ -99,7 +89,7 @@ public class AnimationLoader : ScriptableObject {
 
     	if (animBank == null)
     	{
-    		Debug.Log(String.Format("ERROR: AnimationBank {0} failed to load!", animBankName));
+    		Debug.LogError(String.Format("AnimationBank {0} failed to load!", animBankName));
     		return null;
     	}
 
@@ -121,7 +111,7 @@ public class AnimationLoader : ScriptableObject {
     	}
     	else 
     	{
-    		Debug.Log(String.Format("ERROR: AnimationBank {0} does contain the animation: {1}!", animBankName, animationName));
+    		Debug.LogError(String.Format("AnimationBank {0} does contain the animation: {1}!", animBankName, animationName));
     		return null;
     	}
     }

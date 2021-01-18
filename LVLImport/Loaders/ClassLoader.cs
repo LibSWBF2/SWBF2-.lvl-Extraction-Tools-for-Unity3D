@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEditor;
 
 using LibSWBF2.Logging;
@@ -52,9 +51,6 @@ public class ClassLoader : ScriptableObject {
     }
 
 
-
-
-
     public static string GetBaseClassName(string name)
     {
         var ecWrapper = CentralLoader.GetEntityClass(name);
@@ -69,10 +65,8 @@ public class ClassLoader : ScriptableObject {
 
 
 
-    public static GameObject LoadBaseClass_Door(string name)
+    public static GameObject LoadGeneralClass(string name)
     {
-        //Debug.Log(String.Format("Loading door: {0}...", name));
-
         if (classObjectDatabase.ContainsKey(name))
         {
             var duplicate = Instantiate(classObjectDatabase[name]);
@@ -84,18 +78,19 @@ public class ClassLoader : ScriptableObject {
         var ecWrapper = CentralLoader.GetEntityClass(name);
         if (ecWrapper == null)
         {
-            Debug.Log(String.Format("\tERROR: Failed to load door object: {0}", name));
+            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
             return null;
         }
 
         if (!ecWrapper.GetOverriddenProperties(out uint[] properties, out string[] values))
         {
-            Debug.Log(String.Format("\tERROR: Failed to load door object: {0}", name));
+            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
             return null;
         }
 
 
         GameObject obj = new GameObject(name);
+        GameObject lastAttached = null;
 
         string currentAnimationSet = "";
 
@@ -108,18 +103,18 @@ public class ClassLoader : ScriptableObject {
             {
                 case ANIMATIONNAME:
 
-                    //currentAnimationSet = "human_0";
+                    //currentAnimationSet = "imp_walk_atat";
                     currentAnimationSet = propertyValue;
                     break;
 
                 case ANIMATION:
 
-                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "human_rifle_stand_death_left", obj.transform);
+                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "death01", obj.transform);
                     AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
 
                     if (animClip == null)
                     {
-                        Debug.Log(String.Format("\tERROR: Failed to load animation clip {0}", propertyValue));
+                        Debug.LogError(String.Format("\tFailed to load animation clip {0}", propertyValue));
                     }
                     else 
                     {
@@ -137,73 +132,16 @@ public class ClassLoader : ScriptableObject {
 
                 case GEOMETRYNAME:
 
-					//if (!ModelLoader.AddModelComponents(ref obj, "rep_inf_macewindu"))
+					//if (!ModelLoader.AddModelComponents(ref obj, "imp_walk_atat"))
                     if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
                     {
-                        Debug.Log(String.Format("\tERROR: Failed to load model used by: {0}", name));
+                        Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                         return obj;
                     }
                     break;
 
-                default:
-                    break;
-            }
-        }
-
-        obj.AddComponent<Door>();
-        classObjectDatabase[name] = obj;
-        return obj;
-    }
-
-
-
-
-    public static GameObject LoadBaseClass_Prop(string name)
-    {
-        //Debug.Log(String.Format("Loading prop: {0}...", name));
-
-        if (classObjectDatabase.ContainsKey(name))
-        {
-            var duplicate = Instantiate(classObjectDatabase[name]);
-            duplicate.transform.localPosition = Vector3.zero;
-            duplicate.transform.localRotation = Quaternion.identity;
-            return duplicate;
-        }
-
-        var ecWrapper = CentralLoader.GetEntityClass(name);
-        if (ecWrapper == null)
-        {
-            Debug.LogError(String.Format("\tFailed to load prop object: {0}", name));
-            return null;
-        }
-
-        if (!ecWrapper.GetOverriddenProperties(out uint[] properties, out string[] values))
-        {
-            Debug.LogError(String.Format("\tFailed to load door object: {0}", name));
-            return null;
-        }
-
-        GameObject obj = new GameObject(name);
-        GameObject lastAttached = null;
-
-        for (int i = 0; i < properties.Length; i++)
-        {
-            uint property = properties[i];
-            string propertyValue = values[i];
-
-
-            switch (property)
-            {
-                case GEOMETRYNAME:
-
-                    if (!ModelLoader.AddModelComponents(ref obj, ecWrapper.GetProperty("GeometryName")))
-                    {
-                        Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
-                    }
-                    break;
-
                 case ATTACHODF:
-                    lastAttached = LoadBaseClass_Door(propertyValue);
+                    lastAttached = LoadGeneralClass(propertyValue);
                     break;
 
                 case ATTACHTOHARDPOINT:
@@ -231,7 +169,8 @@ public class ClassLoader : ScriptableObject {
                     break;
             }
         }
-        
+
+        obj.AddComponent<Door>();
         classObjectDatabase[name] = obj;
         return obj;
     }

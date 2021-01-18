@@ -16,35 +16,27 @@ using LibSWBF2.Wrappers;
 static class UnityUtils {
 
     
-    //This worked via matching the .wld file...
 	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
-        //return new UnityEngine.Quaternion(vec.Y, -vec.Z, vec.W, -vec.X);
-        return new UnityEngine.Quaternion(-vec.X, vec.W, -vec.Z, vec.Y);
+        return new UnityEngine.Quaternion(-vec.Z, vec.W, -vec.X, vec.Y);
     }
     
-
-
-    //public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
-    //{
-    //    return new UnityEngine.Quaternion(-vec.Z, vec.Y, -vec.X, vec.W);
-    //}
-
+    public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
+    {
+        return new UnityEngine.Vector3(vec.X,vec.Y,-vec.Z);
+    }
 
 
 
     public static UnityEngine.Quaternion QuatFromLibSkel(LibSWBF2.Types.Vector4 vec)
     {
-        return new UnityEngine.Quaternion(vec.X, vec.Y, vec.Z, vec.W);
-        //return new UnityEngine.Quaternion(-vec.X, vec.W, -vec.Z, vec.Y);
+        return new UnityEngine.Quaternion(-vec.X, vec.Y, vec.Z, -vec.W);
     }
 
     public static UnityEngine.Vector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
     {
-        //return new UnityEngine.Vector3(vec.X,vec.Y,vec.Z);
-        return new UnityEngine.Vector3(vec.X,vec.Y, vec.Z);
+        return new UnityEngine.Vector3(-vec.X, vec.Y, vec.Z);
     }
-
 
 
 
@@ -54,17 +46,11 @@ static class UnityUtils {
     }
 
 
-    public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
-    {
-        return new UnityEngine.Vector3(vec.X,vec.Y,-vec.Z);
-    }
-
 
     public static UnityEngine.Color ColorFromLib(LibSWBF2.Types.Vector3 vec)
     {
         return new UnityEngine.Color(vec.X,vec.Y,vec.Z);
     }
-
 
     public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
     {
@@ -115,43 +101,29 @@ static class UnityUtils {
         } 
     }
 
+
+    public static int[] ReverseWinding(int[] indices)
+    {
+        int[] rewound = new int[indices.Length];
+        for (int i = 0; i < indices.Length; i+=3)
+        {
+            rewound[i] = indices[i+2];
+            rewound[i+1] = indices[i+1];
+            rewound[i+2] = indices[i];
+        }
+        return rewound;
+    }
+
+
+
     public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset, int fix = 0)
     {
         if (vws != null)
         {
-            //Debug.Log(String.Format("Weights per vert: {0}, VW Buffer length: {1}, Unity BW buffer length: {2}", weightsPerVert, vws.Length, boneWeights.Length));
-            /*
-            for (int i = 0; i < vws.Length; i+=weightsPerVert)
-            {
-                for (int j = 0; j < 4; j++)
-                {
-                    int k = (i / weightsPerVert) * 4 + j + offset;
-
-                    if (j >= weightsPerVert)
-                    {
-                        boneWeights[k].boneIndex = 0;
-                        boneWeights[k].weight = 0.0f;
-                    } 
-                    else 
-                    {
-                        int windex = (int) vws[i + j].index;
-                        float wvalue = vws[i + j].weight;
-
-                        //Debug.Log(String.Format("\tIndex: {0}, Value: {1}", windex, wvalue));
-
-                        boneWeights[k].boneIndex = windex;
-                        boneWeights[k].weight = wvalue;                          
-                    }                  
-                }
-            }
-            */
-
             for (int i = 0; i < vws.Length; i++)
             {
                 int windex = (int) vws[i].index;
                 float wvalue = vws[i].weight;
-
-                //Debug.Log(String.Format("\tIndex: {0}, Value: {1}", windex, wvalue));
 
                 boneWeights[offset + i].boneIndex = windex + fix;
                 boneWeights[offset + i].weight = wvalue;                                   
