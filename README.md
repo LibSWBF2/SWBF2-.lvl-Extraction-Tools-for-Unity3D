@@ -1,6 +1,6 @@
 # Unity SWBF2 .lvl Extraction Toolset
 
-Extract assets contained within ```.lvl``` files to Unity.  This project began as a fork of Ben1138's modtools importer, but diverged and conflicted so significantly that it made sense to separate it.  It is one of the many projects under the [LibSWBF2](https://github.com/Ben1138/LibSWBF2) umbrella.
+Extract assets contained within ```.lvl``` files to Unity.  This project began as a fork of [Ben1138's modtools importer](https://github.com/Ben1138/Unity-SWBF2-Import), but diverged and conflicted so significantly that it made sense to separate it.  It is one of the many projects under the [LibSWBF2](https://github.com/Ben1138/LibSWBF2) umbrella.
 
 Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10.
 
@@ -14,7 +14,7 @@ Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10.
 
 
 ## Installation
-1. Place the ```LVLImport``` folder into your ```Assets/``` directory.  If an ```SWBF2``` menu entry doesn't appear, check the error log.
+1. Place the ```LVLImport``` folder into your ```Assets/``` directory.  If the ```SWBF2``` menu entry doesn't appear, check the error log.
 
 ## Usage
 1. Click on ```SWBF2 --> Import .lvl```.
@@ -25,9 +25,9 @@ Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10.
 - Import terrain as mesh: SWBF2 terrains, which are meshes, can be represented with heightmaps in most cases, but cuts/holes create irregular terrain geometry that Unity's terrain component cannot easily handle.  A special shader is needed.
 - LUA bytecode API: Importing the bytecode contained in .lvl script chunks and using it to drive a game/UI would be great.  Or at the very least, to get a list of all calls to ReadDataFile() and relevant mission setup calls.
 - Materials overhaul
+- More finely grained extraction, eg, per-model, ODF in each ```.lvl``` file
 
 
 ## Important Notes:
-- The importer relies on native plugins (libSWBF2.so/.dylib on Linux/MacOS and LibSWBF2.dll on Windows), so expect infrequent CTDs!
-
+- The importer relies on native plugins (libSWBF2.so/.dylib on Linux/MacOS and LibSWBF2.dll on Windows), so expect infrequent CTDs.
 - Much of the work to be done is on the libSWBF2 side.  For now, the importer requires a native and managed plugin built from [this branch](https://github.com/WHSnyder/LibSWBF2/tree/anim_reader)
