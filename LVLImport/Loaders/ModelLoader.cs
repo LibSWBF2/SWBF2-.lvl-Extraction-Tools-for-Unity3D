@@ -12,11 +12,13 @@ using UnityEditor;
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
+using LibMaterial = LibSWBF2.Wrappers.Material;
+using UMaterial = UnityEngine.Material;
 
 public class ModelLoader : ScriptableObject {
 
-    public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
-    public static Material defaultMaterial = new Material(Shader.Find("Standard"));
+    public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
+    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
 
     public static void ResetDB()
     {
@@ -24,8 +26,11 @@ public class ModelLoader : ScriptableObject {
     }
 
 
-    public static Material GetMaterial(string texName, uint matFlags)
+    public static UMaterial GetMaterial(LibMaterial mat)
     {
+        string texName = mat.textures[0];
+        uint matFlags = mat.materialFlags;
+
         if (texName == "")
         {
             return defaultMaterial;
@@ -36,7 +41,7 @@ public class ModelLoader : ScriptableObject {
 
             if (!materialDataBase.ContainsKey(materialName))
             {
-                Material material = new Material(defaultMaterial);
+                UMaterial material = new UMaterial(defaultMaterial);
                 material.name = materialName;
 
                 if (MaterialsUtils.IsCutout(matFlags))
@@ -155,7 +160,7 @@ public class ModelLoader : ScriptableObject {
             List<Segment> segments = segmentMap[boneName];
 
             Mesh mesh = new Mesh();
-            Material[] mats = new Material[segments.Count];
+            UMaterial[] mats = new UMaterial[segments.Count];
 
             mesh.subMeshCount = segments.Count;
 
@@ -177,9 +182,7 @@ public class ModelLoader : ScriptableObject {
                 Segment seg = segments[i];
 
                 // Handle material data
-                string texName = seg.GetMaterialTexName();
-                uint matFlags = seg.GetMaterialFlags();
-                mats[i] = GetMaterial(texName, matFlags);
+                mats[i] = GetMaterial(seg.GetMaterial());
 
                 // Handle vertex data
                 UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, true);
@@ -240,7 +243,7 @@ public class ModelLoader : ScriptableObject {
         Mesh mesh = new Mesh();
 
         Segment[] segments = model.GetSegments(); 
-        Material[] mats = new Material[segments.Length];
+        UMaterial[] mats = new UMaterial[segments.Length];
 
         mesh.subMeshCount = segments.Length;
 
@@ -260,9 +263,7 @@ public class ModelLoader : ScriptableObject {
             Segment seg = segments[i];
 
             // Handle material data
-            string texName = seg.GetMaterialTexName();
-            uint matFlags = seg.GetMaterialFlags();
-            mats[i] = GetMaterial(texName, matFlags);
+            mats[i] = GetMaterial(seg.GetMaterial());
 
             // Handle vertex data
             var libVerts = seg.GetVertexBuffer();
