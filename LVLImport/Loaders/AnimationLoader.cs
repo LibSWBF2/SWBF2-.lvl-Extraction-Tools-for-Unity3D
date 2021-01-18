@@ -12,7 +12,7 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 
 
-public class AnimationLoader : ScriptableObject {
+public class AnimationLoader : Loader {
 
     private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
 
@@ -85,7 +85,7 @@ public class AnimationLoader : ScriptableObject {
     		return animDatabase[animID];
     	}
 
-    	var animBank = CentralLoader.GetAnimationBank(animBankName);
+    	var animBank = container.FindWrapper<AnimationBank>(animBankName);
 
     	if (animBank == null)
     	{

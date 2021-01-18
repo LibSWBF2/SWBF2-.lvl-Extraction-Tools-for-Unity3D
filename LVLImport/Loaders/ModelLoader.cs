@@ -13,7 +13,7 @@ using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class ModelLoader : ScriptableObject {
+public class ModelLoader : Loader {
 
     public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
     public static Material defaultMaterial = new Material(Shader.Find("Standard"));
@@ -208,8 +208,6 @@ public class ModelLoader : ScriptableObject {
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = mats;
-
-            boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,1.0f);
         }
 
         return true;
@@ -219,7 +217,7 @@ public class ModelLoader : ScriptableObject {
 
     public static bool AddModelComponents(ref GameObject newObject, string modelName)
     {   
-        Model model = CentralLoader.GetModel(modelName);
+        Model model = container.FindWrapper<Model>(modelName);
 
         if (model == null)
         {
@@ -387,8 +385,6 @@ public class ModelLoader : ScriptableObject {
                 return false;
             }            
         }
-
-        newObject.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,1.0f);
 
         return true;      
     }

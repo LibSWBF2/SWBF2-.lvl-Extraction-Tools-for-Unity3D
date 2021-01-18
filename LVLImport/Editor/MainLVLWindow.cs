@@ -139,7 +139,7 @@ public class LVLImportWindow : EditorWindow {
             if (container.IsDone())
             {
                 currentlyLoading = false;
-                CentralLoader.SetContainer(container);
+                Loader.SetContainer(container);
 
                 foreach (uint handle in fileHandles)
                 {

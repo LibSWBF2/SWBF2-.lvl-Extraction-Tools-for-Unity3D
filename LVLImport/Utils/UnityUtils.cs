@@ -16,12 +16,12 @@ using LibSWBF2.Wrappers;
 static class UnityUtils {
 
     
-	public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
+	public static UnityEngine.Quaternion QuatFromLibWorld(LibSWBF2.Types.Vector4 vec)
     {
         return new UnityEngine.Quaternion(-vec.Z, vec.W, -vec.X, vec.Y);
     }
     
-    public static UnityEngine.Vector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
+    public static UnityEngine.Vector3 Vec3FromLibWorld(LibSWBF2.Types.Vector3 vec)
     {
         return new UnityEngine.Vector3(vec.X,vec.Y,-vec.Z);
     }

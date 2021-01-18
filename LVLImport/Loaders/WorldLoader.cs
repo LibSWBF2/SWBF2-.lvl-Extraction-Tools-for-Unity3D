@@ -11,7 +11,7 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
 
 
-public class WorldLoader : ScriptableObject {
+public class WorldLoader : Loader {
 
     //Imports all worlds for now...
     public static void ImportWorlds(Level level)
@@ -41,10 +41,6 @@ public class WorldLoader : ScriptableObject {
                         obj = ClassLoader.LoadGeneralClass(entityClassName);
                         break;
 
-                    case "dusteffect":
-                    case "":
-                        break;
-
                     default:
                         break; 
                 }
@@ -59,8 +55,8 @@ public class WorldLoader : ScriptableObject {
                     obj.name = inst.Name;
                 }
 
-                obj.transform.rotation = UnityUtils.QuatFromLib(inst.GetRotation());
-                obj.transform.position = UnityUtils.Vec3FromLib(inst.GetPosition());
+                obj.transform.rotation = UnityUtils.QuatFromLibWorld(inst.GetRotation());
+                obj.transform.position = UnityUtils.Vec3FromLibWorld(inst.GetPosition());
                 obj.transform.parent = worldRoot.transform;
             }
         
@@ -185,7 +181,7 @@ public class WorldLoader : ScriptableObject {
 
             light.position.Z *= -1.0f;
             light.position.Y += .2f;
-            lightObj.transform.position = UnityUtils.Vec3FromLib(light.position);
+            lightObj.transform.position = UnityUtils.Vec3FromLibWorld(light.position);
 
             lightObj.name = light.name;
 
@@ -251,7 +247,7 @@ public class WorldLoader : ScriptableObject {
             }
 
             if (newObj != null){
-                newObj.transform.localScale = new UnityEngine.Vector3(-200,200,200);
+                newObj.transform.localScale = new UnityEngine.Vector3(300,300,300);
             }
         }
     }
