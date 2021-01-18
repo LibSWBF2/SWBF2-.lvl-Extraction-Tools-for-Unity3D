@@ -10,7 +10,7 @@ using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class TextureLoader : ScriptableObject {
+public class TextureLoader : Loader {
 
     public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
     public static bool imported = false;
@@ -40,7 +40,7 @@ public class TextureLoader : ScriptableObject {
         }
 
 
-        LibSWBF2.Wrappers.Texture tex = CentralLoader.GetTexture(name);
+        var tex = container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
 
         if (tex != null && tex.width * tex.width > 0)
         {

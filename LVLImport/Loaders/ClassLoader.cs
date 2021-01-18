@@ -11,7 +11,7 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 
 
-public class ClassLoader : ScriptableObject {
+public class ClassLoader : Loader {
 
     public static Dictionary<string, GameObject> classObjectDatabase = new Dictionary<string, GameObject>();
 
@@ -53,7 +53,7 @@ public class ClassLoader : ScriptableObject {
 
     public static string GetBaseClassName(string name)
     {
-        var ecWrapper = CentralLoader.GetEntityClass(name);
+        var ecWrapper = container.FindWrapper<EntityClass>(name);
 
         if (ecWrapper == null)
         {
@@ -75,7 +75,7 @@ public class ClassLoader : ScriptableObject {
             return duplicate;
         }
 
-        var ecWrapper = CentralLoader.GetEntityClass(name);
+        var ecWrapper = container.FindWrapper<EntityClass>(name);
         if (ecWrapper == null)
         {
             Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
@@ -170,7 +170,6 @@ public class ClassLoader : ScriptableObject {
             }
         }
 
-        obj.AddComponent<Door>();
         classObjectDatabase[name] = obj;
         return obj;
     }
