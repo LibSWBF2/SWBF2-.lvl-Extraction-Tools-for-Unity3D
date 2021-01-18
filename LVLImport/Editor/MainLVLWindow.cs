@@ -13,21 +13,9 @@ using LibSWBF2.Wrappers;
 
 public class LVLImportWindow : EditorWindow {
 
-    bool saveAllPrefabs, importLighting,
-    currentlyLoading, startLoading, buttonStatus;
-
+    bool currentlyLoading, startLoading;
 
     Container container = new Container();
-                                
-
-    string importLightingTip = "Best effort.  Directional lights are not converted well...";
-
-    string saveAllPrefabsTip = String.Join(
-                                " ",
-                                "Will save all gameobjects, textures, models, and materials",
-                                "in Assets/[Prefabs, Textures, Models, Materials] respectively.",
-                                "Will drastically increase load times..."
-                                );
 
     List<string> filesToLoad = new List<string>();
     List<uint>   fileHandles = new List<uint>();
@@ -117,10 +105,6 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
 
-        saveAllPrefabs = EditorGUILayout.Toggle(new GUIContent("Save Prefabs", saveAllPrefabsTip), saveAllPrefabs);
-        importLighting = EditorGUILayout.Toggle(new GUIContent("Import Lighting", importLightingTip), importLighting);
-
-        AddSpaces(5);
         
         GUILayout.BeginHorizontal();
         startLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
@@ -164,7 +148,7 @@ public class LVLImportWindow : EditorWindow {
                     if (level == null)
                         continue;
 
-                    MapLoader.ImportMap(level);
+                    WorldLoader.ImportWorlds(level);
                 }
             }
         }

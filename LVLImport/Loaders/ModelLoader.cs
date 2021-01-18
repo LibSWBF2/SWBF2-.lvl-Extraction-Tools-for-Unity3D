@@ -182,8 +182,8 @@ public class ModelLoader : ScriptableObject {
                 mats[i] = GetMaterial(texName, matFlags);
 
                 // Handle vertex data
-                UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, false);
-                UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
+                UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, true);
+                UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
                 UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
                 offsets[i] = dataOffset;
@@ -198,7 +198,8 @@ public class ModelLoader : ScriptableObject {
             int j = 0;
             foreach (Segment seg in segments)
             {
-                mesh.SetTriangles(seg.GetIndexBuffer(), j, true, offsets[j]);
+                int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
+                mesh.SetTriangles(rewound, j, true, offsets[j]);
                 j++;
             }
 
@@ -266,8 +267,8 @@ public class ModelLoader : ScriptableObject {
             // Handle vertex data
             var libVerts = seg.GetVertexBuffer();
 
-            UnityUtils.ConvertSpaceAndFillVec3(libVerts, positions, dataOffset, false);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, false);
+            UnityUtils.ConvertSpaceAndFillVec3(libVerts, positions, dataOffset, true);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
             UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
 
             offsets[i] = dataOffset;
@@ -292,7 +293,8 @@ public class ModelLoader : ScriptableObject {
         int j = 0;
         foreach (Segment seg in segments)
         {
-            mesh.SetTriangles(seg.GetIndexBuffer(), j, true, offsets[j]);
+            int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
+            mesh.SetTriangles(rewound, j, true, offsets[j]);
             j++;
         }
 
@@ -301,7 +303,7 @@ public class ModelLoader : ScriptableObject {
             int skinType = AddWeights(ref newObject, model, ref mesh, model.IsSkeletonBroken);
             if (skinType == 0)
             {
-                Debug.Log("Failed to add weights....");
+                //Debug.LogWarning("Failed to add weights....");
             }
 
             SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();

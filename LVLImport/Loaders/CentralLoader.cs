@@ -4,15 +4,15 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using UnityEditor;
-//using UnityEngine.ScriptableObject;
+using UnityEngine;
 
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class CentralLoader : UnityEngine.ScriptableObject {
+public class CentralLoader : ScriptableObject {
 
-    private static LibSWBF2.Wrappers.Container container = null;
+    private static Container container = null;
 
     public static bool SetContainer(Container lvlContainer)
     {
