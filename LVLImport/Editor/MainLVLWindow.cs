@@ -119,12 +119,10 @@ public class LVLImportWindow : EditorWindow {
 
         
         GUILayout.BeginHorizontal();
-
-        if (!currentlyLoading)
-        {
-            startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
-            startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100));
-        }
+       
+        startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;      
+        startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100)) ? true : currentlyLoading && startLoadClasses;
+        
         GUILayout.EndHorizontal();
 
         GUI.enabled = true;
@@ -183,6 +181,8 @@ public class LVLImportWindow : EditorWindow {
                         }
                     }
                 }
+
+                container.Delete();
             }
         }
     }
