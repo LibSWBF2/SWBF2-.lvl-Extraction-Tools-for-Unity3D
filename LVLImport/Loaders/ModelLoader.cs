@@ -157,7 +157,7 @@ public class ModelLoader : ScriptableObject {
 
     private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh, bool broken = false)
     {
-        var segments = model.GetSegments();
+        var segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
 
         int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
         int txStatus = segments.Sum(item => item.IsPretransformed() ? 1 : 0);
@@ -191,11 +191,12 @@ public class ModelLoader : ScriptableObject {
 
 
 
-    public static bool AddModelComponentsHierarchical(ref GameObject newObject, Model model,
+    public static bool AddModelComponentsHierarchical(ref GameObject newObject, List<Segment> segments,
                                                     Dictionary<string, Transform> skeleton)
     {
+
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
-        foreach (var segment in model.GetSegments())
+        foreach (var segment in segments)
         {
             string boneName = segment.GetBone();
 
@@ -213,13 +214,13 @@ public class ModelLoader : ScriptableObject {
         foreach (string boneName in segmentMap.Keys)
         {
             GameObject boneObj = skeleton[boneName].gameObject;
-            List<Segment> segments = segmentMap[boneName];
+            List<Segment> mappedSegments = segmentMap[boneName];
 
             MeshFilter filter = boneObj.AddComponent<MeshFilter>();
-            filter.sharedMesh = GetMeshFromSegments(segments.ToArray());
+            filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray());
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in segments select GetMaterial(segment.GetMaterial())).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select GetMaterial(segment.GetMaterial())).ToArray();
         }
 
         return true;
@@ -242,13 +243,17 @@ public class ModelLoader : ScriptableObject {
             return false;
         }
 
-        if (model.HasNonTrivialHierarchy && !model.IsSkeletalMesh)
-        {
-            return AddModelComponentsHierarchical(ref newObject, model, skeleton);
-        }
+        //if (model.HasNonTrivialHierarchy && !model.IsSkeletalMesh)
+        //{
+        //    return AddModelComponentsHierarchical(ref newObject, (from segment in model.GetSegments() where !seg.GetBone().Equals("")).ToList(), skeleton);
+        //}
+
+        AddModelComponentsHierarchical(ref newObject, (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList(), skeleton);
+        
+        if (!model.IsSkeletalMesh) return true;
 
 
-        Segment[] segments = model.GetSegments(); 
+        Segment[] segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
         Mesh mesh = GetMeshFromSegments(segments);
         UMaterial[] mats = (from segment in segments select GetMaterial(segment.GetMaterial())).ToArray();
 
