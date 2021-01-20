@@ -20,11 +20,14 @@ public class ModelLoader : ScriptableObject {
 
     public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
     public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
+    public static bool SaveAssets = false;
+
 
     public static void ResetDB()
     {
         materialDataBase.Clear();
     }
+
 
 
     public static UMaterial GetMaterial(LibMaterial mat)
@@ -43,11 +46,14 @@ public class ModelLoader : ScriptableObject {
             if (!materialDataBase.ContainsKey(materialName))
             {
                 UMaterial material = new UMaterial(defaultMaterial);
-                AssetDatabase.CreateAsset(material, "Assets/Materials/" + materialName + ".mat"); 
+
+                if (SaveAssets)
+                {
+                    AssetDatabase.CreateAsset(material, "Assets/Materials/" + materialName + ".mat"); 
+                }
 
                 material.name = materialName;
-
-                material.SetFloat("_Glossiness",0.0f);
+                material.SetFloat("_Glossiness", 0.0f);
 
                 if (MaterialsUtils.IsCutout(matFlags))
                 {

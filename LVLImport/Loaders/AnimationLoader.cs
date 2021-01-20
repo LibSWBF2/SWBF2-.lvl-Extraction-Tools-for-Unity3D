@@ -31,7 +31,43 @@ public class AnimationLoader : ScriptableObject {
                                                      -1.0f,
                                                       -1.0f,
                                                       1.0f,
-                                                     1.0f  };    
+                                                     1.0f  };   
+
+
+    private static Dictionary<uint, string> crcsToCommonNames;
+
+    static AnimationLoader()
+    {
+        crcsToCommonNames = new Dictionary<uint, string>();
+
+        string[] CommonNames = {
+            "death01", "idle", "idle_leftup", "idle_rightup",
+            "idle_to_leftfoot", "idle_to_leftfoot_leftup",
+            "idle_to_leftfoot_rightup", "leftfoot_to_idle",
+            "leftfoot_to_idle_leftup", "leftfoot_to_idle_rightup",
+            "rightfoot_to_idle", "rightfoot_to_idle_leftup",
+            "rightfoot_to_idle_rightup", "turnl", "turnl_leftup",
+            "turnl_rightup", "turnr", "turnr_leftup", "turnr_rightup",
+            "walk_leftfoot_rightfoot", "walk_leftfoot_rightfoot_leftup",
+            "walk_leftfoot_rightfoot_rightup", "walk_rightfoot_leftfoot",
+            "walk_rightfoot_leftfoot_leftup", "walk_rightfoot_leftfoot_rightup",
+            "grab", "idle", "9pose", "takeoff"
+        }; 
+
+        foreach (string name in CommonNames)
+        {
+            crcsToCommonNames[HashUtils.GetCRC(name)] = name;
+        }
+    } 
+
+    public static string TryFindAnimationName(uint nameCrc)
+    {
+        if (crcsToCommonNames.ContainsKey(nameCrc))
+        {
+            return crcsToCommonNames[nameCrc];
+        }
+        return String.Format("0x{0:x}", nameCrc);
+    }
 
 
     public static void ResetDB()
@@ -73,12 +109,41 @@ public class AnimationLoader : ScriptableObject {
 		}
     }
 
+    
+    public static List<AnimationClip> LoadAnimationBank(string animBankName, Transform tran)
+    {
+        List<AnimationClip> clips = new List<AnimationClip>();
 
+        var bank = CentralLoader.GetAnimationBank(animBankName);
+
+        if (bank == null)
+        {
+            return clips;
+        }
+
+        var animCRCs = bank.GetAnimationCRCs();
+        foreach (uint animCRC in animCRCs)
+        {
+            var clip = LoadAnimationClip(animBankName, animCRC, tran);
+            clip.name = TryFindAnimationName(animCRC);
+            clips.Add(clip);
+        }
+
+        return clips;
+    }    
 
 
     public static AnimationClip LoadAnimationClip(string animBankName, string animationName, Transform objectTransform)
+    {   
+        //uint animBankCRC = HashUtils.GetCRC(animBankName);
+        uint animCRC = HashUtils.GetCRC(animationName);
+        return LoadAnimationClip(animBankName, animCRC, objectTransform);
+    }
+
+
+    public static AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform)
     {
-    	uint animID = HashUtils.GetCRC(animBankName + "/" + animationName);
+    	uint animID = HashUtils.GetCRC(animBankName) * animationName;//HashUtils.GetCRC(animBankName + "/" + animationName);
 
     	if (animDatabase.ContainsKey(animID))
     	{
@@ -93,7 +158,7 @@ public class AnimationLoader : ScriptableObject {
     		return null;
     	}
 
-    	uint animCRC = HashUtils.GetCRC(animationName);
+    	uint animCRC = animationName; //HashUtils.GetCRC(animationName);
 
     	if (objectTransform != null && animBank.GetAnimationMetadata(animCRC, out int numFrames, out int numBones))
     	{
