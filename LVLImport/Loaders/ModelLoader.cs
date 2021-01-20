@@ -43,7 +43,11 @@ public class ModelLoader : ScriptableObject {
             if (!materialDataBase.ContainsKey(materialName))
             {
                 UMaterial material = new UMaterial(defaultMaterial);
+                AssetDatabase.CreateAsset(material, "Assets/Materials/" + materialName + ".mat"); 
+
                 material.name = materialName;
+
+                material.SetFloat("_Glossiness",0.0f);
 
                 if (MaterialsUtils.IsCutout(matFlags))
                 {
@@ -59,6 +63,8 @@ public class ModelLoader : ScriptableObject {
                 {
                     material.mainTexture = importedTex;
                 }
+
+                //material = (UMaterial) AssetDatabase.LoadAssetAtPath("Assets/Materials/" + materialName + ".mat", typeof(UMaterial));
 
                 materialDataBase[materialName] = material;
             }

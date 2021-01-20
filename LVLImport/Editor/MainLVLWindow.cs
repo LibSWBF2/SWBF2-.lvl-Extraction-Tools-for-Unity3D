@@ -15,6 +15,8 @@ public class LVLImportWindow : EditorWindow {
 
     bool currentlyLoading, startLoading;
 
+    bool terrainAsMesh = false;
+
     Container container = new Container();
 
     List<string> filesToLoad = new List<string>();
@@ -104,6 +106,8 @@ public class LVLImportWindow : EditorWindow {
         }
 
         AddSpaces(5);
+        terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
+        AddSpaces(5);
 
         
         GUILayout.BeginHorizontal();
@@ -140,6 +144,7 @@ public class LVLImportWindow : EditorWindow {
             {
                 currentlyLoading = false;
                 CentralLoader.SetContainer(container);
+                WorldLoader.TerrainAsMesh = terrainAsMesh;
 
                 foreach (uint handle in fileHandles)
                 {

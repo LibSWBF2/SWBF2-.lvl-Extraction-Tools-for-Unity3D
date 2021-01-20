@@ -30,7 +30,8 @@ Shader "ConversionAssets/TerrainTest"
 
         void surf (Input IN, inout SurfaceOutput o) {
             float2 modulo = float2(32.0,32.0);
-            float2 uvTex = (IN.worldPos.xz % modulo) / modulo;
+            float2 gridLoc = IN.worldPos.xz;
+            float2 uvTex = (gridLoc % modulo) / modulo;
             //o.Albedo = tex2D(_Layer0Tex, uvTex).rgb;
 
             float3 lay0Diff = tex2D(_Layer0Tex, uvTex).rgb;
@@ -38,11 +39,15 @@ Shader "ConversionAssets/TerrainTest"
             float3 lay2Diff = tex2D(_Layer2Tex, uvTex).rgb;
             float3 lay3Diff = tex2D(_Layer3Tex, uvTex).rgb;
 
-            float2 bounds = float2(_XBound, _ZBound);
+            float2 bounds = float2(_XBound / 2.0, _ZBound / 2.0);
+
+            //float4 blend = tex2D(_BlendMap, ((IN.worldPos.xz + bounds) / bounds));
             float4 blend = tex2D(_BlendMap, (IN.worldPos.xz + bounds) / (2.0 * bounds));
             
             //o.Albedo.rgb = blend.xyz;
             o.Albedo.rgb = lay0Diff * blend.r + lay1Diff * blend.g + lay2Diff * blend.b + lay3Diff * blend.a;
+
+            //o.Albedo.rgb = float4(.5,.5,.5,1.0);
         }  
         ENDCG
     } 
