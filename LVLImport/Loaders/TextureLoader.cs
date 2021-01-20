@@ -15,6 +15,9 @@ public class TextureLoader : ScriptableObject {
     public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
     public static bool imported = false;
 
+
+    public static bool SaveAssets = false;
+
     public static void ResetDB()
     {
         texDataBase.Clear();
@@ -54,14 +57,18 @@ public class TextureLoader : ScriptableObject {
             }
             newTexture.SetPixels(colors,0);
             newTexture.Apply();
-            File.WriteAllBytes(texturePath, newTexture.EncodeToPNG());
+
+            if (SaveAssets)
+            {
+                File.WriteAllBytes(texturePath, newTexture.EncodeToPNG());
+            }
 
             texDataBase[name] = newTexture;
             return newTexture;
         }
         else 
         {
-            Debug.Log(String.Format("ERROR: Texture: {0} failed to load!", name));
+            Debug.LogError(String.Format("Texture: {0} failed to load!", name));
             return null;
         }
     }

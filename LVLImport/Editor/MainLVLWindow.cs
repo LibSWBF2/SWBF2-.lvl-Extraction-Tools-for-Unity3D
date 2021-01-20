@@ -15,7 +15,10 @@ public class LVLImportWindow : EditorWindow {
 
     bool currentlyLoading, startLoading;
 
+    bool startLoadWorlds, startLoadClasses;
+
     bool terrainAsMesh = false;
+    bool saveTextures, saveMaterials;
 
     Container container = new Container();
 
@@ -107,15 +110,26 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
         terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
+        saveTextures  = EditorGUILayout.Toggle(new GUIContent("Save Textures", ""), saveTextures);
+        saveMaterials = EditorGUILayout.Toggle(new GUIContent("Save Materials", ""), saveMaterials);
+        
+        saveTextures = saveMaterials ? true : saveTextures;        
+
         AddSpaces(5);
 
         
-        GUILayout.BeginHorizontal();
-        startLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
-        //GUILayout.Button("Import Objects",GUILayout.Width(100));
-        GUILayout.EndHorizontal();
+
+        if (!currentlyLoading)
+        {
+            GUILayout.BeginHorizontal();
+            startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
+            startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100));
+            GUILayout.EndHorizontal();
+        }
 
         GUI.enabled = true;
+
+        startLoading = (startLoadClasses || startLoadWorlds) && !currentlyLoading;
 
         if (startLoading)
         {
@@ -144,7 +158,10 @@ public class LVLImportWindow : EditorWindow {
             {
                 currentlyLoading = false;
                 CentralLoader.SetContainer(container);
+
                 WorldLoader.TerrainAsMesh = terrainAsMesh;
+                TextureLoader.SaveAssets = saveTextures;
+                ModelLoader.SaveAssets = saveMaterials;
 
                 foreach (uint handle in fileHandles)
                 {
@@ -153,7 +170,19 @@ public class LVLImportWindow : EditorWindow {
                     if (level == null)
                         continue;
 
-                    WorldLoader.ImportWorlds(level);
+                    if (startLoadWorlds)
+                    {
+                        WorldLoader.ImportWorlds(level);
+                    }
+
+                    if (startLoadClasses)
+                    {
+                        foreach (var ec in level.GetEntityClasses())
+                        {
+                            ClassLoader.LoadGeneralClass(ec.name);
+                        }
+                    }
+
                 }
             }
         }
