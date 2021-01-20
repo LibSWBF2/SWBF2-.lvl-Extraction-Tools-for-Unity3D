@@ -111,45 +111,16 @@ public class WorldLoader : ScriptableObject {
     private static GameObject ImportTerrainAsMesh(LibTerrain terrain)
     {
         Mesh terrainMesh = new Mesh();
-
-        float[] positions = terrain.GetPositionsBuffer();
-        float[] normals   = terrain.GetNormalsBuffer();
-        terrainMesh.SetVertices(UnityUtils.FloatToVec3Array(positions, false));
-        terrainMesh.SetNormals(UnityUtils.FloatToVec3Array(normals, false));
-        terrainMesh.SetUVs(0, new UnityEngine.Vector2[(normals.Length / 3)]);
-
-        uint[] indBuffer = terrain.GetIndexBuffer();
-        int[] intIndBuffer = new int[indBuffer.Length];
-        for (int i = 0; i < indBuffer.Length; i++)
-        {
-            intIndBuffer[i] = (int) indBuffer[i];
-        }
-
-        terrainMesh.triangles = intIndBuffer;
-
-
-        float minX = 0.0f;
-        float maxX = 0.0f;
-        float minZ = 0.0f;
-        float maxZ = 0.0f;
-        UnityEngine.Vector3[] poses = UnityUtils.FloatToVec3Array(positions, false);
-        foreach (var vec in poses)
-        {
-            if (vec.x < minX) minX = vec.x;
-            if (vec.z < minZ) minZ = vec.z;
-            if (vec.x > maxX) maxX = vec.x;
-            if (vec.z > maxZ) maxZ = vec.z;
-        }
-
-        Debug.Log(String.Format("MinX: {0} MaxX: {1} MinZ: {2} MaxZ: {3}", minX, maxX, minZ, maxZ));
-
-
+        terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        terrainMesh.vertices = UnityUtils.FloatToVec3Array(terrain.GetPositionsBuffer(), false);
+        terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
+        terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
+        terrainMesh.RecalculateNormals();
 
         GameObject terrainObj = new GameObject("Terrain");
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
-        terrainMesh.RecalculateNormals();
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
@@ -233,7 +204,7 @@ public class WorldLoader : ScriptableObject {
             }
         }
         terData.SetHeights(0, 0, heights);
-        //terData.SetHoles(0,0,holes);
+        terData.SetHoles(0,0,holes);
         
 
         //Get list of textures used
