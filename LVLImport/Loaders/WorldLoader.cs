@@ -4,18 +4,31 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using UnityEngine;
+using UnityEngine.Rendering;
+using Unity.Collections;
 using UnityEditor;
 
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
 
+using LibTerrain = LibSWBF2.Wrappers.Terrain;
+using UMaterial = UnityEngine.Material;
+
+
 
 public class WorldLoader : Loader {
+
+
+
+    public static bool TerrainAsMesh = false;
+
 
     //Imports all worlds for now...
     public static void ImportWorlds(Level level)
     {
+        bool LoadedTerrain = false;
+
         World[] worlds = level.GetWorlds();
 
         foreach (World world in worlds)
@@ -61,10 +74,20 @@ public class WorldLoader : Loader {
             }
         
             var terrain = world.GetTerrain();
-            if (terrain != null)
+            if (terrain != null && !LoadedTerrain)
             {
-                var terrainGameObject = ImportTerrain(terrain);
+                GameObject terrainGameObject;
+                if (TerrainAsMesh)
+                {
+                    terrainGameObject = ImportTerrainAsMesh(terrain);
+                }
+                else 
+                {
+                    terrainGameObject = ImportTerrain(terrain);
+                }
+
                 terrainGameObject.transform.parent = worldRoot.transform;
+                LoadedTerrain = true;
             }
 
             var lights = ImportLights(world.GetLights());
@@ -75,10 +98,84 @@ public class WorldLoader : Loader {
         }
 
         TryImportSkyDome(level);
+
+        AssetDatabase.Refresh();
     }
 
 
-    private static GameObject ImportTerrain(LibSWBF2.Wrappers.Terrain terrain)
+
+    private static GameObject ImportTerrainAsMesh(LibTerrain terrain)
+    {
+        Mesh terrainMesh = new Mesh();
+        terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        terrainMesh.vertices = UnityUtils.FloatToVec3Array(terrain.GetPositionsBuffer(), false);
+        terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
+        terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
+        terrainMesh.RecalculateNormals();
+
+        GameObject terrainObj = new GameObject("Terrain");
+
+        MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
+        filter.sharedMesh = terrainMesh;
+
+        MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
+
+        int j = 0;
+        foreach (string texName in terrain.GetTextureNames())
+        {
+            Texture2D tex = TextureLoader.ImportTexture(texName);
+            string layerTexName = "_LayerXXTex".Replace("XX",j.ToString());
+
+            if (tex != null)
+            {
+                renderer.sharedMaterial.SetTexture(layerTexName, tex);  
+            }
+
+            if (++j > 3) break;
+        }
+
+
+        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
+        Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
+        Color[] colors = blendTex.GetPixels(0);
+
+        for (int w = 0; w < blendDim; w++)
+        {
+            for (int h = 0; h < blendDim; h++)
+            {
+                Color col = Color.black;
+                int baseIndex = (int) (numLayers * (w * blendDim + h));
+
+                for (int z = 0; z < (int) numLayers && z < 4; z++)
+                {
+                    col[z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;  
+                }
+
+                colors[(blendDim - w - 1) * blendDim + h] = col;
+            }
+        }
+
+        blendTex.SetPixels(colors,0);
+        blendTex.Apply();
+
+        renderer.sharedMaterial.SetTexture("_BlendMap", blendTex);
+
+        terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
+        float bound = (float) (dim * dimScale);
+        renderer.sharedMaterial.SetFloat("_XBound", bound);
+        renderer.sharedMaterial.SetFloat("_ZBound", bound);
+
+
+        terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+        return terrainObj;
+    }
+
+
+
+
+
+    private static GameObject ImportTerrain(LibTerrain terrain)
     {
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
@@ -103,7 +200,7 @@ public class WorldLoader : Loader {
             }
         }
         terData.SetHeights(0, 0, heights);
-        //terData.SetHoles(0,0,holes);
+        terData.SetHoles(0,0,holes);
         
 
         //Get list of textures used

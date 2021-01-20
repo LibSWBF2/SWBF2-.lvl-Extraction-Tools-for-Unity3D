@@ -15,6 +15,11 @@ public class LVLImportWindow : EditorWindow {
 
     bool currentlyLoading, startLoading;
 
+    bool startLoadWorlds, startLoadClasses;
+
+    bool terrainAsMesh = false;
+    bool saveTextures, saveMaterials;
+
     Container container = new Container();
 
     List<string> filesToLoad = new List<string>();
@@ -47,7 +52,7 @@ public class LVLImportWindow : EditorWindow {
 
         if (GUILayout.Button("Browse",GUILayout.Width(55)))
         {
-            path = EditorUtility.OpenFilePanel("Select lvl file(s)", "", "lvl");
+            path = EditorUtility.OpenFilePanel("Select lvl file(s)", "", "lvl,zaabin");
             path = String.Compare(path,"") == 0 ? null : path;
         }
 
@@ -104,14 +109,25 @@ public class LVLImportWindow : EditorWindow {
         }
 
         AddSpaces(5);
+        terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
+        saveTextures  = EditorGUILayout.Toggle(new GUIContent("Save Textures", ""), saveTextures);
+        saveMaterials = EditorGUILayout.Toggle(new GUIContent("Save Materials", ""), saveMaterials);
+        
+        saveTextures = saveMaterials ? true : saveTextures;        
+
+        AddSpaces(5);
 
         
         GUILayout.BeginHorizontal();
-        startLoading = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
-        //GUILayout.Button("Import Objects",GUILayout.Width(100));
+       
+        startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;      
+        startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100)) ? true : currentlyLoading && startLoadClasses;
+        
         GUILayout.EndHorizontal();
 
         GUI.enabled = true;
+
+        startLoading = (startLoadClasses || startLoadWorlds) && !currentlyLoading;
 
         if (startLoading)
         {
@@ -141,6 +157,10 @@ public class LVLImportWindow : EditorWindow {
                 currentlyLoading = false;
                 Loader.SetContainer(container);
 
+                WorldLoader.TerrainAsMesh = terrainAsMesh;
+                TextureLoader.SaveAssets = saveTextures;
+                ModelLoader.SaveAssets = saveMaterials;
+
                 foreach (uint handle in fileHandles)
                 {
                     Level level = container.GetLevel(handle);
@@ -148,8 +168,21 @@ public class LVLImportWindow : EditorWindow {
                     if (level == null)
                         continue;
 
-                    WorldLoader.ImportWorlds(level);
+                    if (startLoadWorlds)
+                    {
+                        WorldLoader.ImportWorlds(level);
+                    }
+
+                    if (startLoadClasses)
+                    {
+                        foreach (var ec in level.GetEntityClasses())
+                        {
+                            ClassLoader.LoadGeneralClass(ec.name);
+                        }
+                    }
                 }
+
+                container.Delete();
             }
         }
     }
