@@ -15,6 +15,10 @@ public class ClassLoader : Loader {
 
     public static Dictionary<string, GameObject> classObjectDatabase = new Dictionary<string, GameObject>();
 
+
+    public static bool SaveAssets = false;
+
+
     public const uint GEOMETRYNAME = 1204317002;
     public const uint ATTACHODF = 2849035403;
     public const uint ATTACHTOHARDPOINT = 1005041674;
@@ -105,9 +109,25 @@ public class ClassLoader : Loader {
 
                     //currentAnimationSet = "imp_walk_atat";
                     currentAnimationSet = propertyValue;
+
+                    var clips = AnimationLoader.LoadAnimationBank(propertyValue, obj.transform);
+                    Animation animComponent = obj.GetComponent<Animation>();
+
+                    if (animComponent == null)
+                    {
+                        animComponent = obj.AddComponent<Animation>();
+                    }
+
+                    foreach (var curClip in clips)
+                    {
+                        animComponent.AddClip(curClip, curClip.name);
+                        animComponent.wrapMode = WrapMode.Once;                        
+                    }
+
                     break;
 
                 case ANIMATION:
+                    break;
 
                     //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "death01", obj.transform);
                     AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
@@ -132,10 +152,16 @@ public class ClassLoader : Loader {
 
                 case GEOMETRYNAME:
 
-					//if (!ModelLoader.AddModelComponents(ref obj, "imp_walk_atat"))
-                    if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
+                    try {
+    					//if (!ModelLoader.AddModelComponents(ref obj, "imp_walk_atat"))
+                        if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
+                        {
+                            Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
+                            return obj;
+                        }
+                    }
+                    catch (Exception e)
                     {
-                        Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                         return obj;
                     }
                     break;
