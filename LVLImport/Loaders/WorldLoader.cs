@@ -19,6 +19,11 @@ using UMaterial = UnityEngine.Material;
 
 public class WorldLoader : ScriptableObject {
 
+
+
+    public static bool TerrainAsMesh = false;
+
+
     //Imports all worlds for now...
     public static void ImportWorlds(Level level)
     {
@@ -75,7 +80,16 @@ public class WorldLoader : ScriptableObject {
             var terrain = world.GetTerrain();
             if (terrain != null && !LoadedTerrain)
             {
-                var terrainGameObject = ImportTerrainAsMesh(terrain);
+                GameObject terrainGameObject;
+                if (TerrainAsMesh)
+                {
+                    terrainGameObject = ImportTerrainAsMesh(terrain);
+                }
+                else 
+                {
+                    terrainGameObject = ImportTerrain(terrain);
+                }
+
                 terrainGameObject.transform.parent = worldRoot.transform;
                 LoadedTerrain = true;
             }
@@ -88,6 +102,8 @@ public class WorldLoader : ScriptableObject {
         }
 
         TryImportSkyDome(level);
+
+        AssetDatabase.Refresh();
     }
 
 
@@ -110,6 +126,22 @@ public class WorldLoader : ScriptableObject {
         }
 
         terrainMesh.triangles = intIndBuffer;
+
+
+        float minX = 0.0f;
+        float maxX = 0.0f;
+        float minZ = 0.0f;
+        float maxZ = 0.0f;
+        UnityEngine.Vector3[] poses = UnityUtils.FloatToVec3Array(positions, false);
+        foreach (var vec in poses)
+        {
+            if (vec.x < minX) minX = vec.x;
+            if (vec.z < minZ) minZ = vec.z;
+            if (vec.x > maxX) maxX = vec.x;
+            if (vec.z > maxZ) maxZ = vec.z;
+        }
+
+        Debug.Log(String.Format("MinX: {0} MaxX: {1} MinZ: {2} MaxZ: {3}", minX, maxX, minZ, maxZ));
 
 
 
