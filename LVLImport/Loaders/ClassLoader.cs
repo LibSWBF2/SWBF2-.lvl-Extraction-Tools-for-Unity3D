@@ -110,6 +110,9 @@ public class ClassLoader : ScriptableObject {
                     //currentAnimationSet = "imp_walk_atat";
                     currentAnimationSet = propertyValue;
 
+                    if (ecWrapper.GetBaseName().Equals("com_inf_default"))
+                        propertyValue = "human_sabre";
+
                     var clips = AnimationLoader.LoadAnimationBank(propertyValue, obj.transform);
                     Animation animComponent = obj.GetComponent<Animation>();
 

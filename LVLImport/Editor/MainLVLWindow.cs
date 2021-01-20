@@ -52,7 +52,7 @@ public class LVLImportWindow : EditorWindow {
 
         if (GUILayout.Button("Browse",GUILayout.Width(55)))
         {
-            path = EditorUtility.OpenFilePanel("Select lvl file(s)", "", "lvl");
+            path = EditorUtility.OpenFilePanel("Select lvl file(s)", "", "lvl,zaabin");
             path = String.Compare(path,"") == 0 ? null : path;
         }
 
@@ -118,14 +118,14 @@ public class LVLImportWindow : EditorWindow {
         AddSpaces(5);
 
         
+        GUILayout.BeginHorizontal();
 
         if (!currentlyLoading)
         {
-            GUILayout.BeginHorizontal();
             startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100));      
             startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100));
-            GUILayout.EndHorizontal();
         }
+        GUILayout.EndHorizontal();
 
         GUI.enabled = true;
 
@@ -182,7 +182,6 @@ public class LVLImportWindow : EditorWindow {
                             ClassLoader.LoadGeneralClass(ec.name);
                         }
                     }
-
                 }
             }
         }
