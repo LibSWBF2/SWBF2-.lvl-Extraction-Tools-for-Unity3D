@@ -12,11 +12,14 @@ using UnityEditor;
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
+using LibMaterial = LibSWBF2.Wrappers.Material;
+using UMaterial = UnityEngine.Material;
+using LibBone = LibSWBF2.Wrappers.Bone;
 
 public class ModelLoader : ScriptableObject {
 
-    public static Dictionary<string, Material> materialDataBase = new Dictionary<string, Material>();
-    public static Material defaultMaterial = new Material(Shader.Find("Standard"));
+    public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
+    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
 
     public static void ResetDB()
     {
@@ -24,8 +27,11 @@ public class ModelLoader : ScriptableObject {
     }
 
 
-    public static Material GetMaterial(string texName, uint matFlags)
+    public static UMaterial GetMaterial(LibMaterial mat)
     {
+        string texName = mat.textures[0];
+        uint matFlags = mat.materialFlags;
+
         if (texName == "")
         {
             return defaultMaterial;
@@ -36,7 +42,7 @@ public class ModelLoader : ScriptableObject {
 
             if (!materialDataBase.ContainsKey(materialName))
             {
-                Material material = new Material(defaultMaterial);
+                UMaterial material = new UMaterial(defaultMaterial);
                 material.name = materialName;
 
                 if (MaterialsUtils.IsCutout(matFlags))
@@ -62,9 +68,53 @@ public class ModelLoader : ScriptableObject {
     }
 
 
+
+    private static Mesh GetMeshFromSegments(Segment[] segments)
+    {
+        Mesh mesh = new Mesh();
+        mesh.subMeshCount = segments.Length;
+
+        int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
+
+        Vector3[] positions = new Vector3[totalLength];
+        Vector3[] normals = new Vector3[totalLength];
+        Vector2[] texcoords = new Vector2[totalLength];
+        int[] offsets = new int[segments.Length];
+
+        int dataOffset = 0, i = 0;
+        foreach (Segment seg in segments)
+        {
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, true);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
+            UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
+
+            offsets[i++] = dataOffset;
+            dataOffset += (int) seg.GetVertexBufferLength();
+        }
+
+        mesh.SetVertices(positions);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0,texcoords);
+        
+        i = 0;
+        foreach (Segment seg in segments)
+        {
+            //Reverse winding order since we flip handedness of model data
+            int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
+            mesh.SetTriangles(rewound, i, true, offsets[i]);
+            i++;
+        }
+
+        return mesh;
+    } 
+
+
+
+
+
     private static bool AddHierarchy(ref GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
-        LibSWBF2.Wrappers.Bone[] hierarchy = model.GetSkeleton();
+        LibBone[] hierarchy = model.GetSkeleton();
         Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
 
         foreach (var node in hierarchy)
@@ -113,7 +163,6 @@ public class ModelLoader : ScriptableObject {
         int dataOffset = 0;
         foreach (Segment seg in segments)
         {           
-            //Debug.Log(String.Format("Model: {2}, Verts length: {0}, Weights length: {1}", libVerts.Length, libWeights.Length, modelName));
             UnityUtils.FillBoneWeights(seg.GetVertexWeights(), weights, dataOffset, broken ? -1 : 0);            
             dataOffset += (int) seg.GetVertexBufferLength() * bonesPerVert;
         }
@@ -154,62 +203,11 @@ public class ModelLoader : ScriptableObject {
             GameObject boneObj = skeleton[boneName].gameObject;
             List<Segment> segments = segmentMap[boneName];
 
-            Mesh mesh = new Mesh();
-            Material[] mats = new Material[segments.Count];
-
-            mesh.subMeshCount = segments.Count;
-
-            int totalLength = 0;
-            foreach (Segment seg in segments)
-            {
-                totalLength += (int) seg.GetVertexBufferLength();
-            }
-
-            Vector3[] positions = new Vector3[totalLength];
-            Vector3[] normals = new Vector3[totalLength];
-            Vector2[] texcoords = new Vector2[totalLength];
-            int[] offsets = new int[segments.Count];
-
-            int dataOffset = 0;
-
-            for (int i = 0; i < segments.Count; i++)
-            {
-                Segment seg = segments[i];
-
-                // Handle material data
-                string texName = seg.GetMaterialTexName();
-                uint matFlags = seg.GetMaterialFlags();
-                mats[i] = GetMaterial(texName, matFlags);
-
-                // Handle vertex data
-                UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, true);
-                UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
-                UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
-
-                offsets[i] = dataOffset;
-
-                dataOffset += (int) seg.GetVertexBufferLength();
-            }
-
-            mesh.SetVertices(positions);
-            mesh.SetNormals(normals);
-            mesh.SetUVs(0,texcoords);
-
-            int j = 0;
-            foreach (Segment seg in segments)
-            {
-                int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
-                mesh.SetTriangles(rewound, j, true, offsets[j]);
-                j++;
-            }
-
             MeshFilter filter = boneObj.AddComponent<MeshFilter>();
-            filter.sharedMesh = mesh;
+            filter.sharedMesh = GetMeshFromSegments(segments.ToArray());
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = mats;
-
-            boneObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,1.0f);
+            renderer.sharedMaterials = (from segment in segments select GetMaterial(segment.GetMaterial())).ToArray();
         }
 
         return true;
@@ -223,7 +221,7 @@ public class ModelLoader : ScriptableObject {
 
         if (model == null)
         {
-            Debug.Log(String.Format("ERROR: Failed to load model: {0}", modelName));
+            Debug.LogError(String.Format("Failed to load model: {0}", modelName));
             return false;
         }
 
@@ -237,66 +235,10 @@ public class ModelLoader : ScriptableObject {
             return AddModelComponentsHierarchical(ref newObject, model, skeleton);
         }
 
-        Mesh mesh = new Mesh();
 
         Segment[] segments = model.GetSegments(); 
-        Material[] mats = new Material[segments.Length];
-
-        mesh.subMeshCount = segments.Length;
-
-        int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
-
-
-        Vector3[] positions = new Vector3[totalLength];
-        Vector3[] normals = new Vector3[totalLength];
-        Vector2[] texcoords = new Vector2[totalLength];
-        //BoneWeight1[] weights = new BoneWeight1[model.IsSkeletalMesh ? totalLength * 4 : 0];
-        int[] offsets = new int[segments.Length];
-
-        int dataOffset = 0;
-
-        for (int i = 0; i < segments.Length; i++)
-        {
-            Segment seg = segments[i];
-
-            // Handle material data
-            string texName = seg.GetMaterialTexName();
-            uint matFlags = seg.GetMaterialFlags();
-            mats[i] = GetMaterial(texName, matFlags);
-
-            // Handle vertex data
-            var libVerts = seg.GetVertexBuffer();
-
-            UnityUtils.ConvertSpaceAndFillVec3(libVerts, positions, dataOffset, true);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
-            UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
-
-            offsets[i] = dataOffset;
-
-            dataOffset += (int) seg.GetVertexBufferLength();
-        }
-
-        mesh.SetVertices(positions);
-        mesh.SetNormals(normals);
-        mesh.SetUVs(0,texcoords);
-
-        if (model.IsSkeletalMesh)
-        {
-            /*
-            if (!AddWeights(ref newObject, model, ref mesh, out bool isPretransformed))
-            {
-                Debug.Log("Failed to add weights....");
-            }
-            */
-        }
-        
-        int j = 0;
-        foreach (Segment seg in segments)
-        {
-            int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
-            mesh.SetTriangles(rewound, j, true, offsets[j]);
-            j++;
-        }
+        Mesh mesh = GetMeshFromSegments(segments);
+        UMaterial[] mats = (from segment in segments select GetMaterial(segment.GetMaterial())).ToArray();
 
         if (model.IsSkeletalMesh)
         {
@@ -307,7 +249,7 @@ public class ModelLoader : ScriptableObject {
             }
 
             SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
-            LibSWBF2.Wrappers.Bone[] bonesSWBF = model.GetSkeleton();
+            LibBone[] bonesSWBF = model.GetSkeleton();
 
             /*
             Set bones
