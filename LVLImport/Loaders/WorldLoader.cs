@@ -102,7 +102,6 @@ public class WorldLoader : ScriptableObject {
         terrainMesh.SetNormals(UnityUtils.FloatToVec3Array(normals, false));
         terrainMesh.SetUVs(0, new UnityEngine.Vector2[(normals.Length / 3)]);
 
-
         uint[] indBuffer = terrain.GetIndexBuffer();
         int[] intIndBuffer = new int[indBuffer.Length];
         for (int i = 0; i < indBuffer.Length; i++)
@@ -113,25 +112,12 @@ public class WorldLoader : ScriptableObject {
         terrainMesh.triangles = intIndBuffer;
 
 
-        /*
-        terrainMesh.SetIndexBufferParams(indBuffer.Length, IndexFormat.UInt32);
-        terrainMesh.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);
-        */
-
-        Debug.Log(String.Format("Terrain Mesh: Num positions: {0}, normals: {1}, indices: {2}", positions.Length, normals.Length, indBuffer.Length));
-
-        string vertsDbg = "";
-        for (int i = 0; i < 50; i++)
-        {
-            vertsDbg = vertsDbg + indBuffer[i].ToString() + " ";
-        }
-        Debug.Log("Terrain index dump: " + vertsDbg);
-
 
         GameObject terrainObj = new GameObject("Terrain");
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
+        terrainMesh.RecalculateNormals();
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
