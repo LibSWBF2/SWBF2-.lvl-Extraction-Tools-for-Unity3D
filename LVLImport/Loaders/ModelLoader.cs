@@ -22,6 +22,10 @@ public class ModelLoader : Loader {
     public static Dictionary<string, List<Mesh>> meshDataBase = new Dictionary<string, List<Mesh>>();
 
 
+    //private static GameObject cylColl = Instantiate(Resources.Load(Path.Combine(Application.dataPath, "SWBF2Import", "LVLImport", "ConversionAssets", "CylinderCollider.prefab"), typeof(GameObject))) as GameObject; 
+
+    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/SWBF2Import/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
+
     public static void ResetDB()
     {
         meshDataBase.Clear();
@@ -174,10 +178,70 @@ public class ModelLoader : Loader {
     }
 
 
-    public static bool AddModelComponents(ref GameObject newObject, string modelName)
+
+    private static bool AddModelComponentsSkinned(ref GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
     {
-        return AddModelComponents(ref newObject, container.FindWrapper<Model>(modelName));
+        Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray();
+        Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray());
+        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
+
+        int skinType = AddWeights(ref newObject, model, ref mesh, model.IsSkeletonBroken);
+        if (skinType == 0)
+        {
+            //Debug.LogWarning("Failed to add weights....");
+        }
+
+        SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
+        LibBone[] bonesSWBF = model.GetSkeleton();
+
+        /*
+        Set bones
+        */
+        Transform[] bones = new Transform[bonesSWBF.Length];
+        for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
+        {
+            var curBoneSWBF = bonesSWBF[boneNum];
+            //Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
+            bones[boneNum] = skeleton[curBoneSWBF.name];
+            bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? skeleton[curBoneSWBF.parentName] : newObject.transform, false);
+        }
+
+        /*
+        Set bindposes...
+        */
+        Matrix4x4[] bindPoses = new Matrix4x4[bonesSWBF.Length];
+        for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
+        {
+            if (skinType == 1)
+            {
+                //For pretransformed skins...
+                bindPoses[boneNum] = Matrix4x4.identity;
+            }
+            else 
+            {
+                bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[0].parent.localToWorldMatrix;
+            }
+            //But what works for sarlacctentacle?
+        }
+
+        mesh.bindposes = bindPoses;
+
+        skinRenderer.bones = bones;
+        skinRenderer.sharedMesh = mesh;
+        skinRenderer.sharedMaterials = mats;
+
+        for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
+        {
+            var curBoneSWBF = bonesSWBF[boneNum];
+            skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
+            skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
+        }
+
+        return true;
     }
+
+
+
 
 
 
@@ -194,98 +258,60 @@ public class ModelLoader : Loader {
             return false;
         }
 
-        //if (model.HasNonTrivialHierarchy && !model.IsSkeletalMesh)
-        //{
-        //    return AddModelComponentsHierarchical(ref newObject, (from segment in model.GetSegments() where !seg.GetBone().Equals("")).ToList(), skeleton);
-        //}
-
         AddModelComponentsHierarchical(ref newObject, (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList(), skeleton);
         
-        if (!model.IsSkeletalMesh) return true;
-
-
-        Segment[] segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
-        Mesh mesh = GetMeshFromSegments(segments);
-        UMaterial[] mats = (from segment in segments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
-
         if (model.IsSkeletalMesh)
         {
-            int skinType = AddWeights(ref newObject, model, ref mesh, model.IsSkeletonBroken);
-            if (skinType == 0)
-            {
-                //Debug.LogWarning("Failed to add weights....");
-            }
-
-            SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
-            LibBone[] bonesSWBF = model.GetSkeleton();
-
-            /*
-            Set bones
-            */
-            Transform[] bones = new Transform[bonesSWBF.Length];
-            for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
-            {
-                var curBoneSWBF = bonesSWBF[boneNum];
-                //Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
-                bones[boneNum] = skeleton[curBoneSWBF.name];
-                bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? skeleton[curBoneSWBF.parentName] : newObject.transform, false);
-            }
-
-            /*
-            Set bindposes...
-            */
-            Matrix4x4[] bindPoses = new Matrix4x4[bonesSWBF.Length];
-            for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
-            {
-                if (skinType == 1)
-                {
-                    //For pretransformed skins...
-                    bindPoses[boneNum] = Matrix4x4.identity;
-                }
-                else 
-                {
-                    bindPoses[boneNum] = bones[boneNum].worldToLocalMatrix * bones[0].parent.localToWorldMatrix;
-                }
-                //But what works for sarlacctentacle?
-            }
-
-            mesh.bindposes = bindPoses;
-
-            skinRenderer.bones = bones;
-            skinRenderer.sharedMesh = mesh;
-            skinRenderer.sharedMaterials = mats;
-
-            for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
-            {
-                var curBoneSWBF = bonesSWBF[boneNum];
-                skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
-                skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
-            }
+            AddModelComponentsSkinned(ref newObject, model, skeleton);
         }
-        else
+
+        return true;
+    }
+
+    public static bool AddModelComponents(ref GameObject newObject, string modelName)
+    {
+        return AddModelComponents(ref newObject, container.FindWrapper<Model>(modelName));
+    }
+
+
+
+
+    public static bool AddCollisionComponents(ref GameObject newObject, string modelName, HashSet<string> colliderNames = null)
+    {
+        if (modelName.Equals("")) return false;
+
+        Model model = null;
+        try {
+            model = container.FindWrapper<Model>(modelName);
+        }
+        catch { return false; }
+
+        if (model == null) 
         {
-            MeshFilter filter = newObject.AddComponent<MeshFilter>();
-            filter.sharedMesh = mesh;
-
-            MeshRenderer renderer = newObject.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = mats;
+            return false;
         }
 
+        CollisionMesh collMesh = null;
+        try {
+            collMesh = model.GetCollisionMesh();
+        }
+        catch 
+        {
+            Debug.LogError(modelName + ": Error in process of CollisionMesh fetch failed to get collision mesh");
+            return false;
+        }
 
-        CollisionMesh collMesh = model.GetCollisionMesh();
-        if (collMesh != null)
+        if (collMesh != null && !model.IsSkeletalMesh)
         {
             uint[] indBuffer = collMesh.GetIndices();
 
             try {
-
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), false);
-                    
-                    collMeshUnity.SetIndexBufferParams(indBuffer.Length, IndexFormat.UInt32);
-                    collMeshUnity.SetIndexBufferData(indBuffer, 0, 0, indBuffer.Length);
+                    collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
+                    collMeshUnity.indexFormat = UnityEngine.Rendering.IndexFormat.UInt16;
+                    collMeshUnity.triangles = UnityUtils.ReverseWinding(indBuffer);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = collMeshUnity;
@@ -297,19 +323,84 @@ public class ModelLoader : Loader {
                 return false;
             }            
         }
+        else 
+        {
+            List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
+            if (colliderNames == null || colliderNames.Count == 0)
+            {
+                prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
+            }
+            else 
+            {
+                CollisionPrimitive[] allColliderNames = model.GetPrimitivesMasked();
+                foreach (var prim in allColliderNames)
+                {
+                    if (prim.parentName.Contains("tie"))
+                    {
+                        Debug.Log("on interceptor bone...");
+                    }
+                    if (colliderNames.Contains(prim.name))
+                    {
+                        prims.Add(prim);
+                    }
+                }
+            }
+           
+            foreach (var prim in prims) 
+            {
+                string parentBone = prim.parentName;
+                Transform boneTx = null;
+
+                if (parentBone.Equals(""))
+                {
+                    boneTx = newObject.transform;
+                }
+                else 
+                {
+                    boneTx = UnityUtils.FindChildTransform(newObject.transform, parentBone);
+                }
+
+                if (boneTx == null) continue;
+
+                GameObject primObj = new GameObject(prim.name);
+                primObj.transform.localPosition = UnityUtils.Vec3FromLibSkel(prim.position);
+                primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.rotation);
+                primObj.transform.SetParent(boneTx, false);
+
+                switch (prim.primitiveType)
+                {
+                    case 4:
+                        BoxCollider boxColl = primObj.AddComponent<BoxCollider>();
+                        if (prim.GetCubeDims(out float x, out float y, out float z))
+                        {
+                            boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
+                        }
+                        break;
+
+                    case 2:
+                        if (prim.GetCylinderDims(out float r, out float h))
+                        {
+                            MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
+                            meshColl.sharedMesh = cylColl;
+                            primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
+                        }
+                        break;
+                    
+                    case 1:
+                        SphereCollider sphereColl = primObj.AddComponent<SphereCollider>();
+                        if (prim.GetSphereRadius(out float rad))
+                        {
+                            sphereColl.radius = rad;
+                        }
+                        break;
+                    
+                    default:
+                        Debug.LogWarning(model.Name +": Unknown collision type encountered");
+                        break;
+                }
+            }
+        }    
 
         return true;      
-    }
-
-
-    public static void ImportModels(Level level)
-    {
-        Model[] models = level.GetModels();
-        
-        foreach (Model model in models)
-        {
-            if (model.Name.Contains("LOWD")) continue;
-            //GameObject newObject = ModelLoader.GameObjectFromModel(level, model);
-        } 
     }
 }

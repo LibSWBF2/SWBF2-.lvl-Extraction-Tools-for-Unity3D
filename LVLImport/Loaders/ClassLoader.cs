@@ -24,34 +24,13 @@ public class ClassLoader : Loader {
     public const uint ATTACHTOHARDPOINT = 1005041674;
     public const uint ANIMATIONNAME = 2555738718;
     public const uint ANIMATION = 3779456605;
+    public const uint SOLDIERCOLLISION = 0x5dfdc07f;
+    public const uint ORDNANCECOLLISION = 0xfb2bdf07;
 
 
     public static void ResetDB()
     {
         classObjectDatabase.Clear();
-    }
-
-
-    private static Transform FindChildTransform(Transform trans, string childName)
-    {
-        for (int j = 0; j < trans.childCount; j++)
-        {
-            var curTransform = trans.GetChild(j);
-
-            if (curTransform.name.Equals(childName))
-            {
-                return curTransform;
-            }
-
-            var t = FindChildTransform(curTransform, childName);
-
-            if (t != null)
-            {
-                return t;
-            }
-        }
-
-        return null;
     }
 
 
@@ -71,6 +50,8 @@ public class ClassLoader : Loader {
 
     public static GameObject LoadGeneralClass(string name)
     {
+        if (!name.Contains("ceptor")) return null;
+
         if (classObjectDatabase.ContainsKey(name))
         {
             var duplicate = Instantiate(classObjectDatabase[name]);
@@ -96,7 +77,10 @@ public class ClassLoader : Loader {
         GameObject obj = new GameObject(name);
         GameObject lastAttached = null;
 
+        HashSet<string> ordinanceColliders = new HashSet<string>();
+
         string currentAnimationSet = "";
+        string geometryName = "";
 
         for (int i = 0; i < properties.Length; i++)
         {
@@ -153,8 +137,10 @@ public class ClassLoader : Loader {
 
                 case GEOMETRYNAME:
 
+                    geometryName = propertyValue;
+
                     try {
-                        if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
+                        if (!ModelLoader.AddModelComponents(ref obj, geometryName))
                         {
                             Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                             return obj;
@@ -177,7 +163,7 @@ public class ClassLoader : Loader {
                         break;
                     }
 
-                    var childTx = FindChildTransform(obj.transform, propertyValue);
+                    var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
 
                     if (childTx == null)
                     {
@@ -191,10 +177,17 @@ public class ClassLoader : Loader {
 
                     break;
 
+                case ORDNANCECOLLISION:
+                    Debug.Log("Adding ord collision: " + propertyValue);
+                    ordinanceColliders.Add(propertyValue);
+                    break;
+
                 default:
                     break;
             }
         }
+
+        ModelLoader.AddCollisionComponents(ref obj, geometryName, ordinanceColliders);
 
         classObjectDatabase[name] = obj;
         return obj;
