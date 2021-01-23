@@ -15,6 +15,28 @@ using LibSWBF2.Wrappers;
 
 static class UnityUtils {
 
+    public static Transform FindChildTransform(Transform trans, string childName)
+    {
+        for (int j = 0; j < trans.childCount; j++)
+        {
+            var curTransform = trans.GetChild(j);
+
+            if (curTransform.name.Equals(childName))
+            {
+                return curTransform;
+            }
+
+            var t = FindChildTransform(curTransform, childName);
+
+            if (t != null)
+            {
+                return t;
+            }
+        }
+
+        return null;
+    }
+
     
 	public static UnityEngine.Quaternion QuatFromLibWorld(LibSWBF2.Types.Vector4 vec)
     {
@@ -110,6 +132,18 @@ static class UnityUtils {
             rewound[i] = indices[i+2];
             rewound[i+1] = indices[i+1];
             rewound[i+2] = indices[i];
+        }
+        return rewound;
+    }
+
+    public static int[] ReverseWinding(uint[] indices)
+    {
+        int[] rewound = new int[indices.Length];
+        for (int i = 0; i < indices.Length; i+=3)
+        {
+            rewound[i] = (int) indices[i+2];
+            rewound[i+1] = (int) indices[i+1];
+            rewound[i+2] = (int) indices[i];
         }
         return rewound;
     }
