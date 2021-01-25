@@ -25,7 +25,7 @@ public class TextureLoader : Loader {
 
     public static Texture2D ImportTexture(string name, bool reuse=true) 
     {
-        string texturePath = "Assets/Textures/" + Regex.Replace(name, @"\s+", "") + ".png";
+        string texturePath = Path.Combine(Application.dataPath, "Textures", Regex.Replace(name, @"\s+", "") + ".png");
 
         if (texDataBase.ContainsKey(name))
         {

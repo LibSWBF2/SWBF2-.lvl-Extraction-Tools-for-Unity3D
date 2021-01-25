@@ -174,14 +174,18 @@ public class ModelLoader : Loader {
     }
 
 
-
     public static bool AddModelComponents(ref GameObject newObject, string modelName)
-    {   
-        Model model = container.FindWrapper<Model>(modelName);
+    {
+        return AddModelComponents(ref newObject, container.FindWrapper<Model>(modelName));
+    }
 
+
+
+    public static bool AddModelComponents(ref GameObject newObject, Model model)
+    {   
         if (model == null)
         {
-            Debug.LogError(String.Format("Failed to load model: {0}", modelName));
+            Debug.LogError(String.Format("Failed to load model: {0}", model.Name));
             return false;
         }
 
