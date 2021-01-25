@@ -51,6 +51,7 @@ public class WorldLoader : Loader {
                     case "building":
                     case "destructablebuilding":
                     case "armedbuilding":
+                    case "commandpost":
                         obj = ClassLoader.LoadGeneralClass(entityClassName);
                         break;
 
@@ -347,7 +348,7 @@ public class WorldLoader : Loader {
                         continue;
                     }
 
-                    MaterialLoader.PatchMaterial(ref newObj, "skydome");
+                    MaterialLoader.PatchMaterial(newObj.transform.GetChild(0).gameObject, "skydome");
                 }
             } catch {
                 Debug.LogWarning("Didn't find obvious sky model...");

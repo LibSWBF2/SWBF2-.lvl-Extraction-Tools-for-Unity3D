@@ -75,7 +75,7 @@ public class MaterialLoader : Loader {
                 }
                 else if (IsTransparent(matFlags))
                 {
-                    SetRenderMode(ref material, 3);
+                    SetRenderMode(ref material, 2);
                 }
 
                 Texture2D importedTex = TextureLoader.ImportTexture(texName);
@@ -86,6 +86,7 @@ public class MaterialLoader : Loader {
 
                 if (IsEmissive(matFlags))
                 {
+                    material.EnableKeyword("_EMISSION");
                     material.SetTexture("_EmissionMap", importedTex);
                     material.SetColor("_EmissionColor", Color.white);
                 }         
@@ -99,7 +100,7 @@ public class MaterialLoader : Loader {
 
 
 
-    public static void PatchMaterial(ref GameObject obj, string patchType="")
+    public static void PatchMaterial(GameObject obj, string patchType="")
     {
         var renderer = obj.GetComponent<MeshRenderer>();
 
@@ -109,10 +110,15 @@ public class MaterialLoader : Loader {
             {
                 if (patchType.Equals("skydome"))
                 {
-                    mat.SetTexture("_EmissionMap", mat.GetTexture("_EmissionMap"));
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetTexture("_EmissionMap", mat.GetTexture("_MainTex"));
                     mat.SetColor("_EmissionColor", Color.white);
                 }
             }
+        }
+        else
+        {
+            Debug.Log("Can't patch skydome mat, renderer is null...");
         }
     }
 
@@ -123,6 +129,7 @@ public class MaterialLoader : Loader {
         switch (blendMode)
         {
             case 0: //opaque
+                standardShaderMaterial.SetFloat("_Mode",(float) blendMode);
                 standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
                 standardShaderMaterial.SetInt("_ZWrite", 1);
@@ -132,6 +139,7 @@ public class MaterialLoader : Loader {
                 standardShaderMaterial.renderQueue = -1;
                 break;
             case 1: //cutout
+                standardShaderMaterial.SetFloat("_Mode",(float) blendMode);
                 standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
                 standardShaderMaterial.SetInt("_ZWrite", 1);
@@ -141,6 +149,7 @@ public class MaterialLoader : Loader {
                 standardShaderMaterial.renderQueue = 2450;
                 break;
             case 2: //fade
+                standardShaderMaterial.SetFloat("_Mode",(float) blendMode);
                 standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 standardShaderMaterial.SetInt("_ZWrite", 0);
@@ -150,6 +159,7 @@ public class MaterialLoader : Loader {
                 standardShaderMaterial.renderQueue = 3000;
                 break;
             case 3: //transparent
+                standardShaderMaterial.SetFloat("_Mode",(float) blendMode);
                 standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 standardShaderMaterial.SetInt("_ZWrite", 0);
