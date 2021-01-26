@@ -29,5 +29,5 @@ Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10.
 
 
 ## Important Notes:
-- The importer relies on native plugins (libSWBF2.so/.dylib on Linux/MacOS and LibSWBF2.dll on Windows), so expect infrequent CTDs.
+- The importer relies on native plugins (libLibSWBF2.so/.dylib on Linux/MacOS and LibSWBF2.dll on Windows), so expect infrequent CTDs.
 - Much of the work to be done is on the libSWBF2 side.  For now, the importer requires a native and managed plugin built from [this branch](https://github.com/WHSnyder/LibSWBF2/tree/anim_reader)
