@@ -69,13 +69,13 @@ public class MaterialLoader : Loader {
                 material.name = materialName;
                 material.SetFloat("_Glossiness", 0.0f);
 
-                if (MaterialsUtils.IsCutout(matFlags))
+                if (IsCutout(matFlags))
                 {
-                    MaterialsUtils.SetRenderMode(ref material, 1);
+                    SetRenderMode(ref material, 1);
                 }
-                else if (MaterialsUtils.IsTransparent(matFlags))
+                else if (IsTransparent(matFlags))
                 {
-                    MaterialsUtils.SetRenderMode(ref material, 3);
+                    SetRenderMode(ref material, 3);
                 }
 
                 Texture2D importedTex = TextureLoader.ImportTexture(texName);
@@ -84,7 +84,7 @@ public class MaterialLoader : Loader {
                     material.mainTexture = importedTex;
                 }
 
-                if (MaterialsUtils.IsEmissive(matFlags))
+                if (IsEmissive(matFlags))
                 {
                     material.SetTexture("_EmissionMap", importedTex);
                     material.SetColor("_EmissionColor", Color.white);
@@ -115,4 +115,72 @@ public class MaterialLoader : Loader {
             }
         }
     }
+
+
+    /*From https://answers.unity.com/questions/1004666/change-material-rendering-mode-in-runtime.html */
+    public static void SetRenderMode(ref UMaterial standardShaderMaterial, int blendMode)
+    {
+        switch (blendMode)
+        {
+            case 0: //opaque
+                standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                standardShaderMaterial.SetInt("_ZWrite", 1);
+                standardShaderMaterial.DisableKeyword("_ALPHATEST_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHABLEND_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                standardShaderMaterial.renderQueue = -1;
+                break;
+            case 1: //cutout
+                standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                standardShaderMaterial.SetInt("_ZWrite", 1);
+                standardShaderMaterial.EnableKeyword("_ALPHATEST_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHABLEND_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                standardShaderMaterial.renderQueue = 2450;
+                break;
+            case 2: //fade
+                standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                standardShaderMaterial.SetInt("_ZWrite", 0);
+                standardShaderMaterial.DisableKeyword("_ALPHATEST_ON");
+                standardShaderMaterial.EnableKeyword("_ALPHABLEND_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                standardShaderMaterial.renderQueue = 3000;
+                break;
+            case 3: //transparent
+                standardShaderMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                standardShaderMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                standardShaderMaterial.SetInt("_ZWrite", 0);
+                standardShaderMaterial.DisableKeyword("_ALPHATEST_ON");
+                standardShaderMaterial.DisableKeyword("_ALPHABLEND_ON");
+                standardShaderMaterial.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+                standardShaderMaterial.renderQueue = 3000;
+                break;
+        }
+    }
+
+
+    public static bool IsEmissive(uint flags)
+    {
+        return (flags & (uint)16) != 0; 
+    }
+
+    public static bool IsTransparent(uint flags)
+    {
+        return (flags & (uint)4) != 0;
+    }
+
+    public static bool IsScrolling(uint flags)
+    {
+        return (flags & (uint)16777216) != 0;
+    }
+
+    public static bool IsCutout(uint flags)
+    {
+        return (flags & (uint)2) != 0;
+    }  
+
+
 }
