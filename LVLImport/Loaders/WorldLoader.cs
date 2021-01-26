@@ -109,7 +109,7 @@ public class WorldLoader : Loader {
         Mesh terrainMesh = new Mesh();
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = UnityUtils.FloatToVec3Array(terrain.GetPositionsBuffer(), false);
-        terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
+        //terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
         terrainMesh.RecalculateNormals();
 
@@ -131,35 +131,44 @@ public class WorldLoader : Loader {
             {
                 renderer.sharedMaterial.SetTexture(layerTexName, tex);  
             }
-
-            if (++j > 3) break;
+            j++;
         }
-
 
         terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
-        Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
-        Color[] colors = blendTex.GetPixels(0);
-
-        for (int w = 0; w < blendDim; w++)
+        
+        int i = 0;
+        while (i < 4)
         {
-            for (int h = 0; h < blendDim; h++)
+            Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
+            Color[] colors = blendTex.GetPixels(0);
+
+            for (int w = 0; w < blendDim; w++)
             {
-                Color col = Color.black;
-                int baseIndex = (int) (numLayers * (w * blendDim + h));
-
-                for (int z = 0; z < (int) numLayers && z < 4; z++)
+                for (int h = 0; h < blendDim; h++)
                 {
-                    col[z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;  
+                    Color col = Color.black;
+                    int baseIndex = (int) (numLayers * (w * blendDim + h));
+                    int offset = i * 4;
+
+                    for (int z = 0; z < 4; z++)
+                    {
+                        if (offset + z < numLayers)
+                        {
+                            col[z] = ((float) blendMapRaw[baseIndex + offset + z]) / 255.0f;  
+                        }
+                    }
+
+                    colors[(blendDim - w - 1) * blendDim + h] = col;
                 }
+            } 
 
-                colors[(blendDim - w - 1) * blendDim + h] = col;
-            }
+            blendTex.SetPixels(colors,0);
+            blendTex.Apply();
+
+            renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
+
+            i++;
         }
-
-        blendTex.SetPixels(colors,0);
-        blendTex.Apply();
-
-        renderer.sharedMaterial.SetTexture("_BlendMap", blendTex);
 
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
         float bound = (float) (dim * dimScale);
