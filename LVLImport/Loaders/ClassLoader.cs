@@ -129,7 +129,7 @@ public class ClassLoader : Loader {
                 case ANIMATION:
                     break;
 
-                    //AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, "death01", obj.transform);
+                    /*
                     AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
 
                     if (animClip == null)
@@ -149,18 +149,18 @@ public class ClassLoader : Loader {
                         anim.wrapMode = WrapMode.Once;
                     }
                     break;
+                    */
 
                 case GEOMETRYNAME:
 
                     try {
-    					//if (!ModelLoader.AddModelComponents(ref obj, "imp_walk_atat"))
                         if (!ModelLoader.AddModelComponents(ref obj, propertyValue))
                         {
                             Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                             return obj;
                         }
                     }
-                    catch (Exception e)
+                    catch 
                     {
                         return obj;
                     }
