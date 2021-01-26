@@ -23,6 +23,20 @@ public class MaterialLoader : Loader {
     public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
     public static bool SaveAssets = false;
 
+    private static string matsFolder;
+
+
+    public static void SetSaveDirectory(string path)
+    {
+        matsFolder = path;  
+        if (!Directory.Exists(matsFolder))
+        {
+            Directory.CreateDirectory(matsFolder);
+        }
+    }
+
+
+
 
     public static void ResetDB()
     {
@@ -49,7 +63,7 @@ public class MaterialLoader : Loader {
 
                 if (SaveAssets)
                 {
-                    AssetDatabase.CreateAsset(material, "Assets/Materials/" + materialName + ".mat"); 
+                    AssetDatabase.CreateAsset(material, Path.Combine(matsFolder, materialName + ".mat")); 
                 }
 
                 material.name = materialName;
