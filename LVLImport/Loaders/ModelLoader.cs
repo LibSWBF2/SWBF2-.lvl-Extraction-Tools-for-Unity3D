@@ -18,67 +18,14 @@ using LibBone = LibSWBF2.Wrappers.Bone;
 
 public class ModelLoader : Loader {
 
-    public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
-    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
     public static bool SaveAssets = false;
+    public static Dictionary<string, List<Mesh>> meshDataBase = new Dictionary<string, List<Mesh>>();
 
 
     public static void ResetDB()
     {
-        materialDataBase.Clear();
+        meshDataBase.Clear();
     }
-
-
-
-    public static UMaterial GetMaterial(LibMaterial mat)
-    {
-        string texName = mat.textures[0];
-        uint matFlags = mat.materialFlags;
-
-        if (texName == "")
-        {
-            return defaultMaterial;
-        } 
-        else 
-        {
-            string materialName = texName + "_" + matFlags.ToString();
-
-            if (!materialDataBase.ContainsKey(materialName))
-            {
-                UMaterial material = new UMaterial(defaultMaterial);
-
-                if (SaveAssets)
-                {
-                    AssetDatabase.CreateAsset(material, "Assets/Materials/" + materialName + ".mat"); 
-                }
-
-                material.name = materialName;
-                material.SetFloat("_Glossiness", 0.0f);
-
-                if (MaterialsUtils.IsCutout(matFlags))
-                {
-                    MaterialsUtils.SetRenderMode(ref material, 1);
-                }
-                else if (MaterialsUtils.IsTransparent(matFlags))
-                {
-                    MaterialsUtils.SetRenderMode(ref material, 3);
-                }
-
-                Texture2D importedTex = TextureLoader.ImportTexture(texName);
-                if (importedTex != null)
-                {
-                    material.mainTexture = importedTex;
-                }
-
-                //material = (UMaterial) AssetDatabase.LoadAssetAtPath("Assets/Materials/" + materialName + ".mat", typeof(UMaterial));
-
-                materialDataBase[materialName] = material;
-            }
-
-            return materialDataBase[materialName];
-        }
-    }
-
 
 
     private static Mesh GetMeshFromSegments(Segment[] segments)
@@ -220,7 +167,7 @@ public class ModelLoader : Loader {
             filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray());
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in mappedSegments select GetMaterial(segment.GetMaterial())).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
         }
 
         return true;
@@ -255,7 +202,7 @@ public class ModelLoader : Loader {
 
         Segment[] segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
         Mesh mesh = GetMeshFromSegments(segments);
-        UMaterial[] mats = (from segment in segments select GetMaterial(segment.GetMaterial())).ToArray();
+        UMaterial[] mats = (from segment in segments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
 
         if (model.IsSkeletalMesh)
         {
