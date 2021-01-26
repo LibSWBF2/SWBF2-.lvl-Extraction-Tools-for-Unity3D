@@ -337,6 +337,8 @@ public class WorldLoader : Loader {
                         Debug.LogError("Skydome model creation failed...");
                         continue;
                     }
+
+                    MaterialLoader.PatchMaterial(ref newObj, "skydome");
                 }
             } catch {
                 Debug.LogWarning("Didn't find obvious sky model...");

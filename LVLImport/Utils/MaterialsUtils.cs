@@ -78,7 +78,7 @@ public static class MaterialsUtils {
     public static bool IsCutout(uint flags)
     {
         return (flags & (uint)2) != 0;
-    }
+    }  
 }
 
 

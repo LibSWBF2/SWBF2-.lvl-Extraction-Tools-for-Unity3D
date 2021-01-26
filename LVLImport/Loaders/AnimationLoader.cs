@@ -114,7 +114,7 @@ public class AnimationLoader : Loader {
     {
         List<AnimationClip> clips = new List<AnimationClip>();
 
-        var bank = CentralLoader.GetAnimationBank(animBankName);
+        var bank = container.FindWrapper<AnimationBank>(animBankName);
 
         if (bank == null)
         {

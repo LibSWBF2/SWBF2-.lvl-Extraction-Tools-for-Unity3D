@@ -159,7 +159,7 @@ public class LVLImportWindow : EditorWindow {
 
                 WorldLoader.TerrainAsMesh = terrainAsMesh;
                 TextureLoader.SaveAssets = saveTextures;
-                ModelLoader.SaveAssets = saveMaterials;
+                MaterialLoader.SaveAssets = saveMaterials;
 
                 foreach (uint handle in fileHandles)
                 {
