@@ -2,6 +2,9 @@
 [Tt]emp/
 [Oo]bj/
 [Bb]in
+Scenes/
+Textures/
+Prefabs/
 
 # ignore build asset bundles
 /AssetBundles

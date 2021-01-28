@@ -123,23 +123,22 @@ public class WorldLoader : Loader {
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
 
-        int j = 0;
+        int i = 0;
         foreach (string texName in terrain.GetTextureNames())
         {
             Texture2D tex = TextureLoader.ImportTexture(texName);
-            string layerTexName = "_LayerXXTex".Replace("XX",j.ToString());
+            string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
 
             if (tex != null)
             {
                 renderer.sharedMaterial.SetTexture(layerTexName, tex);  
             }
-            j++;
+            i++;
         }
 
         terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
         
-        int i = 0;
-        while (i < 4)
+        for (i = 0; i < 4; i++)
         {
             Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
             Color[] colors = blendTex.GetPixels(0);
@@ -168,8 +167,6 @@ public class WorldLoader : Loader {
             blendTex.Apply();
 
             renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
-
-            i++;
         }
 
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
