@@ -12,8 +12,24 @@ using UnityEngine;
 using LibSWBF2.Types;
 using LibSWBF2.Wrappers;
 
+using UVector3 = UnityEngine.Vector3;
 
-static class UnityUtils {
+
+public static class UnityUtils {
+
+    /*Credits: https://gamedev.stackexchange.com/a/183962/138651*/
+    public static Bounds GetMaxBounds(GameObject g) {
+        var renderers = g.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return new Bounds(g.transform.position, UVector3.zero);
+        var b = renderers[0].bounds;
+        foreach (Renderer r in renderers) {
+           b.Encapsulate(r.bounds);
+        }
+        
+        return b;
+    }
+
+
 
     public static Transform FindChildTransform(Transform trans, string childName)
     {
@@ -43,9 +59,9 @@ static class UnityUtils {
         return new UnityEngine.Quaternion(-vec.Z, vec.W, -vec.X, vec.Y);
     }
     
-    public static UnityEngine.Vector3 Vec3FromLibWorld(LibSWBF2.Types.Vector3 vec)
+    public static UVector3 Vec3FromLibWorld(LibSWBF2.Types.Vector3 vec)
     {
-        return new UnityEngine.Vector3(vec.X,vec.Y,-vec.Z);
+        return new UVector3(vec.X,vec.Y,-vec.Z);
     }
 
 
@@ -55,9 +71,9 @@ static class UnityUtils {
         return new UnityEngine.Quaternion(-vec.X, vec.Y, vec.Z, -vec.W);
     }
 
-    public static UnityEngine.Vector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
+    public static UVector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
     {
-        return new UnityEngine.Vector3(-vec.X, vec.Y, vec.Z);
+        return new UVector3(-vec.X, vec.Y, vec.Z);
     }
 
 
@@ -80,12 +96,12 @@ static class UnityUtils {
     }
 
 
-    public static UnityEngine.Vector3[] FloatToVec3Array(float[] floats, bool flipX=true)
+    public static UVector3[] FloatToVec3Array(float[] floats, bool flipX=true)
     {
-        UnityEngine.Vector3[] vectors = new UnityEngine.Vector3[floats.Length / 3];
+        UVector3[] vectors = new UVector3[floats.Length / 3];
         for (int i = 0; i < floats.Length; i+=3)
         {
-            vectors[i / 3] = new UnityEngine.Vector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
+            vectors[i / 3] = new UVector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
         }
         return vectors;
     }
@@ -102,13 +118,13 @@ static class UnityUtils {
     }
 
 
-    public static void ConvertSpaceAndFillVec3(float[] floats, UnityEngine.Vector3[] vectors, int offset=0, bool convertSpace = true)
+    public static void ConvertSpaceAndFillVec3(float[] floats, UVector3[] vectors, int offset=0, bool convertSpace = true)
     {
         float mult = convertSpace ? -1.0f : 1.0f;
         if (floats != null){
             for (int i = 0; i < floats.Length; i+=3)
             {
-                vectors[i / 3 + offset] = new UnityEngine.Vector3(mult * floats[i],floats[i+1],floats[i+2]);
+                vectors[i / 3 + offset] = new UVector3(mult * floats[i],floats[i+1],floats[i+2]);
             }
         } 
     }

@@ -50,8 +50,6 @@ public class ClassLoader : Loader {
 
     public static GameObject LoadGeneralClass(string name)
     {
-        if (!name.Contains("ceptor")) return null;
-
         if (classObjectDatabase.ContainsKey(name))
         {
             var duplicate = Instantiate(classObjectDatabase[name]);
@@ -67,9 +65,17 @@ public class ClassLoader : Loader {
             return null;
         }
 
-        if (!ecWrapper.GetOverriddenProperties(out uint[] properties, out string[] values))
+        uint[] properties;
+        string[] values;
+        
+        try {
+            if (!ecWrapper.GetOverriddenProperties(out properties, out values))
+            {
+                Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+                return null;
+            }
+        } catch
         {
-            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
             return null;
         }
 
@@ -91,7 +97,6 @@ public class ClassLoader : Loader {
             {
                 case ANIMATIONNAME:
 
-                    //currentAnimationSet = "imp_walk_atat";
                     currentAnimationSet = propertyValue;
 
                     var clips = AnimationLoader.LoadAnimationBank(propertyValue, obj.transform);
@@ -112,28 +117,6 @@ public class ClassLoader : Loader {
 
                 case ANIMATION:
                     break;
-
-                    /*
-                    AnimationClip animClip = AnimationLoader.LoadAnimationClip(currentAnimationSet, propertyValue, obj.transform);
-
-                    if (animClip == null)
-                    {
-                        Debug.LogError(String.Format("\tFailed to load animation clip {0}", propertyValue));
-                    }
-                    else 
-                    {
-                        Animation anim = obj.GetComponent<Animation>();
-
-                        if (anim == null)
-                        {
-                            anim = obj.AddComponent<Animation>();
-                        }
-
-                        anim.AddClip(animClip, propertyValue);
-                        anim.wrapMode = WrapMode.Once;
-                    }
-                    break;
-                    */
 
                 case GEOMETRYNAME:
 
@@ -178,7 +161,6 @@ public class ClassLoader : Loader {
                     break;
 
                 case ORDNANCECOLLISION:
-                    Debug.Log("Adding ord collision: " + propertyValue);
                     ordinanceColliders.Add(propertyValue);
                     break;
 

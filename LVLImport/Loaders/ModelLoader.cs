@@ -22,9 +22,7 @@ public class ModelLoader : Loader {
     public static Dictionary<string, List<Mesh>> meshDataBase = new Dictionary<string, List<Mesh>>();
 
 
-    //private static GameObject cylColl = Instantiate(Resources.Load(Path.Combine(Application.dataPath, "SWBF2Import", "LVLImport", "ConversionAssets", "CylinderCollider.prefab"), typeof(GameObject))) as GameObject; 
-
-    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/SWBF2Import/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
+    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/swbf2tools/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
 
     public static void ResetDB()
     {
@@ -275,8 +273,87 @@ public class ModelLoader : Loader {
 
 
 
+    public static bool AddCollisionPrimitives(ref GameObject newObject, Model model, HashSet<string> colliderNames = null)
+    {
+        List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
+        if (colliderNames == null || colliderNames.Count == 0)
+        {
+            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
+        }
+        else 
+        {
+            CollisionPrimitive[] allColliderNames = model.GetPrimitivesMasked();
+            foreach (var prim in allColliderNames)
+            {
+                if (colliderNames.Contains(prim.name))
+                {
+                    prims.Add(prim);
+                }
+            }
+        }
+       
+        foreach (var prim in prims) 
+        {
+            string parentBone = prim.parentName;
+            Transform boneTx = null;
 
-    public static bool AddCollisionComponents(ref GameObject newObject, string modelName, HashSet<string> colliderNames = null)
+            if (parentBone.Equals(""))
+            {
+                boneTx = newObject.transform;
+            }
+            else 
+            {
+                boneTx = UnityUtils.FindChildTransform(newObject.transform, parentBone);
+            }
+
+            if (boneTx == null) continue;
+
+            GameObject primObj = new GameObject(prim.name);
+            primObj.transform.localPosition = UnityUtils.Vec3FromLibSkel(prim.position);
+            primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.rotation);
+            primObj.transform.SetParent(boneTx, false);
+
+            switch (prim.primitiveType)
+            {
+                case 4:
+                    BoxCollider boxColl = primObj.AddComponent<BoxCollider>();
+                    if (prim.GetCubeDims(out float x, out float y, out float z))
+                    {
+                        boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
+                    }
+                    break;
+
+                case 2:
+                    if (prim.GetCylinderDims(out float r, out float h))
+                    {
+                        MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
+                        meshColl.sharedMesh = cylColl;
+                        primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
+                    }
+                    break;
+                
+                case 1:
+                    SphereCollider sphereColl = primObj.AddComponent<SphereCollider>();
+                    if (prim.GetSphereRadius(out float rad))
+                    {
+                        sphereColl.radius = rad;
+                    }
+                    break;
+                
+                default:
+                    Debug.LogWarning(model.Name + ": Unknown collision type encountered");
+                    break;
+            }
+        }
+
+        return true;
+    }
+
+
+
+
+
+    public static bool AddCollisionComponents(ref GameObject newObject, string modelName, HashSet<string> colliderNames)
     {
         if (modelName.Equals("")) return false;
 
@@ -284,7 +361,9 @@ public class ModelLoader : Loader {
         try {
             model = container.FindWrapper<Model>(modelName);
         }
-        catch { return false; }
+        catch { 
+            return false;
+        }
 
         if (model == null) 
         {
@@ -297,110 +376,41 @@ public class ModelLoader : Loader {
         }
         catch 
         {
-            Debug.LogError(modelName + ": Error in process of CollisionMesh fetch failed to get collision mesh");
+            Debug.LogError(modelName + ": Error in process of CollisionMesh fetch...");
             return false;
         }
 
-        if (collMesh != null && !model.IsSkeletalMesh)
+        if (collMesh != null)
         {
-            uint[] indBuffer = collMesh.GetIndices();
+            ushort[] indBuffer = collMesh.GetIndices();
 
             try {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
                     collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
+                    
                     collMeshUnity.indexFormat = UnityEngine.Rendering.IndexFormat.UInt16;
+
+                    /*
                     collMeshUnity.triangles = UnityUtils.ReverseWinding(indBuffer);
+                    */
+
+                    collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = collMeshUnity;
                 }
             } 
-            catch (Exception e)
+            catch
             {
-                Debug.Log(e.ToString() + " while creating mesh collider...");
+                Debug.LogError(modelName + ": Error while creating mesh collider...");
                 return false;
-            }            
+            } 
         }
-        else 
-        {
-            List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
-            if (colliderNames == null || colliderNames.Count == 0)
-            {
-                prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
-            }
-            else 
-            {
-                CollisionPrimitive[] allColliderNames = model.GetPrimitivesMasked();
-                foreach (var prim in allColliderNames)
-                {
-                    if (prim.parentName.Contains("tie"))
-                    {
-                        Debug.Log("on interceptor bone...");
-                    }
-                    if (colliderNames.Contains(prim.name))
-                    {
-                        prims.Add(prim);
-                    }
-                }
-            }
-           
-            foreach (var prim in prims) 
-            {
-                string parentBone = prim.parentName;
-                Transform boneTx = null;
 
-                if (parentBone.Equals(""))
-                {
-                    boneTx = newObject.transform;
-                }
-                else 
-                {
-                    boneTx = UnityUtils.FindChildTransform(newObject.transform, parentBone);
-                }
-
-                if (boneTx == null) continue;
-
-                GameObject primObj = new GameObject(prim.name);
-                primObj.transform.localPosition = UnityUtils.Vec3FromLibSkel(prim.position);
-                primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.rotation);
-                primObj.transform.SetParent(boneTx, false);
-
-                switch (prim.primitiveType)
-                {
-                    case 4:
-                        BoxCollider boxColl = primObj.AddComponent<BoxCollider>();
-                        if (prim.GetCubeDims(out float x, out float y, out float z))
-                        {
-                            boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
-                        }
-                        break;
-
-                    case 2:
-                        if (prim.GetCylinderDims(out float r, out float h))
-                        {
-                            MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
-                            meshColl.sharedMesh = cylColl;
-                            primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
-                        }
-                        break;
-                    
-                    case 1:
-                        SphereCollider sphereColl = primObj.AddComponent<SphereCollider>();
-                        if (prim.GetSphereRadius(out float rad))
-                        {
-                            sphereColl.radius = rad;
-                        }
-                        break;
-                    
-                    default:
-                        Debug.LogWarning(model.Name +": Unknown collision type encountered");
-                        break;
-                }
-            }
-        }    
-
+        AddCollisionPrimitives(ref newObject, model, colliderNames); 
+        
         return true;      
     }
 }
