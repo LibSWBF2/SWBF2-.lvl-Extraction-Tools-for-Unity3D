@@ -51,6 +51,7 @@ public class WorldLoader : Loader {
                     case "building":
                     case "destructablebuilding":
                     case "armedbuilding":
+                    case "animatedbuilding":
                     case "commandpost":
                         obj = ClassLoader.LoadGeneralClass(entityClassName);
                         break;

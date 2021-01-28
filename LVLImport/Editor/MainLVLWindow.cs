@@ -161,12 +161,18 @@ public class LVLImportWindow : EditorWindow {
                 TextureLoader.SaveAssets = saveTextures;
                 MaterialLoader.SaveAssets = saveMaterials;
 
+                UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
+
                 foreach (uint handle in fileHandles)
                 {
+                    UnityEngine.Vector3 spawnLoc = new UnityEngine.Vector3(0,0,0); 
+
                     Level level = container.GetLevel(handle);
 
                     if (level == null)
+                    {
                         continue;
+                    }
 
                     if (startLoadWorlds)
                     {
@@ -175,10 +181,24 @@ public class LVLImportWindow : EditorWindow {
 
                     if (startLoadClasses)
                     {
+                        string levelName = level.name;
+                        GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
+                        root.transform.localPosition = offset;
                         foreach (var ec in level.GetEntityClasses())
                         {
-                            ClassLoader.LoadGeneralClass(ec.name);
+                            GameObject newClass = ClassLoader.LoadGeneralClass(ec.name);
+                            if (newClass != null)
+                            {
+                                newClass.transform.SetParent(root.transform, false);
+
+                                float xExtent = UnityUtils.GetMaxBounds(newClass).extents.x;
+                                spawnLoc += new Vector3(xExtent,0,0);
+                                newClass.transform.localPosition = spawnLoc;
+                                spawnLoc += new Vector3(xExtent,0,0);
+                            }
                         }
+
+                        offset += new UnityEngine.Vector3(0,0,20);
                     }
                 }
 
