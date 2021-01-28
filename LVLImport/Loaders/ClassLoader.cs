@@ -47,6 +47,11 @@ public class ClassLoader : Loader {
     }
 
 
+    /*
+    Temporary solution until I get to recording the default properties of
+    each base class.  That'll come with ODF -> Scriptable Object conversion.
+    This loads the most relevant dependencies of a given ODF. 
+    */
 
     public static GameObject LoadGeneralClass(string name)
     {
@@ -95,6 +100,8 @@ public class ClassLoader : Loader {
 
             switch (property)
             {
+                // Refers to an animation bank, for now we just get all the bank's clips
+                // and attach them as a legacy Animation component.
                 case ANIMATIONNAME:
 
                     currentAnimationSet = propertyValue;
@@ -115,6 +122,7 @@ public class ClassLoader : Loader {
 
                     break;
 
+                // Refers to specific animations for specific purposes (see animatedprop)
                 case ANIMATION:
                     break;
 
@@ -139,6 +147,7 @@ public class ClassLoader : Loader {
                     lastAttached = LoadGeneralClass(propertyValue);
                     break;
 
+                // TODO: Hardpoint children are frequently missing...
                 case ATTACHTOHARDPOINT:
 
                     if (lastAttached == null)
@@ -160,6 +169,9 @@ public class ClassLoader : Loader {
 
                     break;
 
+                // Some collider primitives don't have proper masks, so their purpose is
+                // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
+                // as it is most accurate.
                 case ORDNANCECOLLISION:
                     ordinanceColliders.Add(propertyValue);
                     break;

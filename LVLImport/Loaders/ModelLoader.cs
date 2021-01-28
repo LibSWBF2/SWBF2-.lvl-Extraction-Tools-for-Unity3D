@@ -18,17 +18,21 @@ using LibBone = LibSWBF2.Wrappers.Bone;
 
 public class ModelLoader : Loader {
 
+    //Doesn't actually save meshes, not sure where to go with this atm...
     public static bool SaveAssets = false;
     public static Dictionary<string, List<Mesh>> meshDataBase = new Dictionary<string, List<Mesh>>();
+    public static void ResetDB() { meshDataBase.Clear(); }
 
 
-    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/swbf2tools/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
+    // Cylinder collision mesh as substitute for cylinder primitive.
+    // Perhaps a gameobject with three children, each having a box collider, rotated to 
+    // form a 6 sided cylinder would be more performant?  
+    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
 
-    public static void ResetDB()
-    {
-        meshDataBase.Clear();
-    }
 
+    /*
+    Extracts static mesh data from array of segments
+    */
 
     private static Mesh GetMeshFromSegments(Segment[] segments)
     {
@@ -61,8 +65,17 @@ public class ModelLoader : Loader {
         foreach (Segment seg in segments)
         {
             //Reverse winding order since we flip handedness of model data
-            int[] rewound = UnityUtils.ReverseWinding(seg.GetIndexBuffer());
-            mesh.SetTriangles(rewound, i, true, offsets[i]);
+            ushort[] indexBuffer = seg.GetIndexBuffer();
+            UnityUtils.ReverseWinding(indexBuffer);
+
+            Debug.Log("indBuffer length: " + indexBuffer.Length.ToString());
+
+            for (int k = 0; k < 12 && k < indexBuffer.Length; k++)
+            {
+                Debug.Log(indexBuffer[k].ToString());
+            }
+
+            mesh.SetTriangles(indexBuffer, i, true, offsets[i]);
             i++;
         }
 
@@ -70,10 +83,8 @@ public class ModelLoader : Loader {
     } 
 
 
-
-
-
-    private static bool AddHierarchy(ref GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
+    // Straightforward
+    private static bool AddSkeleton(ref GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
         LibBone[] hierarchy = model.GetSkeleton();
         Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
@@ -104,7 +115,13 @@ public class ModelLoader : Loader {
 
 
 
-    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh, bool broken = false)
+    /*
+    Will keep vertex weights separate from static mesh handling until the 
+    various edge cases (see git issue about sarlacc, ATTE, and Jabba) regarding weights and
+    skeletons are sorted out.
+    */
+
+    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh)
     {
         var segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
 
@@ -118,6 +135,7 @@ public class ModelLoader : Loader {
         }
 
         byte bonesPerVert = (byte) (txStatus == 0 ? 3 : 1);  
+        bool broken = model.IsSkeletonBroken;
 
         BoneWeight1[] weights = new BoneWeight1[totalLength * bonesPerVert];
 
@@ -138,12 +156,15 @@ public class ModelLoader : Loader {
     }
 
 
+    /*
+    Gathers segments by their node in the model's skeleton and creates a non-weighted mesh for each
+    node with attached segments.
+    */
 
-
-    public static bool AddModelComponentsHierarchical(ref GameObject newObject, List<Segment> segments,
+    public static bool AddStaticMeshes(ref GameObject newObject, Model model,
                                                     Dictionary<string, Transform> skeleton)
     {
-
+        List<Segment> segments = (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList();
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
         foreach (var segment in segments)
         {
@@ -176,19 +197,24 @@ public class ModelLoader : Loader {
     }
 
 
+    /*
+    Finds segments which are not attached to skeleton nodes, ie ones that are skinned,
+    and creates a weighted mesh from them. 
+    */
 
-    private static bool AddModelComponentsSkinned(ref GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
+    private static bool AddSkinningComponents(ref GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
     {
         Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray();
         Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray());
         UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
 
-        int skinType = AddWeights(ref newObject, model, ref mesh, model.IsSkeletonBroken);
+        int skinType = AddWeights(ref newObject, model, ref mesh);
         if (skinType == 0)
         {
             //Debug.LogWarning("Failed to add weights....");
         }
 
+        //Below, we handle 
         SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
         LibBone[] bonesSWBF = model.GetSkeleton();
 
@@ -199,9 +225,10 @@ public class ModelLoader : Loader {
         for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
         {
             var curBoneSWBF = bonesSWBF[boneNum];
-            //Debug.Log("\t\tSetting bindpose of " + curBoneSWBF.name + " Parent name = " + curBoneSWBF.parentName);
             bones[boneNum] = skeleton[curBoneSWBF.name];
-            bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? skeleton[curBoneSWBF.parentName] : newObject.transform, false);
+
+            //Messy, will fix once skeleton edge cases are sorted out
+            //bones[boneNum].SetParent(curBoneSWBF.parentName != null && curBoneSWBF.parentName != "" && !curBoneSWBF.parentName.Equals(curBoneSWBF.name) ? skeleton[curBoneSWBF.parentName] : newObject.transform, false);
         }
 
         /*
@@ -241,7 +268,10 @@ public class ModelLoader : Loader {
 
 
 
-
+    /*
+    Adds skeleton, attaches static meshes/renderers to skeleton bones, and a skinned mesh/renderer to the root
+    object if present.
+    */
 
     public static bool AddModelComponents(ref GameObject newObject, Model model)
     {   
@@ -251,16 +281,16 @@ public class ModelLoader : Loader {
             return false;
         }
 
-        if (!AddHierarchy(ref newObject, model, out Dictionary<string, Transform> skeleton))
+        if (!AddSkeleton(ref newObject, model, out Dictionary<string, Transform> skeleton))
         {
             return false;
         }
 
-        AddModelComponentsHierarchical(ref newObject, (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList(), skeleton);
+        AddStaticMeshes(ref newObject, model, skeleton);
         
         if (model.IsSkeletalMesh)
         {
-            AddModelComponentsSkinned(ref newObject, model, skeleton);
+            AddSkinningComponents(ref newObject, model, skeleton);
         }
 
         return true;
@@ -273,11 +303,26 @@ public class ModelLoader : Loader {
 
 
 
+
+    /*
+    COLLISION ATTACHMENT FUNCTIONS BELOW
+    */
+
+
+    /*
+    Adds collision primitives.  If a set of specific collider names are
+    passed (see ClassLoader.LoadGeneralClass), they will be chosen 
+    from all the model's colliders.  If not, the model's ordinance
+    collision primitives will be used. 
+    */ 
+
     public static bool AddCollisionPrimitives(ref GameObject newObject, Model model, HashSet<string> colliderNames = null)
     {
+        //Get list of primitives, requested or found.
         List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
         if (colliderNames == null || colliderNames.Count == 0)
         {
+            // 1 = Ordinance
             prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
         }
         else 
@@ -292,6 +337,7 @@ public class ModelLoader : Loader {
             }
         }
        
+        // Instantiate and attach converted primitives
         foreach (var prim in prims) 
         {
             string parentBone = prim.parentName;
@@ -323,11 +369,13 @@ public class ModelLoader : Loader {
                     }
                     break;
 
+                // Instantiate cylinder asset and use in convex mesh collider
                 case 2:
                     if (prim.GetCylinderDims(out float r, out float h))
                     {
                         MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
                         meshColl.sharedMesh = cylColl;
+                        meshColl.convex = true;
                         primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
                     }
                     break;
@@ -340,6 +388,8 @@ public class ModelLoader : Loader {
                     }
                     break;
                 
+                // This happens, not sure what to make of it, but 
+                // all prims of this type have zeroed fields.
                 default:
                     Debug.LogWarning(model.Name + ": Unknown collision type encountered");
                     break;
@@ -350,8 +400,14 @@ public class ModelLoader : Loader {
     }
 
 
-
-
+    /*
+    Adds all collision components.  If the model has a CollisionMesh, 
+    it is loaded and attached to the root object.  This is problematic,
+    as the SWBF2 engine can use concave mesh colliders for non static objects.
+    
+    After adding the collision mesh, ordinance collision primitives are
+    attached.
+    */
 
     public static bool AddCollisionComponents(ref GameObject newObject, string modelName, HashSet<string> colliderNames)
     {
@@ -389,13 +445,6 @@ public class ModelLoader : Loader {
                 {
                     Mesh collMeshUnity = new Mesh();
                     collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
-                    
-                    collMeshUnity.indexFormat = UnityEngine.Rendering.IndexFormat.UInt16;
-
-                    /*
-                    collMeshUnity.triangles = UnityUtils.ReverseWinding(indBuffer);
-                    */
-
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
@@ -405,7 +454,6 @@ public class ModelLoader : Loader {
             catch
             {
                 Debug.LogError(modelName + ": Error while creating mesh collider...");
-                return false;
             } 
         }
 
