@@ -1,3 +1,7 @@
+# First release coming soon!
+
+
+
 # Unity SWBF2 .lvl Extraction Toolset
 
 Extract assets contained within ```.lvl``` files to Unity.  This project began as a fork of [Ben1138's modtools importer](https://github.com/Ben1138/Unity-SWBF2-Import), but diverged and conflicted so significantly that it made sense to separate it.  It is one of the many projects under the [LibSWBF2](https://github.com/Ben1138/LibSWBF2) umbrella.
