@@ -116,7 +116,7 @@ public static class UnityUtils {
         UVector3[] vectors = new UVector3[floats.Length / 3];
         for (int i = 0; i < floats.Length; i+=3)
         {
-            vectors[i / 3] = new UVector3(flipX ? 0.0f - floats[i] : floats[i],floats[i+1],floats[i+2]);
+            vectors[i / 3] = new UVector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
         }
         return vectors;
     }
@@ -138,7 +138,7 @@ public static class UnityUtils {
         if (floats != null){
             for (int i = 0; i < floats.Length; i+=3)
             {
-                vectors[i / 3 + offset] = new UVector3(flipX ? (0.0f - floats[i]) : floats[i],floats[i+1],floats[i+2]);
+                vectors[i / 3 + offset] = new UVector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
             }
         } 
     }
