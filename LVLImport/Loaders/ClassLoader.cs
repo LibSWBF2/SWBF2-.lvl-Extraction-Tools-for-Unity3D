@@ -131,7 +131,7 @@ public class ClassLoader : Loader {
                     geometryName = propertyValue;
 
                     try {
-                        if (!ModelLoader.AddModelComponents(ref obj, geometryName))
+                        if (!ModelLoader.AddModelComponents(obj, geometryName))
                         {
                             Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                             return obj;
@@ -172,7 +172,7 @@ public class ClassLoader : Loader {
                 // Some collider primitives don't have proper masks, so their purpose is
                 // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
                 // as it is most accurate.
-                case ORDNANCECOLLISION:
+                case SOLDIERCOLLISION:
                     ordinanceColliders.Add(propertyValue);
                     break;
 
@@ -181,7 +181,7 @@ public class ClassLoader : Loader {
             }
         }
 
-        ModelLoader.AddCollisionComponents(ref obj, geometryName, ordinanceColliders);
+        ModelLoader.AddCollisionComponents(obj, geometryName, ordinanceColliders);
 
         classObjectDatabase[name] = obj;
         return obj;

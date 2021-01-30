@@ -340,7 +340,7 @@ public class WorldLoader : Loader {
                 {
                     newObj = new GameObject(model.Name);
 
-                    if (!ModelLoader.AddModelComponents(ref newObj, model.Name))
+                    if (!ModelLoader.AddModelComponents(newObj, model.Name))
                     {
                         Debug.LogError("Skydome model creation failed...");
                         continue;
