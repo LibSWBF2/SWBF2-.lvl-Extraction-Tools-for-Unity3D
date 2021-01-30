@@ -67,14 +67,6 @@ public class ModelLoader : Loader {
             //Reverse winding order since we flip handedness of model data
             ushort[] indexBuffer = seg.GetIndexBuffer();
             UnityUtils.ReverseWinding(indexBuffer);
-
-            Debug.Log("indBuffer length: " + indexBuffer.Length.ToString());
-
-            for (int k = 0; k < 12 && k < indexBuffer.Length; k++)
-            {
-                Debug.Log(indexBuffer[k].ToString());
-            }
-
             mesh.SetTriangles(indexBuffer, i, true, offsets[i]);
             i++;
         }
@@ -84,7 +76,7 @@ public class ModelLoader : Loader {
 
 
     // Straightforward
-    private static bool AddSkeleton(ref GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
+    private static bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
         LibBone[] hierarchy = model.GetSkeleton();
         Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
@@ -121,7 +113,7 @@ public class ModelLoader : Loader {
     skeletons are sorted out.
     */
 
-    private static int AddWeights(ref GameObject obj, Model model, ref Mesh mesh)
+    private static int AddWeights(GameObject obj, Model model, Mesh mesh)
     {
         var segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
 
@@ -161,7 +153,7 @@ public class ModelLoader : Loader {
     node with attached segments.
     */
 
-    public static bool AddStaticMeshes(ref GameObject newObject, Model model,
+    public static bool AddStaticMeshes(GameObject newObject, Model model,
                                                     Dictionary<string, Transform> skeleton)
     {
         List<Segment> segments = (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList();
@@ -202,13 +194,13 @@ public class ModelLoader : Loader {
     and creates a weighted mesh from them. 
     */
 
-    private static bool AddSkinningComponents(ref GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
+    private static bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
     {
         Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray();
         Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray());
         UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
 
-        int skinType = AddWeights(ref newObject, model, ref mesh);
+        int skinType = AddWeights(newObject, model, mesh);
         if (skinType == 0)
         {
             //Debug.LogWarning("Failed to add weights....");
@@ -273,7 +265,7 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    public static bool AddModelComponents(ref GameObject newObject, Model model)
+    public static bool AddModelComponents(GameObject newObject, Model model)
     {   
         if (model == null)
         {
@@ -281,24 +273,24 @@ public class ModelLoader : Loader {
             return false;
         }
 
-        if (!AddSkeleton(ref newObject, model, out Dictionary<string, Transform> skeleton))
+        if (!AddSkeleton(newObject, model, out Dictionary<string, Transform> skeleton))
         {
             return false;
         }
 
-        AddStaticMeshes(ref newObject, model, skeleton);
+        AddStaticMeshes(newObject, model, skeleton);
         
-        if (model.IsSkeletalMesh)
+        if (model.IsSkinnedMesh)
         {
-            AddSkinningComponents(ref newObject, model, skeleton);
+            AddSkinningComponents(newObject, model, skeleton);
         }
 
         return true;
     }
 
-    public static bool AddModelComponents(ref GameObject newObject, string modelName)
+    public static bool AddModelComponents(GameObject newObject, string modelName)
     {
-        return AddModelComponents(ref newObject, container.FindWrapper<Model>(modelName));
+        return AddModelComponents(newObject, container.FindWrapper<Model>(modelName));
     }
 
 
@@ -316,14 +308,15 @@ public class ModelLoader : Loader {
     collision primitives will be used. 
     */ 
 
-    public static bool AddCollisionPrimitives(ref GameObject newObject, Model model, HashSet<string> colliderNames = null)
+    public static bool AddCollisionPrimitives(GameObject newObject, Model model, HashSet<string> colliderNames = null)
     {
+        colliderNames = null;
         //Get list of primitives, requested or found.
         List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
         if (colliderNames == null || colliderNames.Count == 0)
         {
             // 1 = Ordinance
-            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
+            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked());
         }
         else 
         {
@@ -409,7 +402,7 @@ public class ModelLoader : Loader {
     attached.
     */
 
-    public static bool AddCollisionComponents(ref GameObject newObject, string modelName, HashSet<string> colliderNames)
+    public static bool AddCollisionComponents(GameObject newObject, string modelName, HashSet<string> colliderNames)
     {
         if (modelName.Equals("")) return false;
 
@@ -441,7 +434,7 @@ public class ModelLoader : Loader {
             ushort[] indBuffer = collMesh.GetIndices();
 
             try {
-                if (indBuffer.Length > 2)
+                if (false)//indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
                     collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
@@ -457,7 +450,7 @@ public class ModelLoader : Loader {
             } 
         }
 
-        AddCollisionPrimitives(ref newObject, model, colliderNames); 
+        AddCollisionPrimitives(newObject, model, colliderNames); 
         
         return true;      
     }
