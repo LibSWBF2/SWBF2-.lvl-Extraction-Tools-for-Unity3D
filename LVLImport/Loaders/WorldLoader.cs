@@ -11,9 +11,11 @@ using UnityEditor;
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
+using LibSWBF2.Utils;
 
 using LibTerrain = LibSWBF2.Wrappers.Terrain;
 using UMaterial = UnityEngine.Material;
+using LibVec3 = LibSWBF2.Types.Vector3;
 
 
 
@@ -92,10 +94,16 @@ public class WorldLoader : Loader {
                 LoadedTerrain = true;
             }
 
-            var lights = ImportLights(world.GetLights());
+            var lights = ImportLights(level.GetConfig(world.Name, ConfigType.LIGHTING)); 
             foreach (var light in lights)
             {
                 light.transform.parent = worldRoot.transform;
+            }
+
+            var regions = ImportRegions(world.GetRegions());
+            foreach (var region in regions)
+            {
+                region.transform.parent = worldRoot.transform;
             }
         }
 
@@ -274,42 +282,47 @@ public class WorldLoader : Loader {
     /*
     Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
     */
-    private static List<GameObject> ImportLights(LibSWBF2.Wrappers.Light[] lights)
+    private static List<GameObject> ImportLights(Config lightingConfig)
     {
         List<GameObject> lightObjects = new List<GameObject>();
 
-        foreach (var light in lights) 
+        List<string> lightNames = lightingConfig.GetStrings("Light");
+        List<Config> lightConfigs = lightingConfig.GetChildConfigs("Light");
+
+        int i = 0;
+        foreach (Config light in lightConfigs) 
         {
-            GameObject lightObj = new GameObject();
+            GameObject lightObj = new GameObject(lightNames[i++]);
 
-            lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(light.rotation);
+            lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(light.GetVec4("Rotation"));
 
-            light.position.Z *= -1.0f;
-            light.position.Y += .2f;
-            lightObj.transform.position = UnityUtils.Vec3FromLibWorld(light.position);
+            LibVec3 lightPos = light.GetVec3("Position");
 
-            lightObj.name = light.name;
+            lightPos.Z *= -1.0f;
+            lightPos.Y += .2f;
+            lightObj.transform.position = UnityUtils.Vec3FromLibWorld(lightPos);
 
 
             UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
-            lightComp.color = UnityUtils.ColorFromLib(light.color);
+            lightComp.color = UnityUtils.ColorFromLib(light.GetVec3("Color"));
             lightComp.intensity = 1;
 
-            LibSWBF2.Enums.LightType ltype = light.lightType;
+            float ltype = light.GetFloat("Type");
+            float range = light.GetFloat("Range");
 
-            if (ltype == LibSWBF2.Enums.LightType.Omni)
+            if (ltype == 2.0f)
             {   
                 lightComp.type = UnityEngine.LightType.Point;
-                lightComp.range = light.range;
+                lightComp.range = range;
                 
             }
-            else if (ltype == LibSWBF2.Enums.LightType.Spot)
+            else if (ltype == 3.0f)
             {
                 lightComp.type = UnityEngine.LightType.Spot;
-                lightComp.range = light.range;
-                lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
+                lightComp.range = range;
+                lightComp.spotAngle = light.GetVec2("Cone").X * Mathf.Rad2Deg;   
             }
-            else if (ltype == LibSWBF2.Enums.LightType.Dir)
+            else if (ltype == 1.0f)
             {
                 lightComp.type = UnityEngine.LightType.Directional;
                 lightComp.intensity = 1;
@@ -358,4 +371,36 @@ public class WorldLoader : Loader {
             }
         }
     }
+
+
+    private static List<GameObject> ImportRegions(Region[] regions)
+    {
+        List<GameObject> regionObjs = new List<GameObject>();
+        foreach (Region region in regions)
+        {
+            GameObject regionObj = new GameObject(region.name);
+            regionObj.transform.position = UnityUtils.Vec3FromLibWorld(region.position);
+            regionObj.transform.rotation = UnityUtils.QuatFromLibWorld(region.rotation);
+
+            LibVec3 sz = region.size;
+
+            //if (region.type.Equals("box"))
+            //{
+            BoxCollider coll = regionObj.AddComponent<BoxCollider>();
+            coll.size = new Vector3(sz.X,sz.Y,sz.Z);
+            coll.isTrigger = true;
+            //}
+            //else 
+            //{
+            //    CapsuleCollider coll = region.AddComponent<CapsuleCollider>();
+            //    coll.height = new Vector3(sz.X,sz.Y,sz.Z);
+            //}
+
+            regionObjs.Add(regionObj);
+        }
+
+        return regionObjs;
+    }
+
+
 }
