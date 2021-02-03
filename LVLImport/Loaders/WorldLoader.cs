@@ -16,6 +16,7 @@ using LibSWBF2.Utils;
 using LibTerrain = LibSWBF2.Wrappers.Terrain;
 using UMaterial = UnityEngine.Material;
 using LibVec3 = LibSWBF2.Types.Vector3;
+using ULight = UnityEngine.Light;
 
 
 
@@ -24,6 +25,11 @@ public class WorldLoader : Loader {
 
 
     public static bool TerrainAsMesh = false;
+
+
+
+
+
 
 
     //Imports all worlds for now...
@@ -282,9 +288,32 @@ public class WorldLoader : Loader {
     /*
     Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
     */
-    private static List<GameObject> ImportLights(Config lightingConfig)
+    private static List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
     {
         List<GameObject> lightObjects = new List<GameObject>();
+
+        if (lightingConfig == null) return lightObjects;
+
+
+        GameObject globalLightingObjects = new GameObject("GlobalLights");
+        lightObjects.Add(globalLightingObjects);
+
+        string light1Name = "", light2Name = "";
+        Config globalLighting = lightingConfig.GetChildConfig("GlobalLights");
+        if (globalLighting != null)
+        {
+            light1Name = globalLighting.GetString("Light1");
+            light2Name = globalLighting.GetString("Light2");
+
+            Color topColor = UnityUtils.ColorFromLib(globalLighting.GetVec3("Top"), true);
+            Color bottomColor = UnityUtils.ColorFromLib(globalLighting.GetVec3("Bottom"), true);
+
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientGroundColor = bottomColor;
+            RenderSettings.ambientSkyColor = topColor;
+        }
+
+
 
         List<string> lightNames = lightingConfig.GetStrings("Light");
         List<Config> lightConfigs = lightingConfig.GetChildConfigs("Light");
@@ -292,7 +321,13 @@ public class WorldLoader : Loader {
         int i = 0;
         foreach (Config light in lightConfigs) 
         {
-            GameObject lightObj = new GameObject(lightNames[i++]);
+            string lightName = lightNames[i++];
+
+            bool IsGlobal = String.Equals(lightName, light1Name, StringComparison.OrdinalIgnoreCase) ||
+                            String.Equals(lightName, light2Name, StringComparison.OrdinalIgnoreCase);
+
+
+            GameObject lightObj = new GameObject(lightName);
 
             lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(light.GetVec4("Rotation"));
 
@@ -303,9 +338,8 @@ public class WorldLoader : Loader {
             lightObj.transform.position = UnityUtils.Vec3FromLibWorld(lightPos);
 
 
-            UnityEngine.Light lightComp = lightObj.AddComponent<UnityEngine.Light>();
+            ULight lightComp = lightObj.AddComponent<ULight>();
             lightComp.color = UnityUtils.ColorFromLib(light.GetVec3("Color"));
-            lightComp.intensity = 1;
 
             float ltype = light.GetFloat("Type");
             float range = light.GetFloat("Range");
@@ -314,18 +348,19 @@ public class WorldLoader : Loader {
             {   
                 lightComp.type = UnityEngine.LightType.Point;
                 lightComp.range = range;
-                
+                lightComp.intensity = 4.0f;           
             }
             else if (ltype == 3.0f)
             {
                 lightComp.type = UnityEngine.LightType.Spot;
                 lightComp.range = range;
                 lightComp.spotAngle = light.GetVec2("Cone").X * Mathf.Rad2Deg;   
+                lightComp.intensity = range / 25.0f;
             }
             else if (ltype == 1.0f)
             {
                 lightComp.type = UnityEngine.LightType.Directional;
-                lightComp.intensity = 1;
+                lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
                 //lightComp.range = light.range;
                 //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
             }
@@ -335,7 +370,15 @@ public class WorldLoader : Loader {
                 continue;
             }
 
-            lightObjects.Add(lightObj);
+            if (IsGlobal)
+            {
+                lightObj.transform.SetParent(globalLightingObjects.transform,false);
+            }
+            else
+            {
+                lightObjects.Add(lightObj);
+            }
+
         }
 
         return lightObjects;
