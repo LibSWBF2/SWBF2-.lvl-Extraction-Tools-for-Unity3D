@@ -68,6 +68,7 @@ public class MaterialLoader : Loader {
 
                 material.name = materialName;
                 material.SetFloat("_Glossiness", 0.0f);
+                //material.SetFloat("_Metallic", 1.0f);
 
                 if (IsCutout(matFlags))
                 {

@@ -316,7 +316,7 @@ public class ModelLoader : Loader {
         if (colliderNames == null || colliderNames.Count == 0)
         {
             // 1 = Ordinance
-            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked());
+            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
         }
         else 
         {
@@ -434,7 +434,7 @@ public class ModelLoader : Loader {
             ushort[] indBuffer = collMesh.GetIndices();
 
             try {
-                if (false)//indBuffer.Length > 2)
+                if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
                     collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);

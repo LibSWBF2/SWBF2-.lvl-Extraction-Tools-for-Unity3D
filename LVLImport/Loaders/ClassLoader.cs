@@ -172,7 +172,7 @@ public class ClassLoader : Loader {
                 // Some collider primitives don't have proper masks, so their purpose is
                 // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
                 // as it is most accurate.
-                case SOLDIERCOLLISION:
+                case ORDNANCECOLLISION:
                     ordinanceColliders.Add(propertyValue);
                     break;
 

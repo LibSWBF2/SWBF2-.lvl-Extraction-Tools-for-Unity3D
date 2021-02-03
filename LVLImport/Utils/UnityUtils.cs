@@ -93,8 +93,12 @@ public static class UnityUtils {
 
 
 
-    public static UnityEngine.Color ColorFromLib(LibSWBF2.Types.Vector3 vec)
+    public static UnityEngine.Color ColorFromLib(LibSWBF2.Types.Vector3 vec, bool ScaleDown = false)
     {
+        if (ScaleDown)
+        {
+            return new UnityEngine.Color(vec.X/255.0f, vec.Y/255.0f, vec.Z/255.0f);
+        }
         return new UnityEngine.Color(vec.X,vec.Y,vec.Z);
     }
 
