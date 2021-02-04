@@ -355,7 +355,7 @@ public class WorldLoader : Loader {
                 lightComp.type = UnityEngine.LightType.Spot;
                 lightComp.range = range;
                 lightComp.spotAngle = light.GetVec2("Cone").X * Mathf.Rad2Deg;   
-                lightComp.intensity = range / 25.0f;
+                lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
             }
             else if (ltype == 1.0f)
             {
