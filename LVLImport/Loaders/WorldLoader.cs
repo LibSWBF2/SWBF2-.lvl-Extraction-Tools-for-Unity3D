@@ -22,14 +22,7 @@ using ULight = UnityEngine.Light;
 
 public class WorldLoader : Loader {
 
-
-
     public static bool TerrainAsMesh = false;
-
-
-
-
-
 
 
     //Imports all worlds for now...
@@ -41,12 +34,12 @@ public class WorldLoader : Loader {
 
         foreach (World world in worlds)
         {
-        	GameObject worldRoot = new GameObject(world.Name);
+        	GameObject worldRoot = new GameObject(world.name);
             
             Instance[] instances = world.GetInstances();
             foreach (Instance inst in instances)
             {
-                string entityClassName = inst.GetEntityClassName();
+                string entityClassName = inst.entityClassName;
                 string baseName = ClassLoader.GetBaseClassName(entityClassName);
 
                 GameObject obj = null;
@@ -73,13 +66,13 @@ public class WorldLoader : Loader {
                     continue;
                 }
 
-                if (!inst.Name.Equals(""))
+                if (!inst.name.Equals(""))
                 {
-                    obj.name = inst.Name;
+                    obj.name = inst.name;
                 }
 
-                obj.transform.rotation = UnityUtils.QuatFromLibWorld(inst.GetRotation());
-                obj.transform.position = UnityUtils.Vec3FromLibWorld(inst.GetPosition());
+                obj.transform.rotation = UnityUtils.QuatFromLibWorld(inst.rotation);
+                obj.transform.position = UnityUtils.Vec3FromLibWorld(inst.position);
                 obj.transform.parent = worldRoot.transform;
             }
         
@@ -100,7 +93,7 @@ public class WorldLoader : Loader {
                 LoadedTerrain = true;
             }
 
-            var lights = ImportLights(level.GetConfig(world.Name, ConfigType.LIGHTING)); 
+            var lights = ImportLights(level.GetConfig(world.name, ConfigType.LIGHTING)); 
             foreach (var light in lights)
             {
                 light.transform.parent = worldRoot.transform;
@@ -355,7 +348,7 @@ public class WorldLoader : Loader {
                 lightComp.type = UnityEngine.LightType.Spot;
                 lightComp.range = range;
                 lightComp.spotAngle = light.GetVec2("Cone").X * Mathf.Rad2Deg;   
-                lightComp.intensity = range / 25.0f;
+                lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
             }
             else if (ltype == 1.0f)
             {
