@@ -137,6 +137,18 @@ public static class UnityUtils {
     }
 
 
+    public static void ConvertSpaceAndFillVec3(UVector3[] vectorsIn, UVector3[] vectors, int offset=0, bool flipX = true)
+    {
+        if (vectorsIn != null){
+            for (int i = 0; i < vectorsIn.Length; i++)
+            {
+                UVector3 cur = vectorsIn[i];
+                vectors[i + offset] = new UVector3(flipX ? -cur.x : cur.x, cur.y, cur.z);
+            }
+        } 
+    }
+
+
     public static void ConvertSpaceAndFillVec3(float[] floats, UVector3[] vectors, int offset=0, bool flipX = true)
     {
         if (floats != null){

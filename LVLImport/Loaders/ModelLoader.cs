@@ -15,6 +15,7 @@ using LibSWBF2.Wrappers;
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
 using LibBone = LibSWBF2.Wrappers.Bone;
+//using UVec3 = UnityEngine.Vector3;
 
 public class ModelLoader : Loader {
 
@@ -49,9 +50,9 @@ public class ModelLoader : Loader {
         int dataOffset = 0, i = 0;
         foreach (Segment seg in segments)
         {
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer(), positions, dataOffset, true);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer(), normals, dataOffset, true);
-            UnityUtils.FillVec2(seg.GetUVBuffer(), texcoords, dataOffset);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset, true);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset, true);
+            UnityUtils.FillVec2(seg.GetUVBuffer<Vector2>(), texcoords, dataOffset);
 
             offsets[i++] = dataOffset;
             dataOffset += (int) seg.GetVertexBufferLength();
@@ -78,7 +79,7 @@ public class ModelLoader : Loader {
     // Straightforward
     private static bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
-        LibBone[] hierarchy = model.GetSkeleton();
+        LibBone[] hierarchy = model.skeleton;
         Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
 
         foreach (var node in hierarchy)
@@ -115,14 +116,14 @@ public class ModelLoader : Loader {
 
     private static int AddWeights(GameObject obj, Model model, Mesh mesh)
     {
-        var segments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray(); 
+        var segments = (from segment in model.GetSegments() where segment.boneName.Equals("") select segment).ToArray(); 
 
         int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
-        int txStatus = segments.Sum(item => item.IsPretransformed() ? 1 : 0);
+        int txStatus = segments.Sum(item => item.isPretransformed ? 1 : 0);
 
         if (txStatus != 0 && txStatus != segments.Length)
         {
-            Debug.LogError(String.Format("Model {0} has heterogeneous pretransformation!", model.Name));
+            Debug.LogError(String.Format("Model {0} has heterogeneous pretransformation!", model.name));
             return 0;
         }
 
@@ -156,11 +157,11 @@ public class ModelLoader : Loader {
     public static bool AddStaticMeshes(GameObject newObject, Model model,
                                                     Dictionary<string, Transform> skeleton)
     {
-        List<Segment> segments = (from segment in model.GetSegments() where !segment.GetBone().Equals("") select segment).ToList();
+        List<Segment> segments = (from segment in model.GetSegments() where !segment.boneName.Equals("") select segment).ToList();
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
         foreach (var segment in segments)
         {
-            string boneName = segment.GetBone();
+            string boneName = segment.boneName;
 
             if (boneName.Equals("")) continue;
 
@@ -182,7 +183,7 @@ public class ModelLoader : Loader {
             filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray());
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.LoadMaterial(segment.material)).ToArray();
         }
 
         return true;
@@ -196,9 +197,9 @@ public class ModelLoader : Loader {
 
     private static bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
     {
-        Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.GetBone().Equals("") select segment).ToArray();
+        Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.boneName.Equals("") select segment).ToArray();
         Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray());
-        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.GetMaterial())).ToArray();
+        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.material)).ToArray();
 
         int skinType = AddWeights(newObject, model, mesh);
         if (skinType == 0)
@@ -208,7 +209,7 @@ public class ModelLoader : Loader {
 
         //Below, we handle 
         SkinnedMeshRenderer skinRenderer = newObject.AddComponent<SkinnedMeshRenderer>();
-        LibBone[] bonesSWBF = model.GetSkeleton();
+        LibBone[] bonesSWBF = model.skeleton;
 
         /*
         Set bones
@@ -269,7 +270,7 @@ public class ModelLoader : Loader {
     {   
         if (model == null)
         {
-            Debug.LogError(String.Format("Failed to load model: {0}", model.Name));
+            Debug.LogError(String.Format("Failed to load model: {0}", model.name));
             return false;
         }
 
@@ -280,7 +281,7 @@ public class ModelLoader : Loader {
 
         AddStaticMeshes(newObject, model, skeleton);
         
-        if (model.IsSkinnedMesh)
+        if (model.isSkinned)
         {
             AddSkinningComponents(newObject, model, skeleton);
         }
@@ -384,7 +385,7 @@ public class ModelLoader : Loader {
                 // This happens, not sure what to make of it, but 
                 // all prims of this type have zeroed fields.
                 default:
-                    Debug.LogWarning(model.Name + ": Unknown collision type encountered");
+                    Debug.LogWarning(model.name + ": Unknown collision type encountered");
                     break;
             }
         }
