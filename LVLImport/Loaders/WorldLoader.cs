@@ -117,7 +117,7 @@ public class WorldLoader : Loader {
     {
         Mesh terrainMesh = new Mesh();
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        terrainMesh.vertices = UnityUtils.FloatToVec3Array(terrain.GetPositionsBuffer(), false);
+        terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
         //terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
         terrainMesh.RecalculateNormals();
@@ -131,7 +131,7 @@ public class WorldLoader : Loader {
         renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
 
         int i = 0;
-        foreach (string texName in terrain.GetTextureNames())
+        foreach (string texName in terrain.layerTextures)
         {
             Texture2D tex = TextureLoader.ImportTexture(texName);
             string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
@@ -194,7 +194,8 @@ public class WorldLoader : Loader {
     {
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
-        terrain.GetHeightBounds(out float floor, out float ceiling);
+        float floor = terrain.heightLowerBound;
+        float ceiling = terrain.heightUpperBound;
         
         TerrainData terData = new TerrainData();
         terData.heightmapResolution = (int) dim + 1;
@@ -220,7 +221,7 @@ public class WorldLoader : Loader {
 
         //Get list of textures used
         List<Texture2D> terTextures = new List<Texture2D>();
-        foreach (string texName in terrain.GetTextureNames())
+        foreach (string texName in terrain.layerTextures)
         {
             Texture2D tex = TextureLoader.ImportTexture(texName);
             if (tex != null)
@@ -385,11 +386,11 @@ public class WorldLoader : Loader {
         {
             GameObject newObj = null;
             try {
-                if (model.Name.Contains("sky")) //best effort
+                if (model.name.Contains("sky")) //best effort
                 {
-                    newObj = new GameObject(model.Name);
+                    newObj = new GameObject(model.name);
 
-                    if (!ModelLoader.AddModelComponents(newObj, model.Name))
+                    if (!ModelLoader.AddModelComponents(newObj, model.name))
                     {
                         Debug.LogError("Skydome model creation failed...");
                         continue;

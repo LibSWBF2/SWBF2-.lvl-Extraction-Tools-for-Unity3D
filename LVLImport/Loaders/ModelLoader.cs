@@ -128,7 +128,7 @@ public class ModelLoader : Loader {
         }
 
         byte bonesPerVert = (byte) (txStatus == 0 ? 3 : 1);  
-        bool broken = model.IsSkeletonBroken;
+        bool broken = model.isSkeletonBroken;
 
         BoneWeight1[] weights = new BoneWeight1[totalLength * bonesPerVert];
 
@@ -438,7 +438,7 @@ public class ModelLoader : Loader {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
+                    collMeshUnity.vertices = UnityUtils.FlipXCoords(collMesh.GetVertices<Vector3>());
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();

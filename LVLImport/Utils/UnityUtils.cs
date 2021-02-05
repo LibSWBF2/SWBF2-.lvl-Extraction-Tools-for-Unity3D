@@ -13,6 +13,7 @@ using LibSWBF2.Types;
 using LibSWBF2.Wrappers;
 
 using UVector3 = UnityEngine.Vector3;
+using UVector2 = UnityEngine.Vector2;
 
 
 public static class UnityUtils {
@@ -115,6 +116,17 @@ public static class UnityUtils {
     alignment. A basic test on Mac worked, but more are needed. 
     */
 
+
+    public static UVector3[] FlipXCoords(UVector3[] verts)
+    {
+        for (int i = 0; i < verts.Length; i++)
+        {
+            verts[i].x *= -1.0f;
+        }
+        return verts;
+    }
+
+
     public static UVector3[] FloatToVec3Array(float[] floats, bool flipX=true)
     {
         UVector3[] vectors = new UVector3[floats.Length / 3];
@@ -159,12 +171,13 @@ public static class UnityUtils {
         } 
     }
 
-    public static void FillVec2(float[] floats, UnityEngine.Vector2[] vectors, int offset=0)
+    public static void FillVec2(UVector2[] floats, UVector2[] vectors, int offset=0)
     {
         if (floats != null){
-            for (int i = 0; i < floats.Length; i+=2)
+            for (int i = 0; i < floats.Length; i++)
             {
-                vectors[i / 2 + offset] = new UnityEngine.Vector2(floats[i],floats[i+1]);
+                UVector2 cur = floats[i];
+                vectors[i + offset] = new UnityEngine.Vector2(cur.x, cur.y);
             }
         } 
     }
