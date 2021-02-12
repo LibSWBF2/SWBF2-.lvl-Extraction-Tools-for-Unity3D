@@ -1,10 +1,5 @@
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]in
-Scenes/
-Textures/
-Prefabs/
+*/
+!LVLImport/
 
 # ignore build asset bundles
 /AssetBundles
