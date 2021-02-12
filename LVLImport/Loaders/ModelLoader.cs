@@ -15,7 +15,7 @@ using LibSWBF2.Wrappers;
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
 using LibBone = LibSWBF2.Wrappers.Bone;
-//using UVec3 = UnityEngine.Vector3;
+
 
 public class ModelLoader : Loader {
 
@@ -79,30 +79,31 @@ public class ModelLoader : Loader {
     // Straightforward
     private static bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
+        skeleton = new Dictionary<string, Transform>();
+
         LibBone[] hierarchy = model.skeleton;
-        Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
+        if (hierarchy == null) return false;
 
         foreach (var node in hierarchy)
         {
             var nodeTransform = new GameObject(node.name).transform;
             nodeTransform.localRotation = UnityUtils.QuatFromLibSkel(node.rotation);
             nodeTransform.localPosition = UnityUtils.Vec3FromLibSkel(node.location);
-            hierarchyMap[node.name] = nodeTransform;
+            skeleton[node.name] = nodeTransform;
         }
 
         foreach (var node in hierarchy)
         {   
             if (node.parentName.Equals(""))
             {
-                hierarchyMap[node.name].SetParent(newObject.transform, false);
+                skeleton[node.name].SetParent(newObject.transform, false);
             }
             else 
             {
-                hierarchyMap[node.name].SetParent(hierarchyMap[node.parentName], false);   
+                skeleton[node.name].SetParent(skeleton[node.parentName], false);   
             }
         }
 
-        skeleton = hierarchyMap;
         return true;
     }
 
@@ -128,7 +129,7 @@ public class ModelLoader : Loader {
         }
 
         byte bonesPerVert = (byte) (txStatus == 0 ? 3 : 1);  
-        bool broken = model.IsSkeletonBroken;
+        bool broken = model.isSkeletonBroken;
 
         BoneWeight1[] weights = new BoneWeight1[totalLength * bonesPerVert];
 
@@ -268,9 +269,8 @@ public class ModelLoader : Loader {
 
     public static bool AddModelComponents(GameObject newObject, Model model)
     {   
-        if (model == null)
+        if (model == null || newObject == null)
         {
-            Debug.LogError(String.Format("Failed to load model: {0}", model.name));
             return false;
         }
 
@@ -438,7 +438,7 @@ public class ModelLoader : Loader {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    collMeshUnity.vertices = UnityUtils.FloatToVec3Array(collMesh.GetVertices(), true);
+                    collMeshUnity.vertices = UnityUtils.ConvertSpaceVec3(collMesh.GetVertices<Vector3>());
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();

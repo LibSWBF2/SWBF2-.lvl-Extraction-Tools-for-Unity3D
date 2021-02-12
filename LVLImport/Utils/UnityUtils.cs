@@ -12,6 +12,7 @@ using UnityEngine;
 using LibSWBF2.Types;
 using LibSWBF2.Wrappers;
 
+using UVector2 = UnityEngine.Vector2;
 using UVector3 = UnityEngine.Vector3;
 
 
@@ -137,34 +138,34 @@ public static class UnityUtils {
     }
 
 
-    public static void ConvertSpaceAndFillVec3(UVector3[] vectorsIn, UVector3[] vectors, int offset=0, bool flipX = true)
+    public static void ConvertSpaceAndFillVec3(UVector3[] vectorsIn, UVector3[] vectorsOut, int offset=0, bool flipX = true)
     {
         if (vectorsIn != null){
             for (int i = 0; i < vectorsIn.Length; i++)
             {
                 UVector3 cur = vectorsIn[i];
-                vectors[i + offset] = new UVector3(flipX ? -cur.x : cur.x, cur.y, cur.z);
+                vectorsOut[i + offset] = new UVector3(flipX ? -cur.x : cur.x, cur.y, cur.z);
             }
         } 
     }
 
 
-    public static void ConvertSpaceAndFillVec3(float[] floats, UVector3[] vectors, int offset=0, bool flipX = true)
+    public static UVector3[] ConvertSpaceVec3(UVector3[] vecs)
     {
-        if (floats != null){
-            for (int i = 0; i < floats.Length; i+=3)
-            {
-                vectors[i / 3 + offset] = new UVector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
-            }
-        } 
+        for (int i = 0; i < vecs.Length; i++)
+        {
+            vecs[i].x = -vecs[i].x;
+        }
+        return vecs;
     }
 
-    public static void FillVec2(float[] floats, UnityEngine.Vector2[] vectors, int offset=0)
+
+    public static void FillVec2(UVector2[] vectorsIn, UVector2[] vectorsOut, int offset=0)
     {
-        if (floats != null){
-            for (int i = 0; i < floats.Length; i+=2)
+        if (vectorsIn != null){
+            for (int i = 0; i < vectorsIn.Length; i++)
             {
-                vectors[i / 2 + offset] = new UnityEngine.Vector2(floats[i],floats[i+1]);
+                vectorsOut[i + offset] = vectorsIn[i];
             }
         } 
     }
