@@ -116,6 +116,17 @@ public static class UnityUtils {
     alignment. A basic test on Mac worked, but more are needed. 
     */
 
+
+    public static UVector3[] FlipXCoords(UVector3[] verts)
+    {
+        for (int i = 0; i < verts.Length; i++)
+        {
+            verts[i].x *= -1.0f;
+        }
+        return verts;
+    }
+
+
     public static UVector3[] FloatToVec3Array(float[] floats, bool flipX=true)
     {
         UVector3[] vectors = new UVector3[floats.Length / 3];
