@@ -74,15 +74,15 @@ public static class UnityUtils {
 
 
     //Skeleton transform conversion to match vertex data handedness flip
-    public static UnityEngine.Quaternion QuatFromLibSkel(LibSWBF2.Types.Vector4 vec)
+    public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
-        return new UnityEngine.Quaternion(-vec.X, vec.Y, vec.Z, -vec.W);
+        return new UnityEngine.Quaternion(vec.X, vec.Y, vec.Z, vec.W);
     }
 
     //''
-    public static UVector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
+    public static UVector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
     {
-        return new UVector3(-vec.X, vec.Y, vec.Z);
+        return new UVector3(vec.X, vec.Y, vec.Z);
     }
 
 
@@ -91,7 +91,6 @@ public static class UnityUtils {
     {
         return new UnityEngine.Quaternion(vec.Y, vec.Z, vec.W, vec.X);   
     }
-
 
 
     public static UnityEngine.Color ColorFromLib(LibSWBF2.Types.Vector3 vec, bool ScaleDown = false)
@@ -103,119 +102,24 @@ public static class UnityUtils {
         return new UnityEngine.Color(vec.X,vec.Y,vec.Z);
     }
 
-    public static UnityEngine.Vector4 Vec4FromLib(LibSWBF2.Types.Vector4 vec)
-    {
-        return new UnityEngine.Vector4(vec.X,vec.Y,-vec.Z,vec.W);
-    }
-
-    
 
     /*
-    The following 4 functions will be replaced by templated getters for each
-    wrapper if I can find good documentation on low-level Unity vector structure +
-    alignment. A basic test on Mac worked, but more are needed. 
-    */
-
-
-    public static UVector3[] FlipXCoords(UVector3[] verts)
-    {
-        for (int i = 0; i < verts.Length; i++)
-        {
-            verts[i].x *= -1.0f;
-        }
-        return verts;
-    }
-
-
-    public static UVector3[] FloatToVec3Array(float[] floats, bool flipX=true)
-    {
-        UVector3[] vectors = new UVector3[floats.Length / 3];
-        for (int i = 0; i < floats.Length; i+=3)
-        {
-            vectors[i / 3] = new UVector3(flipX ? -floats[i] : floats[i],floats[i+1],floats[i+2]);
-        }
-        return vectors;
-    }
-
-
-    public static UnityEngine.Vector2[] FloatToVec2Array(float[] floats)
-    {
-        UnityEngine.Vector2[] vectors = new UnityEngine.Vector2[floats.Length / 2];
-        for (int i = 0; i < floats.Length; i+=2)
-        {
-            vectors[i / 2] = new UnityEngine.Vector2(floats[i],floats[i+1]);
-        }
-        return vectors;
-    }
-
-
-    public static void ConvertSpaceAndFillVec3(UVector3[] vectorsIn, UVector3[] vectorsOut, int offset=0, bool flipX = true)
-    {
-        if (vectorsIn != null){
-            for (int i = 0; i < vectorsIn.Length; i++)
-            {
-                UVector3 cur = vectorsIn[i];
-                vectorsOut[i + offset] = new UVector3(flipX ? -cur.x : cur.x, cur.y, cur.z);
-            }
-        } 
-    }
-
-
-    public static UVector3[] ConvertSpaceVec3(UVector3[] vecs)
-    {
-        for (int i = 0; i < vecs.Length; i++)
-        {
-            vecs[i].x = -vecs[i].x;
-        }
-        return vecs;
-    }
-
-
-    public static void FillVec2(UVector2[] vectorsIn, UVector2[] vectorsOut, int offset=0)
-    {
-        if (vectorsIn != null){
-            for (int i = 0; i < vectorsIn.Length; i++)
-            {
-                vectorsOut[i + offset] = vectorsIn[i];
-            }
-        } 
-    }
-
-
-    /*
-    Reverse triangle ordering.
-    Necessary when handedness of vertex data is flipped.
-    */
-
-    public static ushort[] ReverseWinding(ushort[] indices)
-    {
-        ushort temp;
-        for (int i = 0; i < indices.Length; i+=3)
-        {
-            temp = indices[i];
-            indices[i] = indices[i+2];
-            indices[i+2] = temp;
-        }
-        return indices;
-    }
-
-
-    /*
-    Only parameter of note is fix.  This is used for broken skeletons (only example being Jabba from tat3.lvl), where 
+    Only parameter of note is fix.  This is used for broken skeletons
+    (so far only example is Jabba from tat3.lvl) where 
     bone weight indices are off by 1.
     */
 
-    public static void FillBoneWeights(VertexWeight[] vws, BoneWeight1[] boneWeights, int offset, int fix = 0)
+    public static void FillBoneWeights(VertexWeight[] libVertexWeights, BoneWeight1[] UBoneWeights, int offset, int fix = 0)
     {
-        if (vws != null)
+        if (libVertexWeights != null)
         {
-            for (int i = 0; i < vws.Length; i++)
+            for (int i = 0; i < libVertexWeights.Length; i++)
             {
-                int windex = (int) vws[i].index;
-                float wvalue = vws[i].weight;
+                int windex = (int) libVertexWeights[i].index;
+                float wvalue = libVertexWeights[i].weight;
 
-                boneWeights[offset + i].boneIndex = windex + fix;
-                boneWeights[offset + i].weight = wvalue;                                   
+                UBoneWeights[offset + i].boneIndex = windex + fix;
+                UBoneWeights[offset + i].weight = wvalue;                                   
             }
         }
     }

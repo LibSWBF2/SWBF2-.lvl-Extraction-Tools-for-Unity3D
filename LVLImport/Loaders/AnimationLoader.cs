@@ -24,14 +24,14 @@ public class AnimationLoader : Loader {
                                                 "localPosition.x",
                                                 "localPosition.y",
                                                 "localPosition.z"  };
-
-    private static float[] ComponentMultipliers = {  -1.0f,
+    //In case space conversions are needed
+    private static float[] ComponentMultipliers = {  1.0f,
                                                       1.0f,
                                                      1.0f,
-                                                     -1.0f,
-                                                      -1.0f,
+                                                     1.0f,
                                                       1.0f,
-                                                     1.0f  };   
+                                                      1.0f,
+                                                     1.0f  };
 
 
     private static Dictionary<uint, string> crcsToCommonNames;
