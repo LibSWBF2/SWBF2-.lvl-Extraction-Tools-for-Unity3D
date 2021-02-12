@@ -43,14 +43,17 @@ public class WorldLoader : Loader {
 
     	GameObject worldRoot = new GameObject(world.name);
 
+
         //Instances
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
         foreach (GameObject instanceObject in ImportInstances(world.GetInstances()))
         {
+            instanceObject.transform.localScale = new Vector3(-1.0f,1.0f,1.0f);
             instanceObject.transform.parent = instancesRoot.transform;
         }
         
+
         //Terrain
         var terrain = world.GetTerrain();
         if (terrain != null && !LoadedTerrain)
@@ -69,6 +72,7 @@ public class WorldLoader : Loader {
             LoadedTerrain = true;
         }
 
+
         //Lighting
         var lightingRoots = ImportLights(container.FindConfig(ConfigType.Lighting, world.name)); 
         foreach (var lightingRoot in lightingRoots)
@@ -76,9 +80,11 @@ public class WorldLoader : Loader {
             lightingRoot.transform.parent = worldRoot.transform;
         }
 
+
         //Regions
         var regionsRoot = ImportRegions(world.GetRegions());
         regionsRoot.transform.parent = worldRoot.transform;
+
 
         //Skydome, check if already loaded first
         if (!loadedSkydomes.ContainsKey(world.skydomeName))
@@ -438,7 +444,7 @@ public class WorldLoader : Loader {
                     MaterialLoader.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
                 } catch {}
 
-                domeModelObj.transform.localScale = new Vector3(300,300,300);
+                domeModelObj.transform.localScale = new Vector3(-300,300,300);
                 domeModelObj.transform.parent = domeRoot.transform;
             }
         }
