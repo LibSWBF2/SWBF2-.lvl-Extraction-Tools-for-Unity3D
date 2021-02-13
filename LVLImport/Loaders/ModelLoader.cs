@@ -15,7 +15,7 @@ using LibSWBF2.Wrappers;
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
 using LibBone = LibSWBF2.Wrappers.Bone;
-//using UVec3 = UnityEngine.Vector3;
+
 
 public class ModelLoader : Loader {
 
@@ -455,4 +455,27 @@ public class ModelLoader : Loader {
         
         return true;      
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
