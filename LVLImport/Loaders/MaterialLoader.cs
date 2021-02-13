@@ -11,6 +11,7 @@ using UnityEditor;
 
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
+using LibSWBF2.Enums;
 
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
@@ -20,7 +21,7 @@ using LibBone = LibSWBF2.Wrappers.Bone;
 public class MaterialLoader : Loader {
 
     public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
-    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("Standard"));
+    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
     public static bool SaveAssets = false;
 
     private static string matsFolder;
@@ -47,7 +48,7 @@ public class MaterialLoader : Loader {
     public static UMaterial LoadMaterial(LibMaterial mat)
     {
         string texName = mat.textures[0];
-        uint matFlags = mat.materialFlags;
+        MaterialFlags matFlags = mat.materialFlags;
 
         if (texName == "")
         {
@@ -55,7 +56,7 @@ public class MaterialLoader : Loader {
         } 
         else 
         {
-            string materialName = texName + "_" + matFlags.ToString();
+            string materialName = texName + "_" + ((uint) matFlags).ToString();
 
             if (!materialDataBase.ContainsKey(materialName))
             {
@@ -70,14 +71,25 @@ public class MaterialLoader : Loader {
                 material.SetFloat("_Glossiness", 0.0f);
                 //material.SetFloat("_Metallic", 1.0f);
 
-                if (IsCutout(matFlags))
+                if (matFlags.HasFlag(MaterialFlags.Hardedged))
                 {
                     SetRenderMode(ref material, 1);
                 }
-                else if (IsTransparent(matFlags))
+                else if (matFlags.HasFlag(MaterialFlags.Transparent))
                 {
                     SetRenderMode(ref material, 2);
                 }
+
+                if (matFlags.HasFlag(MaterialFlags.Doublesided))
+                {
+                    material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
+                }
+                else
+                {
+                    material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+                }
+
+
 
                 Texture2D importedTex = TextureLoader.ImportTexture(texName);
                 if (importedTex != null)
@@ -85,7 +97,7 @@ public class MaterialLoader : Loader {
                     material.mainTexture = importedTex;
                 }
 
-                if (IsEmissive(matFlags))
+                if (matFlags.HasFlag(MaterialFlags.Glow))
                 {
                     material.EnableKeyword("_EMISSION");
                     material.SetTexture("_EmissionMap", importedTex);
