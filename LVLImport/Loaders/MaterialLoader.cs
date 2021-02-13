@@ -15,7 +15,6 @@ using LibSWBF2.Enums;
 
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
-using LibBone = LibSWBF2.Wrappers.Bone;
 
 
 public class MaterialLoader : Loader {
@@ -45,6 +44,7 @@ public class MaterialLoader : Loader {
     }
 
 
+
     public static UMaterial LoadMaterial(LibMaterial mat)
     {
         string texName = mat.textures[0];
@@ -69,7 +69,6 @@ public class MaterialLoader : Loader {
 
                 material.name = materialName;
                 material.SetFloat("_Glossiness", 0.0f);
-                //material.SetFloat("_Metallic", 1.0f);
 
                 if (matFlags.HasFlag(MaterialFlags.Hardedged))
                 {
@@ -83,10 +82,6 @@ public class MaterialLoader : Loader {
                 if (matFlags.HasFlag(MaterialFlags.Doublesided))
                 {
                     material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
-                }
-                else
-                {
-                    material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
                 }
 
 
@@ -183,27 +178,4 @@ public class MaterialLoader : Loader {
                 break;
         }
     }
-
-
-    public static bool IsEmissive(uint flags)
-    {
-        return (flags & (uint)16) != 0; 
-    }
-
-    public static bool IsTransparent(uint flags)
-    {
-        return (flags & (uint)4) != 0;
-    }
-
-    public static bool IsScrolling(uint flags)
-    {
-        return (flags & (uint)16777216) != 0;
-    }
-
-    public static bool IsCutout(uint flags)
-    {
-        return (flags & (uint)2) != 0;
-    }  
-
-
 }

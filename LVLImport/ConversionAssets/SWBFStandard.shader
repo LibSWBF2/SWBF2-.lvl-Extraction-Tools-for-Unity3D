@@ -39,7 +39,7 @@ Shader "ConversionAssets/SWBFStandard"
 
         [Enum(UV0,0,UV1,1)] _UVSec("UV Set for secondary textures", Float) = 0
 
-        _Cull ("__cull", Float) = 1.0
+        _Cull ("__cull", Float) = 2.0
 
 
 

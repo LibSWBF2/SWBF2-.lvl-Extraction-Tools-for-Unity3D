@@ -55,6 +55,7 @@ public class ClassLoader : Loader {
 
     public static GameObject LoadGeneralClass(string name)
     {
+        //Check if ODF already loaded
         if (classObjectDatabase.ContainsKey(name))
         {
             var duplicate = Instantiate(classObjectDatabase[name]);
@@ -77,7 +78,6 @@ public class ClassLoader : Loader {
             if (!ecWrapper.GetOverriddenProperties(out properties, out values))
             {
                 Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
-                return null;
             }
         } catch
         {
@@ -87,6 +87,7 @@ public class ClassLoader : Loader {
 
         GameObject obj = new GameObject(name);
         GameObject lastAttached = null;
+        string lastAttachedName = "";
 
         HashSet<string> ordinanceColliders = new HashSet<string>();
 
@@ -144,16 +145,15 @@ public class ClassLoader : Loader {
                     break;
 
                 case ATTACHODF:
-                    lastAttached = LoadGeneralClass(propertyValue);
+                    lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
                     break;
 
                 // TODO: Hardpoint children are frequently missing...
                 case ATTACHTOHARDPOINT:
 
-                    if (lastAttached == null)
-                    {
-                        break;
-                    }
+                    lastAttached = LoadGeneralClass(lastAttachedName);
+                    if (lastAttached == null) break;
+
 
                     var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
 
@@ -186,4 +186,22 @@ public class ClassLoader : Loader {
         classObjectDatabase[name] = obj;
         return obj;
     }
+
+
+
+    /*
+    private static GameObject CreateLeafPatch(uint[] hashes, string[] values)
+    {
+        GameObject leafPatchObj = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        MeshRenderer renderer = leafPatchObj.GetComponent<MeshRenderer>();
+
+        int texIndex = Array.FindIndex(hashes, x => x == HashUtils.GetFNV("Texture"));
+
+        return leafPatchObj;
+    }
+    */
+
+
+
+
 }
