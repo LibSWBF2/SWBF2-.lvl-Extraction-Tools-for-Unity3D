@@ -208,7 +208,7 @@ public class LVLImportWindow : EditorWindow {
                     }
                 }
 
-                container.Delete();
+                //container.Delete();
             }
         }
     }
