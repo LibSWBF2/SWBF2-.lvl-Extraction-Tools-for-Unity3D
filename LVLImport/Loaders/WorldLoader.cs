@@ -24,91 +24,126 @@ public class WorldLoader : Loader {
 
     public static bool TerrainAsMesh = false;
 
+    private static Dictionary<string, GameObject> loadedSkydomes;
 
-    //Imports all worlds for now...
-    public static void ImportWorlds(Level level)
+    static WorldLoader()
+    {
+        loadedSkydomes = new Dictionary<string, GameObject>();
+    }
+
+    public static void Reset()
+    {
+        loadedSkydomes = new Dictionary<string, GameObject>();
+    }
+
+
+    public static void ImportWorld(World world)
     {
         bool LoadedTerrain = false;
 
-        World[] worlds = level.GetWorlds();
+    	GameObject worldRoot = new GameObject(world.name);
 
-        foreach (World world in worlds)
+
+        //Instances
+        GameObject instancesRoot = new GameObject("Instances");
+        instancesRoot.transform.parent = worldRoot.transform;
+        foreach (GameObject instanceObject in ImportInstances(world.GetInstances()))
         {
-        	GameObject worldRoot = new GameObject(world.name);
-            
-            Instance[] instances = world.GetInstances();
-            foreach (Instance inst in instances)
-            {
-                string entityClassName = inst.entityClassName;
-                string baseName = ClassLoader.GetBaseClassName(entityClassName);
-
-                GameObject obj = null;
-
-                switch (baseName)
-                {
-                    case "door":
-                    case "animatedprop":                  
-                    case "prop":
-                    case "building":
-                    case "destructablebuilding":
-                    case "armedbuilding":
-                    case "animatedbuilding":
-                    case "commandpost":
-                        obj = ClassLoader.LoadGeneralClass(entityClassName);
-                        break;
-
-                    default:
-                        break; 
-                }
-
-                if (obj == null)
-                {
-                    continue;
-                }
-
-                if (!inst.name.Equals(""))
-                {
-                    obj.name = inst.name;
-                }
-
-                obj.transform.rotation = UnityUtils.QuatFromLibWorld(inst.rotation);
-                obj.transform.position = UnityUtils.Vec3FromLibWorld(inst.position);
-                obj.transform.parent = worldRoot.transform;
-            }
+            instanceObject.transform.localScale = new Vector3(-1.0f,1.0f,1.0f);
+            instanceObject.transform.parent = instancesRoot.transform;
+        }
         
-            var terrain = world.GetTerrain();
-            if (terrain != null && !LoadedTerrain)
-            {
-                GameObject terrainGameObject;
-                if (TerrainAsMesh)
-                {
-                    terrainGameObject = ImportTerrainAsMesh(terrain);
-                }
-                else 
-                {
-                    terrainGameObject = ImportTerrain(terrain);
-                }
 
-                terrainGameObject.transform.parent = worldRoot.transform;
-                LoadedTerrain = true;
+        //Terrain
+        var terrain = world.GetTerrain();
+        if (terrain != null && !LoadedTerrain)
+        {
+            GameObject terrainGameObject;
+            if (TerrainAsMesh)
+            {
+                terrainGameObject = ImportTerrainAsMesh(terrain);
+            }
+            else 
+            {
+                terrainGameObject = ImportTerrain(terrain);
             }
 
-            var lights = ImportLights(level.GetConfig(world.name, ConfigType.LIGHTING)); 
-            foreach (var light in lights)
-            {
-                light.transform.parent = worldRoot.transform;
-            }
-
-            var regions = ImportRegions(world.GetRegions());
-            foreach (var region in regions)
-            {
-                region.transform.parent = worldRoot.transform;
-            }
+            terrainGameObject.transform.parent = worldRoot.transform;
+            LoadedTerrain = true;
         }
 
-        TryImportSkyDome(level);
 
-        AssetDatabase.Refresh();
+        //Lighting
+        var lightingRoots = ImportLights(container.FindConfig(ConfigType.Lighting, world.name)); 
+        foreach (var lightingRoot in lightingRoots)
+        {
+            lightingRoot.transform.parent = worldRoot.transform;
+        }
+
+
+        //Regions
+        var regionsRoot = ImportRegions(world.GetRegions());
+        regionsRoot.transform.parent = worldRoot.transform;
+
+
+        //Skydome, check if already loaded first
+        if (!loadedSkydomes.ContainsKey(world.skydomeName))
+        {
+            var skyRoot = ImportSkydome(container.FindConfig(ConfigType.Skydome, world.skydomeName));
+            if (skyRoot != null)
+            {
+                skyRoot.transform.parent = worldRoot.transform;
+            }
+
+            loadedSkydomes[world.skydomeName] = skyRoot;
+        }
+    }
+
+
+    private static List<GameObject> ImportInstances(Instance[] instances)
+    {
+        List<GameObject> instanceObjects = new List<GameObject>();
+        foreach (Instance inst in instances)
+        {
+            string entityClassName = inst.entityClassName;
+            string baseName = ClassLoader.GetBaseClassName(entityClassName);
+
+            GameObject instanceObject = null;
+
+            switch (baseName)
+            {
+                case "door":
+                case "animatedprop":                  
+                case "prop":
+                case "building":
+                case "destructablebuilding":
+                case "armedbuilding":
+                case "animatedbuilding":
+                case "commandpost":
+                    instanceObject = ClassLoader.LoadGeneralClass(entityClassName);
+                    break;
+
+                default:
+                    break; 
+            }
+
+            if (instanceObject == null)
+            {
+                continue;
+            }
+
+            if (!inst.name.Equals(""))
+            {
+                instanceObject.name = inst.name;
+            }
+
+            instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.rotation);
+            instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.position);
+            instanceObjects.Add(instanceObject);
+            //obj.transform.parent = instancesRoot.transform;
+        }
+
+        return instanceObjects;
     }
 
 
@@ -118,7 +153,6 @@ public class WorldLoader : Loader {
         Mesh terrainMesh = new Mesh();
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
-        //terrainMesh.normals = UnityUtils.FloatToVec3Array(terrain.GetNormalsBuffer(), false);
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
         terrainMesh.RecalculateNormals();
 
@@ -289,8 +323,8 @@ public class WorldLoader : Loader {
         if (lightingConfig == null) return lightObjects;
 
 
-        GameObject globalLightingObjects = new GameObject("GlobalLights");
-        lightObjects.Add(globalLightingObjects);
+        GameObject globalLightsRoot = new GameObject("GlobalLights");
+        lightObjects.Add(globalLightsRoot);
 
         string light1Name = "", light2Name = "";
         Config globalLighting = lightingConfig.GetChildConfig("GlobalLights");
@@ -311,6 +345,9 @@ public class WorldLoader : Loader {
 
         List<string> lightNames = lightingConfig.GetStrings("Light");
         List<Config> lightConfigs = lightingConfig.GetChildConfigs("Light");
+
+        GameObject localLightsRoot = new GameObject("LocalLights");
+        lightObjects.Add(localLightsRoot);
 
         int i = 0;
         foreach (Config light in lightConfigs) 
@@ -366,53 +403,77 @@ public class WorldLoader : Loader {
 
             if (IsGlobal)
             {
-                lightObj.transform.SetParent(globalLightingObjects.transform,false);
+                lightObj.transform.SetParent(globalLightsRoot.transform,false);
             }
             else
             {
-                lightObjects.Add(lightObj);
+                lightObj.transform.SetParent(localLightsRoot.transform,false);
             }
 
         }
 
         return lightObjects;
     }
-        
 
-    private static void TryImportSkyDome(Level level)
+
+    private static GameObject ImportSkydome(Config skydomeConfig)
     {
-        //Basic skybox loading
-        foreach (var model in level.GetModels())
+        if (skydomeConfig == null) return null;
+
+
+        GameObject skyRoot = new GameObject("Skydome");
+
+        //Import dome
+        GameObject domeRoot = new GameObject("Dome");
+        domeRoot.transform.parent = skyRoot.transform;
+        
+        Config domeInfo = skydomeConfig.GetChildConfig("DomeInfo");
+        if (domeInfo != null)
         {
-            GameObject newObj = null;
-            try {
-                if (model.name.Contains("sky")) //best effort
-                {
-                    newObj = new GameObject(model.name);
+            //Havent decided re this yet
+            Color ambient = UnityUtils.ColorFromLib(domeInfo.GetVec3("Ambient"));
 
-                    if (!ModelLoader.AddModelComponents(newObj, model.name))
-                    {
-                        Debug.LogError("Skydome model creation failed...");
-                        continue;
-                    }
+            List<Config> domeModelConfigs = domeInfo.GetChildConfigs("DomeModel");
+            foreach (Config domeModelConfig in domeModelConfigs)
+            {
+                string geometryName = domeModelConfig.GetString("Geometry");
+                GameObject domeModelObj = new GameObject(geometryName);
 
-                    MaterialLoader.PatchMaterial(newObj.transform.GetChild(0).gameObject, "skydome");
-                }
-            } catch {
-                Debug.LogWarning("Didn't find obvious sky model...");
-                continue;
-            }
+                ModelLoader.AddModelComponents(domeModelObj, geometryName);
+                try {
+                    MaterialLoader.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
+                } catch {}
 
-            if (newObj != null){
-                newObj.transform.localScale = new UnityEngine.Vector3(300,300,300);
+                domeModelObj.transform.localScale = new Vector3(-300,300,300);
+                domeModelObj.transform.parent = domeRoot.transform;
             }
         }
+
+
+        //Import dome objects, one of each for now
+        GameObject domeObjectsRoot = new GameObject("SkyObjects");
+        domeObjectsRoot.transform.parent = skyRoot.transform;
+
+        List<Config> domeObjectConfigs = skydomeConfig.GetChildConfigs("SkyObject");
+        foreach (Config domeObjectConfig in domeObjectConfigs)
+        {
+            string geometryName = domeObjectConfig.GetString("Geometry");
+            GameObject domeObject = new GameObject(geometryName);
+
+            ModelLoader.AddModelComponents(domeObject, geometryName);
+
+            domeObject.transform.parent = domeObjectsRoot.transform;
+            domeObject.transform.localPosition = new Vector3(0, domeObjectConfig.GetVec2("Height").X, 0);
+        }
+
+        return skyRoot;
     }
+    
 
 
-    private static List<GameObject> ImportRegions(Region[] regions)
+    private static GameObject ImportRegions(Region[] regions)
     {
-        List<GameObject> regionObjs = new List<GameObject>();
+        GameObject regionsRoot = new GameObject("Regions");
         foreach (Region region in regions)
         {
             GameObject regionObj = new GameObject(region.name);
@@ -433,11 +494,9 @@ public class WorldLoader : Loader {
             //    coll.height = new Vector3(sz.X,sz.Y,sz.Z);
             //}
 
-            regionObjs.Add(regionObj);
+            regionObj.transform.parent = regionsRoot.transform;
         }
 
-        return regionObjs;
+        return regionsRoot;
     }
-
-
 }
