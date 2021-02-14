@@ -50,12 +50,14 @@ public class ModelLoader : Loader {
         int dataOffset = 0, i = 0;
         foreach (Segment seg in segments)
         {
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset, true);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset, true);
-            UnityUtils.FillVec2(seg.GetUVBuffer<Vector2>(), texcoords, dataOffset);
+            int vBufLength = (int) seg.GetVertexBufferLength();
+
+            Array.Copy(seg.GetVertexBuffer<Vector3>(), 0, positions, dataOffset, vBufLength);
+            Array.Copy(seg.GetNormalsBuffer<Vector3>(), 0, normals, dataOffset, vBufLength);
+            Array.Copy(seg.GetUVBuffer<Vector2>(), 0, texcoords, dataOffset, vBufLength);
 
             offsets[i++] = dataOffset;
-            dataOffset += (int) seg.GetVertexBufferLength();
+            dataOffset += vBufLength;
         }
 
         mesh.SetVertices(positions);
@@ -65,10 +67,7 @@ public class ModelLoader : Loader {
         i = 0;
         foreach (Segment seg in segments)
         {
-            //Reverse winding order since we flip handedness of model data
-            ushort[] indexBuffer = seg.GetIndexBuffer();
-            UnityUtils.ReverseWinding(indexBuffer);
-            mesh.SetTriangles(indexBuffer, i, true, offsets[i]);
+            mesh.SetTriangles(seg.GetIndexBuffer(), i, true, offsets[i]);
             i++;
         }
 
@@ -79,30 +78,31 @@ public class ModelLoader : Loader {
     // Straightforward
     private static bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
+        skeleton = new Dictionary<string, Transform>();
+
         LibBone[] hierarchy = model.skeleton;
-        Dictionary<string, Transform> hierarchyMap = new Dictionary<string, Transform>();
+        if (hierarchy == null) return false;
 
         foreach (var node in hierarchy)
         {
             var nodeTransform = new GameObject(node.name).transform;
-            nodeTransform.localRotation = UnityUtils.QuatFromLibSkel(node.rotation);
-            nodeTransform.localPosition = UnityUtils.Vec3FromLibSkel(node.location);
-            hierarchyMap[node.name] = nodeTransform;
+            nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
+            nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
+            skeleton[node.name] = nodeTransform;
         }
 
         foreach (var node in hierarchy)
         {   
             if (node.parentName.Equals(""))
             {
-                hierarchyMap[node.name].SetParent(newObject.transform, false);
+                skeleton[node.name].SetParent(newObject.transform, false);
             }
             else 
             {
-                hierarchyMap[node.name].SetParent(hierarchyMap[node.parentName], false);   
+                skeleton[node.name].SetParent(skeleton[node.parentName], false);   
             }
         }
 
-        skeleton = hierarchyMap;
         return true;
     }
 
@@ -251,8 +251,8 @@ public class ModelLoader : Loader {
         for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
         {
             var curBoneSWBF = bonesSWBF[boneNum];
-            skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
-            skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
+            skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
+            skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
         }
 
         return true;
@@ -268,9 +268,8 @@ public class ModelLoader : Loader {
 
     public static bool AddModelComponents(GameObject newObject, Model model)
     {   
-        if (model == null)
+        if (model == null || newObject == null)
         {
-            Debug.LogError(String.Format("Failed to load model: {0}", model.name));
             return false;
         }
 
@@ -349,8 +348,8 @@ public class ModelLoader : Loader {
             if (boneTx == null) continue;
 
             GameObject primObj = new GameObject(prim.name);
-            primObj.transform.localPosition = UnityUtils.Vec3FromLibSkel(prim.position);
-            primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.rotation);
+            primObj.transform.localPosition = UnityUtils.Vec3FromLib(prim.position);
+            primObj.transform.localRotation = UnityUtils.QuatFromLib(prim.rotation);
             primObj.transform.SetParent(boneTx, false);
 
             switch (prim.primitiveType)
@@ -438,7 +437,7 @@ public class ModelLoader : Loader {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    collMeshUnity.vertices = UnityUtils.FlipXCoords(collMesh.GetVertices<Vector3>());
+                    collMeshUnity.vertices = collMesh.GetVertices<Vector3>();
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();

@@ -157,9 +157,12 @@ public class LVLImportWindow : EditorWindow {
                 currentlyLoading = false;
                 Loader.SetContainer(container);
 
+                WorldLoader.Reset();
                 WorldLoader.TerrainAsMesh = terrainAsMesh;
+                
                 TextureLoader.SaveAssets = saveTextures;
                 MaterialLoader.SaveAssets = saveMaterials;
+
 
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
 
@@ -176,7 +179,10 @@ public class LVLImportWindow : EditorWindow {
 
                     if (startLoadWorlds)
                     {
-                        WorldLoader.ImportWorlds(level);
+                        foreach (World world in level.GetWorlds())
+                        {
+                            WorldLoader.ImportWorld(world);
+                        }
                     }
 
                     if (startLoadClasses)
