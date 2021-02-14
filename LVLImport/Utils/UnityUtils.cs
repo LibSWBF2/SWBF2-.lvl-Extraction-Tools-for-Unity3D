@@ -61,7 +61,8 @@ public static class UnityUtils {
         return null;
     }
 
-    //Reversed libSWBF2 GLM transform decomp + munge conversion leads to this mess (I think)
+    //Reversed libSWBF2 GLM transform decomp + munge conversion leads to this mess.
+    //Perhaps quat components are switched up in lib's XFRM -> Quat converter
 	public static UnityEngine.Quaternion QuatFromLibWorld(LibSWBF2.Types.Vector4 vec)
     {
         return new UnityEngine.Quaternion(-vec.Z, vec.W, -vec.X, vec.Y);
@@ -73,13 +74,11 @@ public static class UnityUtils {
     }
 
 
-    //Skeleton transform conversion to match vertex data handedness flip
     public static UnityEngine.Quaternion QuatFromLib(LibSWBF2.Types.Vector4 vec)
     {
         return new UnityEngine.Quaternion(vec.X, vec.Y, vec.Z, vec.W);
     }
 
-    //''
     public static UVector3 Vec3FromLib(LibSWBF2.Types.Vector3 vec)
     {
         return new UVector3(vec.X, vec.Y, vec.Z);

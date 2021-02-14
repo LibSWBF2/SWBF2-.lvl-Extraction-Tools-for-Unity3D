@@ -51,7 +51,7 @@ public class AnimationLoader : Loader {
             "walk_leftfoot_rightfoot", "walk_leftfoot_rightfoot_leftup",
             "walk_leftfoot_rightfoot_rightup", "walk_rightfoot_leftfoot",
             "walk_rightfoot_leftfoot_leftup", "walk_rightfoot_leftfoot_rightup",
-            "grab", "idle", "9pose", "takeoff"
+            "grab", "idle", "9pose", "takeoff", "open",
         }; 
 
         foreach (string name in CommonNames)
