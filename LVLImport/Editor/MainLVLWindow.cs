@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEditor;
 
 using LibSWBF2.Wrappers;
+using LibSWBF2.Enums;
 
 
 public class LVLImportWindow : EditorWindow {
@@ -163,6 +164,21 @@ public class LVLImportWindow : EditorWindow {
                 TextureLoader.SaveAssets = saveTextures;
                 MaterialLoader.SaveAssets = saveMaterials;
 
+                /*
+                string tstFX = "com_sfx_ord_flame";
+                Config libEmitter = container.FindConfig(ConfigType.Effect, tstFX);
+
+                if (libEmitter == null) return;
+
+                GameObject obj = new GameObject(tstFX);
+                obj.AddComponent<ParticleSystem>();
+
+                EffectsLoader.ImportEffect(obj.GetComponent<ParticleSystem>(), libEmitter);
+                
+                container.Delete();
+                return;
+                */
+
 
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
 
@@ -179,7 +195,7 @@ public class LVLImportWindow : EditorWindow {
 
                     if (startLoadWorlds)
                     {
-                        foreach (World world in level.GetWorlds())
+                        foreach (World world in level.GetWrappers<World>())
                         {
                             WorldLoader.ImportWorld(world);
                         }
@@ -190,7 +206,7 @@ public class LVLImportWindow : EditorWindow {
                         string levelName = level.name;
                         GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
                         root.transform.localPosition = offset;
-                        foreach (var ec in level.GetEntityClasses())
+                        foreach (var ec in level.GetWrappers<EntityClass>())
                         {
                             GameObject newClass = ClassLoader.LoadGeneralClass(ec.name);
                             if (newClass != null)
@@ -208,7 +224,7 @@ public class LVLImportWindow : EditorWindow {
                     }
                 }
 
-                //container.Delete();
+                container.Delete();
             }
         }
     }

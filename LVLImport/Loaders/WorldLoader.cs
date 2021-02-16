@@ -326,14 +326,15 @@ public class WorldLoader : Loader {
         lightObjects.Add(globalLightsRoot);
 
         string light1Name = "", light2Name = "";
-        Config globalLighting = lightingConfig.GetChildConfig("GlobalLights");
+        Field globalLighting = lightingConfig.GetField("GlobalLights");
         if (globalLighting != null)
         {
-            light1Name = globalLighting.GetString("Light1");
-            light2Name = globalLighting.GetString("Light2");
+            Scope gl = globalLighting.scope;
+            light1Name = gl.GetField("Light1").GetString();
+            light2Name = gl.GetField("Light2").GetString();
 
-            Color topColor = UnityUtils.ColorFromLib(globalLighting.GetVec3("Top"), true);
-            Color bottomColor = UnityUtils.ColorFromLib(globalLighting.GetVec3("Bottom"), true);
+            Color topColor = UnityUtils.ColorFromLib(gl.GetField("Top").GetVec3(), true);
+            Color bottomColor = UnityUtils.ColorFromLib(gl.GetField("Bottom").GetVec3(), true);
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientGroundColor = bottomColor;
@@ -341,17 +342,16 @@ public class WorldLoader : Loader {
         }
 
 
-
-        List<string> lightNames = lightingConfig.GetStrings("Light");
-        List<Config> lightConfigs = lightingConfig.GetChildConfigs("Light");
+        List<Field> lightFields = lightingConfig.GetFields("Light");
 
         GameObject localLightsRoot = new GameObject("LocalLights");
         lightObjects.Add(localLightsRoot);
 
         int i = 0;
-        foreach (Config light in lightConfigs) 
+        foreach (Field light in lightFields) 
         {
-            string lightName = lightNames[i++];
+            string lightName = light.GetString();
+            Scope sl = light.scope;
 
             bool IsGlobal = String.Equals(lightName, light1Name, StringComparison.OrdinalIgnoreCase) ||
                             String.Equals(lightName, light2Name, StringComparison.OrdinalIgnoreCase);
@@ -359,9 +359,9 @@ public class WorldLoader : Loader {
 
             GameObject lightObj = new GameObject(lightName);
 
-            lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(light.GetVec4("Rotation"));
+            lightObj.transform.rotation = UnityUtils.QuatFromLibLGT(sl.GetVec4("Rotation"));
 
-            LibVec3 lightPos = light.GetVec3("Position");
+            LibVec3 lightPos = sl.GetVec3("Position");
 
             lightPos.Z *= -1.0f;
             lightPos.Y += .2f;
@@ -369,10 +369,10 @@ public class WorldLoader : Loader {
 
 
             ULight lightComp = lightObj.AddComponent<ULight>();
-            lightComp.color = UnityUtils.ColorFromLib(light.GetVec3("Color"));
+            lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
 
-            float ltype = light.GetFloat("Type");
-            float range = light.GetFloat("Range");
+            float ltype = sl.GetFloat("Type");
+            float range = sl.GetFloat("Range");
 
             if (ltype == 2.0f)
             {   
@@ -384,7 +384,7 @@ public class WorldLoader : Loader {
             {
                 lightComp.type = UnityEngine.LightType.Spot;
                 lightComp.range = range;
-                lightComp.spotAngle = light.GetVec2("Cone").X * Mathf.Rad2Deg;   
+                lightComp.spotAngle = sl.GetVec2("Cone").X * Mathf.Rad2Deg;   
                 lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
             }
             else if (ltype == 1.0f)
@@ -426,16 +426,19 @@ public class WorldLoader : Loader {
         GameObject domeRoot = new GameObject("Dome");
         domeRoot.transform.parent = skyRoot.transform;
         
-        Config domeInfo = skydomeConfig.GetChildConfig("DomeInfo");
+        Field domeInfo = skydomeConfig.GetField("DomeInfo");
         if (domeInfo != null)
         {
-            //Havent decided re this yet
-            Color ambient = UnityUtils.ColorFromLib(domeInfo.GetVec3("Ambient"));
+            Scope sDi = domeInfo.scope;
 
-            List<Config> domeModelConfigs = domeInfo.GetChildConfigs("DomeModel");
-            foreach (Config domeModelConfig in domeModelConfigs)
+            //Havent decided re this yet
+            Color ambient = UnityUtils.ColorFromLib(sDi.GetVec3("Ambient"));
+
+            List<Field> domeModelFields = sDi.GetFields("DomeModel");
+            foreach (Field domeModelField in domeModelFields)
             {
-                string geometryName = domeModelConfig.GetString("Geometry");
+                Scope sD = domeModelField.scope;
+                string geometryName = sD.GetString("Geometry");
                 GameObject domeModelObj = new GameObject(geometryName);
 
                 ModelLoader.AddModelComponents(domeModelObj, geometryName);
@@ -453,16 +456,16 @@ public class WorldLoader : Loader {
         GameObject domeObjectsRoot = new GameObject("SkyObjects");
         domeObjectsRoot.transform.parent = skyRoot.transform;
 
-        List<Config> domeObjectConfigs = skydomeConfig.GetChildConfigs("SkyObject");
-        foreach (Config domeObjectConfig in domeObjectConfigs)
+        List<Field> domeObjectFields = skydomeConfig.GetFields("SkyObject");
+        foreach (Field domeObjectField in domeObjectFields)
         {
-            string geometryName = domeObjectConfig.GetString("Geometry");
+            string geometryName = domeObjectField.scope.GetString("Geometry");
             GameObject domeObject = new GameObject(geometryName);
 
             ModelLoader.AddModelComponents(domeObject, geometryName);
 
             domeObject.transform.parent = domeObjectsRoot.transform;
-            domeObject.transform.localPosition = new Vector3(0, domeObjectConfig.GetVec2("Height").X, 0);
+            domeObject.transform.localPosition = new Vector3(0, domeObjectField.scope.GetVec2("Height").X, 0);
         }
 
         return skyRoot;
