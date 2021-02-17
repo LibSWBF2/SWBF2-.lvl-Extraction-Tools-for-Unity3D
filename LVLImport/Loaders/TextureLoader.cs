@@ -15,33 +15,34 @@ public class TextureLoader : Loader {
     public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
     public static bool imported = false;
 
-
     public static bool SaveAssets = false;
+
+    private static string SaveFolder;
+
+    public static void SetSaveDirectory(string folderName)
+    {
+        string path = "Assets/LVLImport/" + folderName;
+        if (!AssetDatabase.IsValidFolder(path))
+        {
+           Debug.Log("Textures folder: " + AssetDatabase.GUIDToAssetPath(AssetDatabase.CreateFolder("Assets/LVLImport", folderName)));
+        }
+        SaveFolder = path;
+    }
 
     public static void ResetDB()
     {
         texDataBase.Clear();
     }
 
-    public static Texture2D ImportTexture(string name, bool reuse=true) 
-    {
-        string texturePath = Path.Combine(Application.dataPath, "Textures", Regex.Replace(name, @"\s+", "") + ".png");
 
+
+
+    public static Texture2D ImportTexture(string name) 
+    {
         if (texDataBase.ContainsKey(name))
         {
             return texDataBase[name];
         }
-
-        if (File.Exists(texturePath))
-        {
-            Texture2D tex2D = new Texture2D(2,2);
-            byte[] texBytes = File.ReadAllBytes(texturePath);
-            tex2D.LoadImage(texBytes);
-
-            texDataBase[name] = tex2D;
-            return tex2D;
-        }
-
 
         var tex = container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
 
@@ -60,7 +61,7 @@ public class TextureLoader : Loader {
 
             if (SaveAssets)
             {
-                File.WriteAllBytes(texturePath, newTexture.EncodeToPNG());
+                File.WriteAllBytes(SaveFolder + "/" + name + ".png", newTexture.EncodeToPNG());
             }
 
             texDataBase[name] = newTexture;

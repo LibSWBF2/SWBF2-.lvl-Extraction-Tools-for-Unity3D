@@ -27,6 +27,22 @@ public class ClassLoader : Loader {
     public const uint SOLDIERCOLLISION = 0x5dfdc07f;
     public const uint ORDNANCECOLLISION = 0xfb2bdf07;
 
+    private const uint FLYER = 0x40472d5;
+    private const uint WALKER = 0xacfa2c67;
+    private const uint COMMANDWALKER = 0xd8cb53c8;
+    private const uint COMMANDFLYER = 0xde0a35a8;
+    private const uint SOLDIER = 0x9ccd1fb5;
+    private const uint HOVER = 0x70ceab2d;
+    private const uint WALKERDROID = 0x93b81cb3;
+    private const uint DOOR = 0x21f5b729;
+    private const uint ANIMATEDPROP = 0x15f2c005;
+    private const uint BUILDING = 0x38df0375;
+    private const uint PROP = 0xd93e11f8;
+    private const uint DESTRUCTABLEBUILDING = 0x6f31a7b7;
+    private const uint ARMEDBUILDING = 0x6af75f5c;
+    private const uint ANIMATEDBUILDING = 0x8f83fb9c;
+    private const uint COMMANDPOST = 0x844ccdb4;
+
 
     public static void ResetDB()
     {
@@ -44,6 +60,44 @@ public class ClassLoader : Loader {
         }
 
         return ecWrapper.GetBaseName();
+    }
+
+
+    private static GameObject TryCreateFromBase(string baseName)
+    {
+        GameObject objOut = null;
+
+        switch (HashUtils.GetFNV(baseName))
+        {
+            case DOOR:
+            case ANIMATEDPROP:
+            case ANIMATEDBUILDING:
+            case BUILDING:
+            case DESTRUCTABLEBUILDING:
+            case ARMEDBUILDING:
+            case COMMANDPOST:
+                objOut = new GameObject("map_object");
+                break;
+            case SOLDIER:
+                objOut = new GameObject("soldier");
+                AttachAnims(objOut, "human_0");
+                AttachAnims(objOut, "human_1");
+                AttachAnims(objOut, "human_2");
+                AttachAnims(objOut, "human_3");
+                AttachAnims(objOut, "human_4");
+                break;
+            case HOVER:
+            case FLYER:
+            case WALKER:
+            case COMMANDWALKER:
+            case WALKERDROID:
+                objOut = new GameObject(baseName);
+                break;
+            default:
+                break;
+        }
+
+        return objOut;
     }
 
 
@@ -67,9 +121,26 @@ public class ClassLoader : Loader {
         var ecWrapper = container.FindWrapper<EntityClass>(name);
         if (ecWrapper == null)
         {
-            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+            GameObject baseObj = TryCreateFromBase(name);
+
+            if (baseObj == null)
+            {
+                Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+                return null;
+            }
+            else
+            {
+                classObjectDatabase[name] = baseObj;
+            }
+        }
+
+        GameObject obj = LoadGeneralClass(ecWrapper.GetBaseName());
+        if (obj == null)
+        {
             return null;
         }
+
+        obj.name = ecWrapper.name;
 
         uint[] properties;
         string[] values;
@@ -84,8 +155,6 @@ public class ClassLoader : Loader {
             return null;
         }
 
-
-        GameObject obj = new GameObject(name);
         GameObject lastAttached = null;
         string lastAttachedName = "";
 
@@ -104,23 +173,8 @@ public class ClassLoader : Loader {
                 // Refers to an animation bank, for now we just get all the bank's clips
                 // and attach them as a legacy Animation component.
                 case ANIMATIONNAME:
-
                     currentAnimationSet = propertyValue;
-
-                    var clips = AnimationLoader.LoadAnimationBank(propertyValue, obj.transform);
-                    Animation animComponent = obj.GetComponent<Animation>();
-
-                    if (animComponent == null)
-                    {
-                        animComponent = obj.AddComponent<Animation>();
-                    }
-
-                    foreach (var curClip in clips)
-                    {
-                        animComponent.AddClip(curClip, curClip.name);
-                        animComponent.wrapMode = WrapMode.Once;                        
-                    }
-
+                    AttachAnims(obj, currentAnimationSet);
                     break;
 
                 // Refers to specific animations for specific purposes (see animatedprop)
@@ -186,6 +240,26 @@ public class ClassLoader : Loader {
         classObjectDatabase[name] = obj;
         return obj;
     }
+
+    private static bool AttachAnims(GameObject obj, string animBank)
+    {
+        List<AnimationClip> clips = AnimationLoader.LoadAnimationBank(animBank, obj.transform);
+
+        Animation animComponent = obj.GetComponent<Animation>();
+        if (animComponent == null)
+        {
+            animComponent = obj.AddComponent<Animation>();
+        }
+
+        foreach (var curClip in clips)
+        {
+            animComponent.AddClip(curClip, curClip.name);
+            animComponent.wrapMode = WrapMode.Once;
+        }
+
+        return true;
+    }
+
 
 
 
