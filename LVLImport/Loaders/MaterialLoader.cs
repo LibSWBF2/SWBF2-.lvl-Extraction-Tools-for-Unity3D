@@ -23,16 +23,17 @@ public class MaterialLoader : Loader {
     public static UMaterial defaultMaterial = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
     public static bool SaveAssets = false;
 
-    private static string matsFolder;
+    private static string SaveFolder;
 
 
-    public static void SetSaveDirectory(string path)
+    public static void SetSaveDirectory(string folderName)
     {
-        matsFolder = path;  
-        if (!Directory.Exists(matsFolder))
+        string path = "Assets/LVLImport/" + folderName;
+        if (!AssetDatabase.IsValidFolder(path))
         {
-            Directory.CreateDirectory(matsFolder);
+            AssetDatabase.CreateFolder("Assets/LVLImport", folderName);
         }
+        SaveFolder = path;
     }
 
 
@@ -64,7 +65,7 @@ public class MaterialLoader : Loader {
 
                 if (SaveAssets)
                 {
-                    AssetDatabase.CreateAsset(material, Path.Combine(matsFolder, materialName + ".mat")); 
+                    AssetDatabase.CreateAsset(material, Path.Combine(SaveFolder, materialName + ".mat")); 
                 }
 
                 material.name = materialName;

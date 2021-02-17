@@ -18,12 +18,15 @@ public class LVLImportWindow : EditorWindow {
 
     bool startLoadWorlds, startLoadClasses;
 
-    bool terrainAsMesh = false;
-    bool saveTextures, saveMaterials;
+    static bool terrainAsMesh = false;
+    static bool saveTextures, saveMaterials;
+
+    static string matFolder = "Materials";
+    static string texFolder = "Textures";
 
     Container container = new Container();
 
-    List<string> filesToLoad = new List<string>();
+    static List<string> filesToLoad = new List<string>();
     List<uint>   fileHandles = new List<uint>();
 
 
@@ -110,10 +113,25 @@ public class LVLImportWindow : EditorWindow {
         }
 
         AddSpaces(5);
+
         terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
-        saveTextures  = EditorGUILayout.Toggle(new GUIContent("Save Textures", ""), saveTextures);
+
+        GUILayout.BeginHorizontal();
+        saveTextures = EditorGUILayout.Toggle(new GUIContent("Save Textures", ""), saveTextures);
+        if (saveTextures)
+        {
+            texFolder = EditorGUILayout.TextField("Folder to save textures to. (Assets/LVLImport/<Folder>)", texFolder);
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
         saveMaterials = EditorGUILayout.Toggle(new GUIContent("Save Materials", ""), saveMaterials);
-        
+        if (saveMaterials)
+        {
+            matFolder = EditorGUILayout.TextField("Folder to save materials to. (Assets/LVLImport/<Folder>)", matFolder);
+        }
+        GUILayout.EndHorizontal();
+
         saveTextures = saveMaterials ? true : saveTextures;        
 
         AddSpaces(5);
@@ -162,22 +180,10 @@ public class LVLImportWindow : EditorWindow {
                 WorldLoader.TerrainAsMesh = terrainAsMesh;
                 
                 TextureLoader.SaveAssets = saveTextures;
+                TextureLoader.SetSaveDirectory(texFolder);
+
                 MaterialLoader.SaveAssets = saveMaterials;
-
-                /*
-                string tstFX = "com_sfx_ord_flame";
-                Config libEmitter = container.FindConfig(ConfigType.Effect, tstFX);
-
-                if (libEmitter == null) return;
-
-                GameObject obj = new GameObject(tstFX);
-                obj.AddComponent<ParticleSystem>();
-
-                EffectsLoader.ImportEffect(obj.GetComponent<ParticleSystem>(), libEmitter);
-                
-                container.Delete();
-                return;
-                */
+                MaterialLoader.SetSaveDirectory(matFolder);
 
 
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
@@ -223,6 +229,8 @@ public class LVLImportWindow : EditorWindow {
                         offset += new UnityEngine.Vector3(0,0,20);
                     }
                 }
+
+                AssetDatabase.Refresh();
 
                 container.Delete();
             }
