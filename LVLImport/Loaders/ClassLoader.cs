@@ -62,7 +62,7 @@ public class ClassLoader : Loader {
         return ecWrapper.GetBaseName();
     }
 
-
+    /*
     private static GameObject TryCreateFromBase(string baseName)
     {
         GameObject objOut = null;
@@ -76,15 +76,16 @@ public class ClassLoader : Loader {
             case DESTRUCTABLEBUILDING:
             case ARMEDBUILDING:
             case COMMANDPOST:
+            case PROP:
                 objOut = new GameObject("map_object");
                 break;
             case SOLDIER:
                 objOut = new GameObject("soldier");
-                AttachAnims(objOut, "human_0");
-                AttachAnims(objOut, "human_1");
-                AttachAnims(objOut, "human_2");
-                AttachAnims(objOut, "human_3");
-                AttachAnims(objOut, "human_4");
+                AttachAnims(objOut, "human");
+                //AttachAnims(objOut, "human_1");
+                //AttachAnims(objOut, "human_2");
+                //AttachAnims(objOut, "human_3");
+                //AttachAnims(objOut, "human_4");
                 break;
             case HOVER:
             case FLYER:
@@ -99,6 +100,25 @@ public class ClassLoader : Loader {
 
         return objOut;
     }
+    */
+
+
+    public static bool IsBaseSolider(string name)
+    {
+        if (name == "soldier")
+        {
+            return true;
+        }
+
+        EntityClass ecWrapper = container.FindWrapper<EntityClass>(name);
+        if (ecWrapper != null)
+        {
+            return IsBaseSolider(ecWrapper.GetBaseName());    
+        }
+
+        return false;
+    }
+
 
 
     /*
@@ -107,34 +127,27 @@ public class ClassLoader : Loader {
     This loads the most relevant dependencies of a given ODF. 
     */
 
-    public static GameObject LoadGeneralClass(string name)
+    public static GameObject LoadGeneralClass(string name, int count = 0)
     {
+        if (name == null || name == "") return null;
+
         //Check if ODF already loaded
         if (classObjectDatabase.ContainsKey(name))
         {
             var duplicate = Instantiate(classObjectDatabase[name]);
             duplicate.transform.localPosition = Vector3.zero;
             duplicate.transform.localRotation = Quaternion.identity;
+            duplicate.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
             return duplicate;
         }
 
         var ecWrapper = container.FindWrapper<EntityClass>(name);
         if (ecWrapper == null)
         {
-            GameObject baseObj = TryCreateFromBase(name);
-
-            if (baseObj == null)
-            {
-                Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
-                return null;
-            }
-            else
-            {
-                classObjectDatabase[name] = baseObj;
-            }
+            return TryCreateFromBase(name);
         }
 
-        GameObject obj = LoadGeneralClass(ecWrapper.GetBaseName());
+        GameObject obj = LoadGeneralClass(ecWrapper.GetBaseName(), ++count);
         if (obj == null)
         {
             return null;
@@ -144,7 +157,6 @@ public class ClassLoader : Loader {
 
         uint[] properties;
         string[] values;
-        
         try {
             if (!ecWrapper.GetOverriddenProperties(out properties, out values))
             {
@@ -199,7 +211,7 @@ public class ClassLoader : Loader {
                     break;
 
                 case ATTACHODF:
-                    lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
+                    lastAttachedName = propertyValue;
                     break;
 
                 // TODO: Hardpoint children are frequently missing...
