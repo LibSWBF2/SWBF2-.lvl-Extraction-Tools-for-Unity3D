@@ -45,7 +45,7 @@ public static class UnityUtils {
         {
             var curTransform = trans.GetChild(j);
 
-            if (curTransform.name.Equals(childName))
+            if (curTransform.name.Equals(childName, StringComparison.OrdinalIgnoreCase))
             {
                 return curTransform;
             }

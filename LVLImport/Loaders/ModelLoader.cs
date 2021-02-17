@@ -85,7 +85,7 @@ public class ModelLoader : Loader {
 
         foreach (var node in hierarchy)
         {
-            var nodeTransform = new GameObject(node.name).transform;
+            var nodeTransform = new GameObject(node.name.ToLower()).transform;
             nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
             nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
             skeleton[node.name] = nodeTransform;
