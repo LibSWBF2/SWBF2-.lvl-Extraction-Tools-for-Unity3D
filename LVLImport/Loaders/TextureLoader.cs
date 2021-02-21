@@ -12,24 +12,18 @@ using LibSWBF2.Wrappers;
 
 public class TextureLoader : Loader {
 
-    public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
-    public static bool imported = false;
+    public static TextureLoader Instance { get; private set; } = null;
 
-    public static bool SaveAssets = false;
+    private Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
 
-    private static string SaveFolder;
 
-    public static void SetSaveDirectory(string folderName)
+    static TextureLoader()
     {
-        string path = "Assets/LVLImport/" + folderName;
-        if (!AssetDatabase.IsValidFolder(path))
-        {
-           Debug.Log("Textures folder: " + AssetDatabase.GUIDToAssetPath(AssetDatabase.CreateFolder("Assets/LVLImport", folderName)));
-        }
-        SaveFolder = path;
+        Instance = new TextureLoader();
     }
 
-    public static void ResetDB()
+
+    public void ResetDB()
     {
         texDataBase.Clear();
     }
@@ -37,7 +31,7 @@ public class TextureLoader : Loader {
 
 
 
-    public static Texture2D ImportTexture(string name) 
+    public Texture2D ImportTexture(string name) 
     {
         if (texDataBase.ContainsKey(name))
         {
@@ -61,7 +55,7 @@ public class TextureLoader : Loader {
 
             if (SaveAssets)
             {
-                File.WriteAllBytes(SaveFolder + "/" + name + ".png", newTexture.EncodeToPNG());
+                File.WriteAllBytes(SaveDirectory + "/" + name + ".png", newTexture.EncodeToPNG());
             }
 
             texDataBase[name] = newTexture;

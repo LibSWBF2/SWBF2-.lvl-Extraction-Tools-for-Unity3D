@@ -14,7 +14,15 @@ using LibSWBF2.Utils;
 
 public class AnimationLoader : Loader {
 
-    private static Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
+    public static AnimationLoader Instance { get; private set; } = null;
+
+
+    private Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
+
+    public void ResetDB()
+    {
+        animDatabase.Clear();
+    }
 
 
     private static string[] ComponentPaths = {  "localRotation.x",
@@ -47,17 +55,12 @@ public class AnimationLoader : Loader {
     }
 
 
-    public static void ResetDB()
-    {
-        animDatabase.Clear();
-    }
-
-    private static void WalkSkeletonAndCreateCurves(ref AnimationClip clip, AnimationBank animBank,
+    private void WalkSkeletonAndCreateCurves(ref AnimationClip clip, AnimationBank animBank,
     										Transform bone, string curPath, uint animHash)
     {
     	uint boneHash = HashUtils.GetCRC(bone.name);
 		
-    	string relPath = curPath + bone.name;
+    	string relPath = curPath + bone.name.ToLower();
 
 
     	animBank.GetAnimationMetadata(animHash, out int frameCap, out int numBones);
@@ -87,7 +90,7 @@ public class AnimationLoader : Loader {
     }
 
     
-    public static List<AnimationClip> LoadAnimationBank(string animBankName, Transform tran)
+    public List<AnimationClip> LoadAnimationBank(string animBankName, Transform tran)
     {
         List<AnimationClip> clips = new List<AnimationClip>();
 
@@ -110,7 +113,7 @@ public class AnimationLoader : Loader {
     }    
 
 
-    public static AnimationClip LoadAnimationClip(string animBankName, string animationName, Transform objectTransform)
+    public AnimationClip LoadAnimationClip(string animBankName, string animationName, Transform objectTransform)
     {   
         //uint animBankCRC = HashUtils.GetCRC(animBankName);
         uint animCRC = HashUtils.GetCRC(animationName);
@@ -118,7 +121,7 @@ public class AnimationLoader : Loader {
     }
 
 
-    public static AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform)
+    public AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform)
     {
     	uint animID = HashUtils.GetCRC(animBankName) * animationName;//HashUtils.GetCRC(animBankName + "/" + animationName);
 
@@ -140,6 +143,19 @@ public class AnimationLoader : Loader {
     	if (objectTransform != null && animBank.GetAnimationMetadata(animCRC, out int numFrames, out int numBones))
     	{
     		var clip = new AnimationClip();
+
+            if (SaveAssets)
+            {
+                string bankPath = SaveDirectory + "/" + animBankName;
+                if (!AssetDatabase.IsValidFolder(bankPath))
+                {
+                    AssetDatabase.GUIDToAssetPath(AssetDatabase.CreateFolder(SaveDirectory, animBankName));
+                }
+
+                AssetDatabase.CreateAsset(clip, bankPath + "/" + TryFindAnimationName(animationName) + ".anim"); 
+            }
+
+
     		clip.legacy = true;
 
     		for (int i = 0; i < objectTransform.childCount; i++)
@@ -160,8 +176,10 @@ public class AnimationLoader : Loader {
 
 
 
-        static AnimationLoader()
+    static AnimationLoader()
     {
+        Instance = new AnimationLoader();
+
         crcsToCommonNames = new Dictionary<uint, string>();
 
         string[] CommonNames = {

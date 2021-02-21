@@ -19,12 +19,17 @@ public class LVLImportWindow : EditorWindow {
     bool startLoadWorlds, startLoadClasses;
 
     static bool terrainAsMesh = false;
-    static bool saveTextures, saveMaterials;
+    static bool saveTextures, saveMaterials, saveModels, saveAnims, saveObjects;
 
     static string matFolder = "Materials";
     static string texFolder = "Textures";
+    static string modelsFolder = "Models";
+    static string animsFolder = "Animations";
+    static string objectsFolder = "Objects";
 
-    Container container = new Container();
+    static string savePathPrefix = "Assets/LVLImport/"; 
+
+    Container container;
 
     static List<string> filesToLoad = new List<string>();
     List<uint>   fileHandles = new List<uint>();
@@ -35,7 +40,6 @@ public class LVLImportWindow : EditorWindow {
     [MenuItem("SWBF2/Import .lvl", false, 10)]
     static void Init()
     {
-        // Get existing open window or if none, make a new one:
         LVLImportWindow window = (LVLImportWindow)EditorWindow.GetWindow(typeof(LVLImportWindow));
         window.Show();
     }
@@ -71,6 +75,21 @@ public class LVLImportWindow : EditorWindow {
         GUILayout.EndHorizontal();
 
         return path;
+    }
+
+
+    private void AddSaveOption(string type, ref bool initStatus, ref string initVal)
+    {
+        EditorGUIUtility.labelWidth = 150;
+        GUILayout.BeginHorizontal();
+        initStatus = EditorGUILayout.Toggle(new GUIContent("Save " + type, ""), initStatus);
+
+        if (initStatus)
+        {
+            EditorGUIUtility.labelWidth = 105;
+            initVal = EditorGUILayout.TextField(savePathPrefix, initVal,  GUILayout.ExpandWidth(true));
+        }
+        GUILayout.EndHorizontal();
     }
 
 
@@ -116,23 +135,43 @@ public class LVLImportWindow : EditorWindow {
 
         terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
 
-        GUILayout.BeginHorizontal();
-        saveTextures = EditorGUILayout.Toggle(new GUIContent("Save Textures", ""), saveTextures);
-        if (saveTextures)
-        {
-            texFolder = EditorGUILayout.TextField("Folder to save textures to. (Assets/LVLImport/<Folder>)", texFolder);
-        }
-        GUILayout.EndHorizontal();
 
-        GUILayout.BeginHorizontal();
-        saveMaterials = EditorGUILayout.Toggle(new GUIContent("Save Materials", ""), saveMaterials);
-        if (saveMaterials)
+        if (saveTextures || saveModels || saveMaterials || saveAnims || saveObjects)
         {
-            matFolder = EditorGUILayout.TextField("Folder to save materials to. (Assets/LVLImport/<Folder>)", matFolder);
+            AddSpaces(5);
+            EditorGUIUtility.labelWidth = 150;
+            savePathPrefix = EditorGUILayout.TextField("Save Path Prefix", savePathPrefix,  GUILayout.ExpandWidth(true));
+            AddSpaces(2);
         }
-        GUILayout.EndHorizontal();
 
-        saveTextures = saveMaterials ? true : saveTextures;        
+        if (!savePathPrefix.StartsWith("Assets"))
+        {
+            savePathPrefix = "Assets/LVLImport";
+            Debug.LogError("Save Path Prefix must start with \"Assets/\"!");
+        }
+
+        AddSaveOption("Textures", ref saveTextures, ref texFolder);
+        AddSaveOption("Materials", ref saveMaterials, ref matFolder);
+        AddSaveOption("Models", ref saveModels, ref modelsFolder);
+        AddSaveOption("Animations", ref saveAnims, ref animsFolder);
+        AddSaveOption("Objects", ref saveObjects, ref objectsFolder);
+
+
+        saveTextures = saveMaterials ? true : saveTextures;
+
+        if (saveModels)
+        {
+            saveTextures = true;
+            saveMaterials = true;
+        }
+
+        if (saveObjects)
+        {
+            saveTextures = true;
+            saveMaterials = true;
+            saveAnims = true;
+            saveModels = true;
+        }        
 
         AddSpaces(5);
 
@@ -141,7 +180,6 @@ public class LVLImportWindow : EditorWindow {
        
         startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;      
         startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100)) ? true : currentlyLoading && startLoadClasses;
-        
         GUILayout.EndHorizontal();
 
         GUI.enabled = true;
@@ -150,8 +188,9 @@ public class LVLImportWindow : EditorWindow {
 
         if (startLoading)
         {
-            fileHandles = new List<uint>();
+            container = new Container();
 
+            fileHandles = new List<uint>();
             foreach (string path in filesToLoad)
             {
                 fileHandles.Add(container.AddLevel(path));
@@ -174,24 +213,24 @@ public class LVLImportWindow : EditorWindow {
             if (container.IsDone())
             {
                 currentlyLoading = false;
-                Loader.SetContainer(container);
 
-                WorldLoader.Reset();
-                WorldLoader.TerrainAsMesh = terrainAsMesh;
-                
-                TextureLoader.SaveAssets = saveTextures;
-                TextureLoader.SetSaveDirectory(texFolder);
+                Loader.ResetAllLoaders();
+                Loader.SetGlobalContainer(container);
 
-                MaterialLoader.SaveAssets = saveMaterials;
-                MaterialLoader.SetSaveDirectory(matFolder);
+                WorldLoader.Instance.TerrainAsMesh = terrainAsMesh;
+
+                if (saveTextures){ TextureLoader.Instance.SetSave(savePathPrefix,texFolder); };
+                if (saveMaterials) { MaterialLoader.Instance.SetSave(savePathPrefix,matFolder); };
+                if (saveModels) { ModelLoader.Instance.SetSave(savePathPrefix,modelsFolder); };
+                if (saveAnims) { AnimationLoader.Instance.SetSave(savePathPrefix,animsFolder); };
+                if (saveObjects) { ClassLoader.Instance.SetSave(savePathPrefix,objectsFolder); };
 
 
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
 
+
                 foreach (uint handle in fileHandles)
                 {
-                    UnityEngine.Vector3 spawnLoc = new UnityEngine.Vector3(0,0,0); 
-
                     Level level = container.GetLevel(handle);
 
                     if (level == null)
@@ -203,18 +242,40 @@ public class LVLImportWindow : EditorWindow {
                     {
                         foreach (World world in level.GetWrappers<World>())
                         {
-                            WorldLoader.ImportWorld(world);
+                            WorldLoader.Instance.ImportWorld(world);
                         }
                     }
 
+
+                    UnityEngine.Vector3 spawnLoc = new UnityEngine.Vector3(0,0,0); 
+                    
                     if (startLoadClasses)
                     {
-                        string levelName = level.name;
+                        string levelName = level.Name;
                         GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
                         root.transform.localPosition = offset;
-                        foreach (var ec in level.GetWrappers<EntityClass>())
+
+                        List<GameObject> importedObjs = new List<GameObject>();
+                        try 
                         {
-                            GameObject newClass = ClassLoader.LoadGeneralClass(ec.name);
+                            AssetDatabase.StartAssetEditing();
+
+                            foreach (var ec in level.GetWrappers<EntityClass>())
+                            {
+                                GameObject newClass = ClassLoader.Instance.LoadGeneralClass(ec.name);
+                                if (newClass != null)
+                                {
+                                    importedObjs.Add(newClass);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            AssetDatabase.StopAssetEditing();
+                        }
+
+                        foreach (GameObject newClass in importedObjs)
+                        {
                             if (newClass != null)
                             {
                                 newClass.transform.SetParent(root.transform, false);
@@ -229,8 +290,6 @@ public class LVLImportWindow : EditorWindow {
                         offset += new UnityEngine.Vector3(0,0,20);
                     }
                 }
-
-                AssetDatabase.Refresh();
 
                 container.Delete();
             }

@@ -13,10 +13,15 @@ using LibSWBF2.Utils;
 
 public class ClassLoader : Loader {
 
-    public static Dictionary<string, GameObject> classObjectDatabase = new Dictionary<string, GameObject>();
+    public static ClassLoader Instance { get; private set; } = null;
 
+    static ClassLoader()
+    {
+        Instance = new ClassLoader();
+    }
 
-    public static bool SaveAssets = false;
+    public Dictionary<string, GameObject> classObjectDatabase = new Dictionary<string, GameObject>();
+
 
 
     public const uint GEOMETRYNAME = 1204317002;
@@ -27,30 +32,21 @@ public class ClassLoader : Loader {
     public const uint SOLDIERCOLLISION = 0x5dfdc07f;
     public const uint ORDNANCECOLLISION = 0xfb2bdf07;
 
-    private const uint FLYER = 0x40472d5;
-    private const uint WALKER = 0xacfa2c67;
-    private const uint COMMANDWALKER = 0xd8cb53c8;
-    private const uint COMMANDFLYER = 0xde0a35a8;
-    private const uint SOLDIER = 0x9ccd1fb5;
-    private const uint HOVER = 0x70ceab2d;
-    private const uint WALKERDROID = 0x93b81cb3;
-    private const uint DOOR = 0x21f5b729;
-    private const uint ANIMATEDPROP = 0x15f2c005;
-    private const uint BUILDING = 0x38df0375;
-    private const uint PROP = 0xd93e11f8;
-    private const uint DESTRUCTABLEBUILDING = 0x6f31a7b7;
-    private const uint ARMEDBUILDING = 0x6af75f5c;
-    private const uint ANIMATEDBUILDING = 0x8f83fb9c;
-    private const uint COMMANDPOST = 0x844ccdb4;
 
-
-    public static void ResetDB()
+    public void ResetDB()
     {
         classObjectDatabase.Clear();
     }
 
 
-    public static string GetBaseClassName(string name)
+    public void DeleteAll()
+    {
+    }
+
+
+
+
+    public string GetBaseClassName(string name)
     {
         var ecWrapper = container.FindWrapper<EntityClass>(name);
 
@@ -62,64 +58,6 @@ public class ClassLoader : Loader {
         return ecWrapper.GetBaseName();
     }
 
-    /*
-    private static GameObject TryCreateFromBase(string baseName)
-    {
-        GameObject objOut = null;
-
-        switch (HashUtils.GetFNV(baseName))
-        {
-            case DOOR:
-            case ANIMATEDPROP:
-            case ANIMATEDBUILDING:
-            case BUILDING:
-            case DESTRUCTABLEBUILDING:
-            case ARMEDBUILDING:
-            case COMMANDPOST:
-            case PROP:
-                objOut = new GameObject("map_object");
-                break;
-            case SOLDIER:
-                objOut = new GameObject("soldier");
-                AttachAnims(objOut, "human");
-                //AttachAnims(objOut, "human_1");
-                //AttachAnims(objOut, "human_2");
-                //AttachAnims(objOut, "human_3");
-                //AttachAnims(objOut, "human_4");
-                break;
-            case HOVER:
-            case FLYER:
-            case WALKER:
-            case COMMANDWALKER:
-            case WALKERDROID:
-                objOut = new GameObject(baseName);
-                break;
-            default:
-                break;
-        }
-
-        return objOut;
-    }
-    */
-
-
-    public static bool IsBaseSolider(string name)
-    {
-        if (name == "soldier")
-        {
-            return true;
-        }
-
-        EntityClass ecWrapper = container.FindWrapper<EntityClass>(name);
-        if (ecWrapper != null)
-        {
-            return IsBaseSolider(ecWrapper.GetBaseName());    
-        }
-
-        return false;
-    }
-
-
 
     /*
     Temporary solution until I get to recording the default properties of
@@ -127,14 +65,28 @@ public class ClassLoader : Loader {
     This loads the most relevant dependencies of a given ODF. 
     */
 
-    public static GameObject LoadGeneralClass(string name, int count = 0)
+    public GameObject LoadGeneralClass(string name)
     {
         if (name == null || name == "") return null;
 
         //Check if ODF already loaded
         if (classObjectDatabase.ContainsKey(name))
         {
-            var duplicate = Instantiate(classObjectDatabase[name]);
+            GameObject duplicate = null;
+            if (SaveAssets)
+            {
+                duplicate = PrefabUtility.InstantiatePrefab(classObjectDatabase[name]) as GameObject;
+            }
+            else 
+            {
+                duplicate = UnityEngine.Object.Instantiate(classObjectDatabase[name]);     
+            }
+
+            if (duplicate == null)
+            {
+                return null;
+            }
+
             duplicate.transform.localPosition = Vector3.zero;
             duplicate.transform.localRotation = Quaternion.identity;
             duplicate.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
@@ -144,19 +96,13 @@ public class ClassLoader : Loader {
         var ecWrapper = container.FindWrapper<EntityClass>(name);
         if (ecWrapper == null)
         {
-            return TryCreateFromBase(name);
-        }
-
-        GameObject obj = LoadGeneralClass(ecWrapper.GetBaseName(), ++count);
-        if (obj == null)
-        {
+            Debug.LogError(String.Format("\tObject class: {0} not defined in loaded levels...", name));
             return null;
         }
 
-        obj.name = ecWrapper.name;
-
         uint[] properties;
         string[] values;
+        
         try {
             if (!ecWrapper.GetOverriddenProperties(out properties, out values))
             {
@@ -167,127 +113,127 @@ public class ClassLoader : Loader {
             return null;
         }
 
-        GameObject lastAttached = null;
-        string lastAttachedName = "";
 
-        HashSet<string> ordinanceColliders = new HashSet<string>();
+        GameObject obj = new GameObject(name);
 
-        string currentAnimationSet = "";
-        string geometryName = "";
-
-        for (int i = 0; i < properties.Length; i++)
+        try 
         {
-            uint property = properties[i];
-            string propertyValue = values[i];
+            AssetDatabase.StartAssetEditing();
 
-            switch (property)
+            GameObject lastAttached = null;
+            string lastAttachedName = "";
+
+            HashSet<string> ordinanceColliders = new HashSet<string>();
+
+            string currentAnimationSet = "";
+            string geometryName = "";
+
+            for (int i = 0; i < properties.Length; i++)
             {
-                // Refers to an animation bank, for now we just get all the bank's clips
-                // and attach them as a legacy Animation component.
-                case ANIMATIONNAME:
-                    currentAnimationSet = propertyValue;
-                    AttachAnims(obj, currentAnimationSet);
-                    break;
+                uint property = properties[i];
+                string propertyValue = values[i];
 
-                // Refers to specific animations for specific purposes (see animatedprop)
-                case ANIMATION:
-                    break;
+                switch (property)
+                {
+                    // Refers to an animation bank, for now we just get all the bank's clips
+                    // and attach them as a legacy Animation component.
+                    case ANIMATIONNAME:
 
-                case GEOMETRYNAME:
+                        currentAnimationSet = propertyValue;
 
-                    geometryName = propertyValue;
+                        var clips = AnimationLoader.Instance.LoadAnimationBank(propertyValue, obj.transform);
+                        Animation animComponent = obj.GetComponent<Animation>();
 
-                    try {
-                        if (!ModelLoader.AddModelComponents(obj, geometryName))
+                        if (animComponent == null)
                         {
-                            Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
+                            animComponent = obj.AddComponent<Animation>();
+                        }
+
+                        foreach (var curClip in clips)
+                        {
+                            animComponent.AddClip(curClip, curClip.name);
+                            animComponent.wrapMode = WrapMode.Once;                        
+                        }
+
+                        break;
+
+                    // Refers to specific animations for specific purposes (see animatedprop)
+                    case ANIMATION:
+                        break;
+
+                    case GEOMETRYNAME:
+
+                        geometryName = propertyValue;
+
+                        try {
+                            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
+                            {
+                                Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
+                                return obj;
+                            }
+                        }
+                        catch 
+                        {
                             return obj;
                         }
-                    }
-                    catch 
-                    {
-                        return obj;
-                    }
-                    break;
+                        break;
 
-                case ATTACHODF:
-                    lastAttachedName = propertyValue;
-                    break;
+                    case ATTACHODF:
+                        lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
+                        break;
 
-                // TODO: Hardpoint children are frequently missing...
-                case ATTACHTOHARDPOINT:
+                    // TODO: Hardpoint children are frequently missing...
+                    case ATTACHTOHARDPOINT:
 
-                    lastAttached = LoadGeneralClass(lastAttachedName);
-                    if (lastAttached == null) break;
+                        lastAttached = LoadGeneralClass(lastAttachedName);
+                        if (lastAttached == null) break;
 
 
-                    var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
+                        var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
 
-                    if (childTx == null)
-                    {
-                        Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
-                        lastAttached.transform.SetParent(obj.transform, false);
-                    }
-                    else 
-                    {
-                        lastAttached.transform.SetParent(childTx, false);
-                    }
+                        if (childTx == null)
+                        {
+                            Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
+                            lastAttached.transform.SetParent(obj.transform, false);
+                        }
+                        else 
+                        {
+                            lastAttached.transform.SetParent(childTx, false);
+                        }
 
-                    break;
+                        break;
 
-                // Some collider primitives don't have proper masks, so their purpose is
-                // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
-                // as it is most accurate.
-                case ORDNANCECOLLISION:
-                    ordinanceColliders.Add(propertyValue);
-                    break;
+                    // Some collider primitives don't have proper masks, so their purpose is
+                    // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
+                    // as it is most accurate.
+                    case ORDNANCECOLLISION:
+                        ordinanceColliders.Add(propertyValue);
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
+
+            ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordinanceColliders);
+        }
+        finally 
+        {
+            AssetDatabase.StopAssetEditing();
         }
 
-        ModelLoader.AddCollisionComponents(obj, geometryName, ordinanceColliders);
 
-        classObjectDatabase[name] = obj;
+        if (SaveAssets)
+        {
+            // SaveAsPrefabAssetAndConnect doesnt return the imported object when inside a Start/StopAssetEditing block.
+            // So we import all asset dependencies first, then create/import the prefab 
+            classObjectDatabase[name] = PrefabUtility.SaveAsPrefabAssetAndConnect(obj, SaveDirectory + "/" + obj.name + ".prefab", InteractionMode.UserAction);
+        }
+        else
+        {
+            classObjectDatabase[name] = obj;
+        }
+
         return obj;
     }
-
-    private static bool AttachAnims(GameObject obj, string animBank)
-    {
-        List<AnimationClip> clips = AnimationLoader.LoadAnimationBank(animBank, obj.transform);
-
-        Animation animComponent = obj.GetComponent<Animation>();
-        if (animComponent == null)
-        {
-            animComponent = obj.AddComponent<Animation>();
-        }
-
-        foreach (var curClip in clips)
-        {
-            animComponent.AddClip(curClip, curClip.name);
-            animComponent.wrapMode = WrapMode.Once;
-        }
-
-        return true;
-    }
-
-
-
-
-    /*
-    private static GameObject CreateLeafPatch(uint[] hashes, string[] values)
-    {
-        GameObject leafPatchObj = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        MeshRenderer renderer = leafPatchObj.GetComponent<MeshRenderer>();
-
-        int texIndex = Array.FindIndex(hashes, x => x == HashUtils.GetFNV("Texture"));
-
-        return leafPatchObj;
-    }
-    */
-
-
-
-
 }
