@@ -19,33 +19,25 @@ using UMaterial = UnityEngine.Material;
 
 public class MaterialLoader : Loader {
 
-    public static Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
     public static UMaterial defaultMaterial = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
-    public static bool SaveAssets = false;
 
-    private static string matsFolder;
-
-
-    public static void SetSaveDirectory(string path)
+    public static MaterialLoader Instance { get; private set; } = null;
+    static MaterialLoader()
     {
-        matsFolder = path;  
-        if (!Directory.Exists(matsFolder))
-        {
-            Directory.CreateDirectory(matsFolder);
-        }
+        Instance = new MaterialLoader();
     }
 
+    private Dictionary<string, UMaterial> materialDataBase = new Dictionary<string, UMaterial>();
 
 
-
-    public static void ResetDB()
+    public void ResetDB()
     {
         materialDataBase.Clear();
     }
 
 
 
-    public static UMaterial LoadMaterial(LibMaterial mat)
+    public UMaterial LoadMaterial(LibMaterial mat)
     {
         string texName = mat.textures[0];
         MaterialFlags matFlags = mat.materialFlags;
@@ -64,7 +56,7 @@ public class MaterialLoader : Loader {
 
                 if (SaveAssets)
                 {
-                    AssetDatabase.CreateAsset(material, Path.Combine(matsFolder, materialName + ".mat")); 
+                    AssetDatabase.CreateAsset(material, Path.Combine(SaveDirectory, materialName + ".mat")); 
                 }
 
                 material.name = materialName;
@@ -84,9 +76,7 @@ public class MaterialLoader : Loader {
                     material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
                 }
 
-
-
-                Texture2D importedTex = TextureLoader.ImportTexture(texName);
+                Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
                 if (importedTex != null)
                 {
                     material.mainTexture = importedTex;
@@ -108,7 +98,7 @@ public class MaterialLoader : Loader {
 
 
 
-    public static void PatchMaterial(GameObject obj, string patchType="")
+    public void PatchMaterial(GameObject obj, string patchType="")
     {
         var renderer = obj.GetComponent<MeshRenderer>();
 

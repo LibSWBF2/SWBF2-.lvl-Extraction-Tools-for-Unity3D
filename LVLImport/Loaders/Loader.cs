@@ -10,20 +10,82 @@ using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
-public class Loader : ScriptableObject {
+public abstract class Loader {
 
+    // Used by different loader classes
     protected static Container container = null;
 
-    public static bool SetContainer(Container lvlContainer)
+    protected bool SaveAssets = false;
+    protected string SaveDirectory = null;
+
+    public bool SetSave(string prefix, string folderName)
+    {
+        if (folderName == null || folderName == "" || prefix == null || !prefix.StartsWith("Assets/"))
+        {
+            SaveAssets = false;
+            return false;
+        }
+
+        if (!prefix.EndsWith("/"))
+        {
+            prefix = prefix + "/";
+        }
+
+        prefix = prefix + folderName;
+
+        string[] pathLevels = prefix.Split('/');
+        string pathAccum = "Assets";
+
+        for (int i = 1; i < pathLevels.Length; i++)
+        {
+            string curPath = pathAccum + "/" + pathLevels[i];
+            if (!AssetDatabase.IsValidFolder(curPath))
+            {
+                AssetDatabase.GUIDToAssetPath(AssetDatabase.CreateFolder(pathAccum, pathLevels[i]));
+            }
+            pathAccum = curPath;
+        }
+
+        SaveDirectory = pathAccum;
+        SaveAssets = true;
+
+        return true;
+    }
+
+
+    public static void ResetAllLoaders()
+    {
+        TextureLoader.Instance.SaveAssets = false;
+        TextureLoader.Instance.ResetDB();
+
+        MaterialLoader.Instance.SaveAssets = false;
+        MaterialLoader.Instance.ResetDB();
+
+        ModelLoader.Instance.SaveAssets = false;
+        ModelLoader.Instance.ResetDB();
+
+        AnimationLoader.Instance.SaveAssets = false;
+        AnimationLoader.Instance.ResetDB();
+
+        ClassLoader.Instance.SaveAssets = false;
+        ClassLoader.Instance.ResetDB();
+    }
+
+
+
+    public static bool SetGlobalContainer(Container lvlContainer)
     {
     	container = lvlContainer;
-
-        ModelLoader.ResetDB();
-        AnimationLoader.ResetDB();
-        TextureLoader.ResetDB();
-        ClassLoader.ResetDB();
-
     	return true;
+    }
+
+    public static bool FreeGlobalContainer()
+    {
+        if (container == null) return false;
+
+        container.Delete();
+        container = null;
+        return true;
     }
 }
 

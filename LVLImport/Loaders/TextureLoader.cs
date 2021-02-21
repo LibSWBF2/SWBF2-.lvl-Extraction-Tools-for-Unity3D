@@ -12,36 +12,31 @@ using LibSWBF2.Wrappers;
 
 public class TextureLoader : Loader {
 
-    public static Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
-    public static bool imported = false;
+    public static TextureLoader Instance { get; private set; } = null;
+
+    private Dictionary<string, Texture2D> texDataBase = new Dictionary<string, Texture2D>();
 
 
-    public static bool SaveAssets = false;
+    static TextureLoader()
+    {
+        Instance = new TextureLoader();
+    }
 
-    public static void ResetDB()
+
+    public void ResetDB()
     {
         texDataBase.Clear();
     }
 
-    public static Texture2D ImportTexture(string name, bool reuse=true) 
-    {
-        string texturePath = Path.Combine(Application.dataPath, "Textures", Regex.Replace(name, @"\s+", "") + ".png");
 
+
+
+    public Texture2D ImportTexture(string name) 
+    {
         if (texDataBase.ContainsKey(name))
         {
             return texDataBase[name];
         }
-
-        if (File.Exists(texturePath))
-        {
-            Texture2D tex2D = new Texture2D(2,2);
-            byte[] texBytes = File.ReadAllBytes(texturePath);
-            tex2D.LoadImage(texBytes);
-
-            texDataBase[name] = tex2D;
-            return tex2D;
-        }
-
 
         var tex = container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
 
@@ -60,7 +55,7 @@ public class TextureLoader : Loader {
 
             if (SaveAssets)
             {
-                File.WriteAllBytes(texturePath, newTexture.EncodeToPNG());
+                File.WriteAllBytes(SaveDirectory + "/" + name + ".png", newTexture.EncodeToPNG());
             }
 
             texDataBase[name] = newTexture;

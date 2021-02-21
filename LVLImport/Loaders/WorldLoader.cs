@@ -22,22 +22,30 @@ using ULight = UnityEngine.Light;
 
 public class WorldLoader : Loader {
 
-    public static bool TerrainAsMesh = false;
+    public bool TerrainAsMesh = false;
 
-    private static Dictionary<string, GameObject> loadedSkydomes;
-
+    public static WorldLoader Instance { get; private set; } = null;
     static WorldLoader()
     {
-        loadedSkydomes = new Dictionary<string, GameObject>();
+        Instance = new WorldLoader();
     }
 
-    public static void Reset()
+    private WorldLoader()
+    {
+        loadedSkydomes = new Dictionary<string, GameObject>();        
+    }
+
+
+    private Dictionary<string, GameObject> loadedSkydomes;
+
+
+    public void Reset()
     {
         loadedSkydomes = new Dictionary<string, GameObject>();
     }
 
 
-    public static void ImportWorld(World world)
+    public void ImportWorld(World world)
     {
         bool LoadedTerrain = false;
 
@@ -47,6 +55,13 @@ public class WorldLoader : Loader {
         //Instances
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
+
+        //List<GameObject> objs = 
+        //try {
+        //    AssetDatabase.StartAssetEditing();
+
+        //
+
         foreach (GameObject instanceObject in ImportInstances(world.GetInstances()))
         {
             instanceObject.transform.parent = instancesRoot.transform;
@@ -60,7 +75,7 @@ public class WorldLoader : Loader {
             GameObject terrainGameObject;
             if (TerrainAsMesh)
             {
-                terrainGameObject = ImportTerrainAsMesh(terrain);
+                terrainGameObject = ImportTerrainAsMesh(terrain, world.name);
             }
             else 
             {
@@ -99,13 +114,34 @@ public class WorldLoader : Loader {
     }
 
 
-    private static List<GameObject> ImportInstances(Instance[] instances)
+    private List<GameObject> ImportInstances(Instance[] instances)
     {
         List<GameObject> instanceObjects = new List<GameObject>();
+
+        HashSet<string> classesUsed = new HashSet<string>();
+        foreach (Instance inst in instances)
+        {
+            classesUsed.Add(inst.entityClassName);
+        }
+
+        try 
+        {
+            //AssetDatabase.StartAssetEditing();
+            foreach (var ec in classesUsed)
+            {
+                //ClassLoader.Instance.LoadGeneralClass(ec);
+            }            
+        }
+        finally
+        {
+            //AssetDatabase.StopAssetEditing();
+            //AssetDatabase.Refresh();
+        }
+
         foreach (Instance inst in instances)
         {
             string entityClassName = inst.entityClassName;
-            string baseName = ClassLoader.GetBaseClassName(entityClassName);
+            string baseName = ClassLoader.Instance.GetBaseClassName(entityClassName);
 
             GameObject instanceObject = null;
 
@@ -119,7 +155,7 @@ public class WorldLoader : Loader {
                 case "armedbuilding":
                 case "animatedbuilding":
                 case "commandpost":
-                    instanceObject = ClassLoader.LoadGeneralClass(entityClassName);
+                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName);
                     break;
 
                 default:
@@ -147,9 +183,10 @@ public class WorldLoader : Loader {
 
 
 
-    private static GameObject ImportTerrainAsMesh(LibTerrain terrain)
+    private GameObject ImportTerrainAsMesh(LibTerrain terrain, string name)
     {
         Mesh terrainMesh = new Mesh();
+
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
@@ -166,7 +203,7 @@ public class WorldLoader : Loader {
         int i = 0;
         foreach (string texName in terrain.layerTextures)
         {
-            Texture2D tex = TextureLoader.ImportTexture(texName);
+            Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
             string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
 
             if (tex != null)
@@ -222,8 +259,7 @@ public class WorldLoader : Loader {
 
 
 
-
-    private static GameObject ImportTerrain(LibTerrain terrain)
+    private GameObject ImportTerrain(LibTerrain terrain)
     {
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
@@ -256,7 +292,7 @@ public class WorldLoader : Loader {
         List<Texture2D> terTextures = new List<Texture2D>();
         foreach (string texName in terrain.layerTextures)
         {
-            Texture2D tex = TextureLoader.ImportTexture(texName);
+            Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
             if (tex != null)
             {
                 terTextures.Add(tex);  
@@ -315,7 +351,7 @@ public class WorldLoader : Loader {
     /*
     Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
     */
-    private static List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
+    private List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
     {
         List<GameObject> lightObjects = new List<GameObject>();
 
@@ -347,7 +383,6 @@ public class WorldLoader : Loader {
         GameObject localLightsRoot = new GameObject("LocalLights");
         lightObjects.Add(localLightsRoot);
 
-        int i = 0;
         foreach (Field light in lightFields) 
         {
             string lightName = light.GetString();
@@ -415,7 +450,7 @@ public class WorldLoader : Loader {
     }
 
 
-    private static GameObject ImportSkydome(Config skydomeConfig)
+    private GameObject ImportSkydome(Config skydomeConfig)
     {
         if (skydomeConfig == null) return null;
 
@@ -441,9 +476,9 @@ public class WorldLoader : Loader {
                 string geometryName = sD.GetString("Geometry");
                 GameObject domeModelObj = new GameObject(geometryName);
 
-                ModelLoader.AddModelComponents(domeModelObj, geometryName);
+                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName);
                 try {
-                    MaterialLoader.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
+                    MaterialLoader.Instance.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
                 } catch {}
 
                 domeModelObj.transform.localScale = new Vector3(-300,300,300);
@@ -462,7 +497,7 @@ public class WorldLoader : Loader {
             string geometryName = domeObjectField.scope.GetString("Geometry");
             GameObject domeObject = new GameObject(geometryName);
 
-            ModelLoader.AddModelComponents(domeObject, geometryName);
+            ModelLoader.Instance.AddModelComponents(domeObject, geometryName);
 
             domeObject.transform.parent = domeObjectsRoot.transform;
             domeObject.transform.localPosition = new Vector3(0, domeObjectField.scope.GetVec2("Height").X, 0);
@@ -473,7 +508,7 @@ public class WorldLoader : Loader {
     
 
 
-    private static GameObject ImportRegions(Region[] regions)
+    private GameObject ImportRegions(Region[] regions)
     {
         GameObject regionsRoot = new GameObject("Regions");
         foreach (Region region in regions)
