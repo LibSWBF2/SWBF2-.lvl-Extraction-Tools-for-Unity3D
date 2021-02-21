@@ -19,11 +19,17 @@ using LibBone = LibSWBF2.Wrappers.Bone;
 
 public class ModelLoader : Loader {
 
-    //Doesn't actually save meshes, not sure where to go with this atm...
-    public static bool SaveAssets = false;
-    public static Dictionary<string, List<Mesh>> meshDataBase = new Dictionary<string, List<Mesh>>();
-    public static void ResetDB() { meshDataBase.Clear(); }
+    public static ModelLoader Instance { get; private set; } = null;
 
+    static ModelLoader()
+    {
+        Instance = new ModelLoader();
+    }
+
+    public void ResetDB()
+    {
+        //todo
+    }
 
     // Cylinder collision mesh as substitute for cylinder primitive.
     // Perhaps a gameobject with three children, each having a box collider, rotated to 
@@ -35,9 +41,15 @@ public class ModelLoader : Loader {
     Extracts static mesh data from array of segments
     */
 
-    private static Mesh GetMeshFromSegments(Segment[] segments)
+    private Mesh GetMeshFromSegments(Segment[] segments, string meshName = "")
     {
         Mesh mesh = new Mesh();
+
+        if (SaveAssets)
+        {
+            AssetDatabase.CreateAsset(mesh, Path.Combine(SaveDirectory, meshName + ".mesh")); 
+        }
+
         mesh.subMeshCount = segments.Length;
 
         int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
@@ -76,7 +88,7 @@ public class ModelLoader : Loader {
 
 
     // Straightforward
-    private static bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
+    private bool AddSkeleton(GameObject newObject, Model model, out Dictionary<string, Transform> skeleton)
     {
         skeleton = new Dictionary<string, Transform>();
 
@@ -85,7 +97,7 @@ public class ModelLoader : Loader {
 
         foreach (var node in hierarchy)
         {
-            var nodeTransform = new GameObject(node.name).transform;
+            var nodeTransform = new GameObject(node.name.ToLower()).transform;
             nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
             nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
             skeleton[node.name] = nodeTransform;
@@ -114,7 +126,7 @@ public class ModelLoader : Loader {
     skeletons are sorted out.
     */
 
-    private static int AddWeights(GameObject obj, Model model, Mesh mesh)
+    private int AddWeights(GameObject obj, Model model, Mesh mesh)
     {
         var segments = (from segment in model.GetSegments() where segment.boneName.Equals("") select segment).ToArray(); 
 
@@ -154,7 +166,7 @@ public class ModelLoader : Loader {
     node with attached segments.
     */
 
-    public static bool AddStaticMeshes(GameObject newObject, Model model,
+    public bool AddStaticMeshes(GameObject newObject, Model model,
                                                     Dictionary<string, Transform> skeleton)
     {
         List<Segment> segments = (from segment in model.GetSegments() where !segment.boneName.Equals("") select segment).ToList();
@@ -180,10 +192,10 @@ public class ModelLoader : Loader {
             List<Segment> mappedSegments = segmentMap[boneName];
 
             MeshFilter filter = boneObj.AddComponent<MeshFilter>();
-            filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray());
+            filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray(), model.name + "_" + boneName);
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.LoadMaterial(segment.material)).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.material)).ToArray();
         }
 
         return true;
@@ -195,11 +207,11 @@ public class ModelLoader : Loader {
     and creates a weighted mesh from them. 
     */
 
-    private static bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
+    private bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
     {
         Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.boneName.Equals("") select segment).ToArray();
-        Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray());
-        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.LoadMaterial(segment.material)).ToArray();
+        Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray(), model.name + "_skin");
+        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.Instance.LoadMaterial(segment.material)).ToArray();
 
         int skinType = AddWeights(newObject, model, mesh);
         if (skinType == 0)
@@ -266,7 +278,7 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    public static bool AddModelComponents(GameObject newObject, Model model)
+    public bool AddModelComponents(GameObject newObject, Model model)
     {   
         if (model == null || newObject == null)
         {
@@ -288,7 +300,7 @@ public class ModelLoader : Loader {
         return true;
     }
 
-    public static bool AddModelComponents(GameObject newObject, string modelName)
+    public bool AddModelComponents(GameObject newObject, string modelName)
     {
         return AddModelComponents(newObject, container.FindWrapper<Model>(modelName));
     }
@@ -308,7 +320,7 @@ public class ModelLoader : Loader {
     collision primitives will be used. 
     */ 
 
-    public static bool AddCollisionPrimitives(GameObject newObject, Model model, HashSet<string> colliderNames = null)
+    public bool AddCollisionPrimitives(GameObject newObject, Model model, HashSet<string> colliderNames = null)
     {
         colliderNames = null;
         //Get list of primitives, requested or found.
@@ -402,7 +414,7 @@ public class ModelLoader : Loader {
     attached.
     */
 
-    public static bool AddCollisionComponents(GameObject newObject, string modelName, HashSet<string> colliderNames)
+    public bool AddCollisionComponents(GameObject newObject, string modelName, HashSet<string> colliderNames)
     {
         if (modelName.Equals("")) return false;
 
