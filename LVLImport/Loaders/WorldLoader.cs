@@ -56,12 +56,6 @@ public class WorldLoader : Loader {
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
 
-        //List<GameObject> objs = 
-        //try {
-        //    AssetDatabase.StartAssetEditing();
-
-        //
-
         foreach (GameObject instanceObject in ImportInstances(world.GetInstances()))
         {
             instanceObject.transform.parent = instancesRoot.transform;
@@ -79,7 +73,7 @@ public class WorldLoader : Loader {
             }
             else 
             {
-                terrainGameObject = ImportTerrain(terrain);
+                terrainGameObject = ImportTerrain(terrain, world.name);
             }
 
             terrainGameObject.transform.parent = worldRoot.transform;
@@ -116,27 +110,30 @@ public class WorldLoader : Loader {
 
     private List<GameObject> ImportInstances(Instance[] instances)
     {
-        List<GameObject> instanceObjects = new List<GameObject>();
-
-        HashSet<string> classesUsed = new HashSet<string>();
-        foreach (Instance inst in instances)
-        {
-            classesUsed.Add(inst.entityClassName);
-        }
-
         try 
         {
-            //AssetDatabase.StartAssetEditing();
-            foreach (var ec in classesUsed)
+            HashSet<string> neededClasses = new HashSet<string>();
+            foreach (var i in instances)
             {
-                //ClassLoader.Instance.LoadGeneralClass(ec);
-            }            
+                neededClasses.Add(i.entityClassName);
+            }
+
+            //AssetDatabase.StartAssetEditing();
+
+            foreach (string neededClass in neededClasses)
+            {
+                ClassLoader.Instance.LoadGeneralClass(neededClass);
+            }
         }
         finally
         {
-            //AssetDatabase.StopAssetEditing();
-            //AssetDatabase.Refresh();
+           // AssetDatabase.StopAssetEditing();
+           // AssetDatabase.Refresh();
         }
+
+
+
+        List<GameObject> instanceObjects = new List<GameObject>();
 
         foreach (Instance inst in instances)
         {
@@ -174,9 +171,12 @@ public class WorldLoader : Loader {
 
             instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.rotation);
             instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.position);
-            instanceObject.transform.localScale *= new Vector3(-1.0f,1.0f,1.0f);
+            instanceObject.transform.localScale = new Vector3(-1.0f,1.0f,1.0f);
             instanceObjects.Add(instanceObject);
         }
+
+        ClassLoader.Instance.PrintDB();
+        //ClassLoader.Instance.DeleteAndClearDB();
 
         return instanceObjects;
     }
@@ -186,6 +186,11 @@ public class WorldLoader : Loader {
     private GameObject ImportTerrainAsMesh(LibTerrain terrain, string name)
     {
         Mesh terrainMesh = new Mesh();
+        if (SaveAssets)
+        {
+            AssetDatabase.CreateAsset(terrainMesh, Path.Combine(SaveDirectory, name + "_terrain.mesh"));
+        }
+
 
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
@@ -196,9 +201,15 @@ public class WorldLoader : Loader {
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
+       
+        UMaterial terrainMat = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
+        if (SaveAssets)
+        {
+            AssetDatabase.CreateAsset(terrainMat, Path.Combine(SaveDirectory, name + "_terrain.mat"));
+        }
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
+        renderer.sharedMaterial = terrainMat;
 
         int i = 0;
         foreach (string texName in terrain.layerTextures)
@@ -218,6 +229,7 @@ public class WorldLoader : Loader {
         for (i = 0; i < 4; i++)
         {
             Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
+
             Color[] colors = blendTex.GetPixels(0);
 
             for (int w = 0; w < blendDim; w++)
@@ -243,6 +255,11 @@ public class WorldLoader : Loader {
             blendTex.SetPixels(colors,0);
             blendTex.Apply();
 
+            if (SaveAssets)
+            {
+                File.WriteAllBytes(SaveDirectory + "/blendmap_slice_" + i.ToString() + ".png", blendTex.EncodeToPNG());
+            }
+
             renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
         }
 
@@ -251,6 +268,10 @@ public class WorldLoader : Loader {
         renderer.sharedMaterial.SetFloat("_XBound", bound);
         renderer.sharedMaterial.SetFloat("_ZBound", bound);
 
+        if (SaveAssets)
+        {
+            PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
+        }
 
         terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
         return terrainObj;
@@ -259,7 +280,7 @@ public class WorldLoader : Loader {
 
 
 
-    private GameObject ImportTerrain(LibTerrain terrain)
+    private GameObject ImportTerrain(LibTerrain terrain, string name)
     {
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
@@ -340,8 +361,11 @@ public class WorldLoader : Loader {
         GameObject terrainObj = UnityEngine.Terrain.CreateTerrainGameObject(terData);
         int dimOffset = -1 * ((int) (dimScale * dim)) / 2;
         terrainObj.transform.position = new Vector3(dimOffset,floor,dimOffset);
-        //PrefabUtility.SaveAsPrefabAsset(terrainObj, Application.dataPath + "/Terrain/terrain.prefab");
-        //AssetDatabase.Refresh();
+        
+        if (SaveAssets)
+        {
+            PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
+        }
 
         return terrainObj;
     }
@@ -481,6 +505,11 @@ public class WorldLoader : Loader {
                     MaterialLoader.Instance.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
                 } catch {}
 
+                if (SaveAssets)
+                {
+                    PrefabUtility.SaveAsPrefabAssetAndConnect(domeModelObj, SaveDirectory + "/dome_model_" + geometryName + ".prefab", InteractionMode.UserAction);
+                }
+
                 domeModelObj.transform.localScale = new Vector3(-300,300,300);
                 domeModelObj.transform.parent = domeRoot.transform;
             }
@@ -498,6 +527,11 @@ public class WorldLoader : Loader {
             GameObject domeObject = new GameObject(geometryName);
 
             ModelLoader.Instance.AddModelComponents(domeObject, geometryName);
+
+            if (SaveAssets)
+            {
+                PrefabUtility.SaveAsPrefabAssetAndConnect(domeObject, SaveDirectory + "/dome_object_" + geometryName + ".prefab", InteractionMode.UserAction);
+            }
 
             domeObject.transform.parent = domeObjectsRoot.transform;
             domeObject.transform.localPosition = new Vector3(0, domeObjectField.scope.GetVec2("Height").X, 0);

@@ -76,6 +76,7 @@ public class ClassLoader : Loader {
             if (SaveAssets)
             {
                 duplicate = PrefabUtility.InstantiatePrefab(classObjectDatabase[name]) as GameObject;
+                //duplicate = PrefabUtility.InstantiatePrefab(PrefabUtility.GetPrefabInstanceHandle(classObjectDatabase[name])) as GameObject;
             }
             else 
             {
@@ -116,117 +117,106 @@ public class ClassLoader : Loader {
 
         GameObject obj = new GameObject(name);
 
-        try 
+        GameObject lastAttached = null;
+        string lastAttachedName = "";
+
+        HashSet<string> ordinanceColliders = new HashSet<string>();
+
+        string currentAnimationSet = "";
+        string geometryName = "";
+
+        for (int i = 0; i < properties.Length; i++)
         {
-            AssetDatabase.StartAssetEditing();
+            uint property = properties[i];
+            string propertyValue = values[i];
 
-            GameObject lastAttached = null;
-            string lastAttachedName = "";
-
-            HashSet<string> ordinanceColliders = new HashSet<string>();
-
-            string currentAnimationSet = "";
-            string geometryName = "";
-
-            for (int i = 0; i < properties.Length; i++)
+            switch (property)
             {
-                uint property = properties[i];
-                string propertyValue = values[i];
+                // Refers to an animation bank, for now we just get all the bank's clips
+                // and attach them as a legacy Animation component.
+                case ANIMATIONNAME:
 
-                switch (property)
-                {
-                    // Refers to an animation bank, for now we just get all the bank's clips
-                    // and attach them as a legacy Animation component.
-                    case ANIMATIONNAME:
+                    currentAnimationSet = propertyValue;
 
-                        currentAnimationSet = propertyValue;
+                    var clips = AnimationLoader.Instance.LoadAnimationBank(propertyValue, obj.transform);
+                    Animation animComponent = obj.GetComponent<Animation>();
 
-                        var clips = AnimationLoader.Instance.LoadAnimationBank(propertyValue, obj.transform);
-                        Animation animComponent = obj.GetComponent<Animation>();
+                    if (animComponent == null)
+                    {
+                        animComponent = obj.AddComponent<Animation>();
+                    }
 
-                        if (animComponent == null)
+                    foreach (var curClip in clips)
+                    {
+                        animComponent.AddClip(curClip, curClip.name);
+                        animComponent.wrapMode = WrapMode.Once;                        
+                    }
+
+                    break;
+
+                // Refers to specific animations for specific purposes (see animatedprop)
+                case ANIMATION:
+                    break;
+
+                case GEOMETRYNAME:
+
+                    geometryName = propertyValue;
+
+                    try {
+                        if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
                         {
-                            animComponent = obj.AddComponent<Animation>();
-                        }
-
-                        foreach (var curClip in clips)
-                        {
-                            animComponent.AddClip(curClip, curClip.name);
-                            animComponent.wrapMode = WrapMode.Once;                        
-                        }
-
-                        break;
-
-                    // Refers to specific animations for specific purposes (see animatedprop)
-                    case ANIMATION:
-                        break;
-
-                    case GEOMETRYNAME:
-
-                        geometryName = propertyValue;
-
-                        try {
-                            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
-                            {
-                                Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
-                                return obj;
-                            }
-                        }
-                        catch 
-                        {
+                            Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
                             return obj;
                         }
-                        break;
+                    }
+                    catch 
+                    {
+                        return obj;
+                    }
+                    break;
 
-                    case ATTACHODF:
-                        lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
-                        break;
+                case ATTACHODF:
+                    lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
+                    break;
 
-                    // TODO: Hardpoint children are frequently missing...
-                    case ATTACHTOHARDPOINT:
+                // TODO: Hardpoint children are frequently missing...
+                case ATTACHTOHARDPOINT:
 
-                        lastAttached = LoadGeneralClass(lastAttachedName);
-                        if (lastAttached == null) break;
+                    lastAttached = LoadGeneralClass(lastAttachedName);
+                    if (lastAttached == null) break;
 
 
-                        var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
+                    var childTx = UnityUtils.FindChildTransform(obj.transform, propertyValue);
 
-                        if (childTx == null)
-                        {
-                            Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
-                            lastAttached.transform.SetParent(obj.transform, false);
-                        }
-                        else 
-                        {
-                            lastAttached.transform.SetParent(childTx, false);
-                        }
+                    if (childTx == null)
+                    {
+                        Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
+                        lastAttached.transform.SetParent(obj.transform, false);
+                    }
+                    else 
+                    {
+                        lastAttached.transform.SetParent(childTx, false);
+                    }
 
-                        break;
+                    break;
 
-                    // Some collider primitives don't have proper masks, so their purpose is
-                    // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
-                    // as it is most accurate.
-                    case ORDNANCECOLLISION:
-                        ordinanceColliders.Add(propertyValue);
-                        break;
+                // Some collider primitives don't have proper masks, so their purpose is
+                // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
+                // as it is most accurate.
+                case ORDNANCECOLLISION:
+                    ordinanceColliders.Add(propertyValue);
+                    break;
 
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
-
-            ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordinanceColliders);
-        }
-        finally 
-        {
-            AssetDatabase.StopAssetEditing();
         }
 
+        ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordinanceColliders);
 
         if (SaveAssets)
         {
-            // SaveAsPrefabAssetAndConnect doesnt return the imported object when inside a Start/StopAssetEditing block.
-            // So we import all asset dependencies first, then create/import the prefab 
+            // This breaks when called inside an AssetEditing block...
             classObjectDatabase[name] = PrefabUtility.SaveAsPrefabAssetAndConnect(obj, SaveDirectory + "/" + obj.name + ".prefab", InteractionMode.UserAction);
         }
         else
@@ -236,4 +226,32 @@ public class ClassLoader : Loader {
 
         return obj;
     }
+
+
+    public void PrintDB()
+    {
+        foreach (string objname in classObjectDatabase.Keys)
+        {
+            Debug.LogWarning(PrefabUtility.GetPrefabInstanceStatus(classObjectDatabase[objname]).ToString());
+        }
+    }
+
+
+    public void DeleteAndClearDB()
+    {
+        foreach (string objname in classObjectDatabase.Keys)
+        {
+            try
+            {
+                PrefabUtility.UnpackPrefabInstance(classObjectDatabase[objname], PrefabUnpackMode.Completely, InteractionMode.UserAction);
+                UnityEngine.Object.DestroyImmediate(classObjectDatabase[objname]);
+            }catch (Exception e)
+            {
+                Debug.Log(e.Message);
+            }
+        }
+        classObjectDatabase.Clear();
+    }
+
+
 }

@@ -69,6 +69,8 @@ public abstract class Loader {
 
         ClassLoader.Instance.SaveAssets = false;
         ClassLoader.Instance.ResetDB();
+
+        WorldLoader.Instance.SaveAssets = false;
     }
 
 
