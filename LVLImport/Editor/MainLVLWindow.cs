@@ -19,13 +19,14 @@ public class LVLImportWindow : EditorWindow {
     bool startLoadWorlds, startLoadClasses;
 
     static bool terrainAsMesh = false;
-    static bool saveTextures, saveMaterials, saveModels, saveAnims, saveObjects;
+    static bool saveTextures, saveMaterials, saveModels, saveAnims, saveObjects, saveWorld;
 
     static string matFolder = "Materials";
     static string texFolder = "Textures";
     static string modelsFolder = "Models";
     static string animsFolder = "Animations";
     static string objectsFolder = "Objects";
+    static string worldFolder = "World";
 
     static string savePathPrefix = "Assets/LVLImport/"; 
 
@@ -155,6 +156,7 @@ public class LVLImportWindow : EditorWindow {
         AddSaveOption("Models", ref saveModels, ref modelsFolder);
         AddSaveOption("Animations", ref saveAnims, ref animsFolder);
         AddSaveOption("Objects", ref saveObjects, ref objectsFolder);
+        AddSaveOption("World", ref saveWorld, ref worldFolder);
 
 
         saveTextures = saveMaterials ? true : saveTextures;
@@ -178,7 +180,7 @@ public class LVLImportWindow : EditorWindow {
         
         GUILayout.BeginHorizontal();
        
-        startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;      
+        startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;
         startLoadClasses = GUILayout.Button("Import Objects",GUILayout.Width(100)) ? true : currentlyLoading && startLoadClasses;
         GUILayout.EndHorizontal();
 
@@ -219,11 +221,12 @@ public class LVLImportWindow : EditorWindow {
 
                 WorldLoader.Instance.TerrainAsMesh = terrainAsMesh;
 
-                if (saveTextures){ TextureLoader.Instance.SetSave(savePathPrefix,texFolder); };
-                if (saveMaterials) { MaterialLoader.Instance.SetSave(savePathPrefix,matFolder); };
-                if (saveModels) { ModelLoader.Instance.SetSave(savePathPrefix,modelsFolder); };
-                if (saveAnims) { AnimationLoader.Instance.SetSave(savePathPrefix,animsFolder); };
-                if (saveObjects) { ClassLoader.Instance.SetSave(savePathPrefix,objectsFolder); };
+                if (saveTextures){ TextureLoader.Instance.SetSave(savePathPrefix,texFolder); }
+                if (saveMaterials) { MaterialLoader.Instance.SetSave(savePathPrefix,matFolder); }
+                if (saveModels) { ModelLoader.Instance.SetSave(savePathPrefix,modelsFolder); }
+                if (saveAnims) { AnimationLoader.Instance.SetSave(savePathPrefix,animsFolder); }
+                if (saveObjects) { ClassLoader.Instance.SetSave(savePathPrefix,objectsFolder); }
+                if (saveWorld) { WorldLoader.Instance.SetSave(savePathPrefix, worldFolder); }
 
 
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
@@ -232,7 +235,6 @@ public class LVLImportWindow : EditorWindow {
                 foreach (uint handle in fileHandles)
                 {
                     Level level = container.GetLevel(handle);
-
                     if (level == null)
                     {
                         continue;
@@ -251,12 +253,13 @@ public class LVLImportWindow : EditorWindow {
                     
                     if (startLoadClasses)
                     {
-                        string levelName = level.Name;
+                        string levelName = level.name;
                         GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
                         root.transform.localPosition = offset;
 
                         List<GameObject> importedObjs = new List<GameObject>();
-                        try 
+
+                        try
                         {
                             AssetDatabase.StartAssetEditing();
 
@@ -272,6 +275,7 @@ public class LVLImportWindow : EditorWindow {
                         finally
                         {
                             AssetDatabase.StopAssetEditing();
+                            AssetDatabase.Refresh();
                         }
 
                         foreach (GameObject newClass in importedObjs)
