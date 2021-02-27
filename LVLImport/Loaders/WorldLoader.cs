@@ -22,6 +22,7 @@ using ULight = UnityEngine.Light;
 
 public class WorldLoader : Loader {
 
+    public bool ImportTerrain = true;
     public bool TerrainAsMesh = false;
 
     public static WorldLoader Instance { get; private set; } = null;
@@ -44,13 +45,15 @@ public class WorldLoader : Loader {
         loadedSkydomes = new Dictionary<string, GameObject>();
     }
 
-
     public void ImportWorld(World world)
     {
-        bool LoadedTerrain = false;
+        ImportWorld(world, out _);
+    }
 
-    	GameObject worldRoot = new GameObject(world.name);
-
+    public void ImportWorld(World world, out bool hasTerrain)
+    {
+        hasTerrain = false;
+        GameObject worldRoot = new GameObject(world.name);
 
         //Instances
         GameObject instancesRoot = new GameObject("Instances");
@@ -63,21 +66,24 @@ public class WorldLoader : Loader {
         
 
         //Terrain
-        var terrain = world.GetTerrain();
-        if (terrain != null && !LoadedTerrain)
+        if (ImportTerrain)
         {
-            GameObject terrainGameObject;
-            if (TerrainAsMesh)
+            var terrain = world.GetTerrain();
+            if (terrain != null && !hasTerrain)
             {
-                terrainGameObject = ImportTerrainAsMesh(terrain, world.name);
-            }
-            else 
-            {
-                terrainGameObject = ImportTerrain(terrain, world.name);
-            }
+                GameObject terrainGameObject;
+                if (TerrainAsMesh)
+                {
+                    terrainGameObject = ImportTerrainAsMesh(terrain, world.name);
+                }
+                else 
+                {
+                    terrainGameObject = ImportTerrainAsUnity(terrain, world.name);
+                }
 
-            terrainGameObject.transform.parent = worldRoot.transform;
-            LoadedTerrain = true;
+                terrainGameObject.transform.parent = worldRoot.transform;
+                hasTerrain = true;
+            }
         }
 
 
@@ -175,7 +181,7 @@ public class WorldLoader : Loader {
             instanceObjects.Add(instanceObject);
         }
 
-        ClassLoader.Instance.PrintDB();
+        //ClassLoader.Instance.PrintDB();
         //ClassLoader.Instance.DeleteAndClearDB();
 
         return instanceObjects;
@@ -280,7 +286,7 @@ public class WorldLoader : Loader {
 
 
 
-    private GameObject ImportTerrain(LibTerrain terrain, string name)
+    private GameObject ImportTerrainAsUnity(LibTerrain terrain, string name)
     {
         //Read heightmap
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
