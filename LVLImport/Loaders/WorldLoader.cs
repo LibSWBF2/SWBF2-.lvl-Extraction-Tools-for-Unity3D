@@ -177,7 +177,7 @@ public class WorldLoader : Loader {
 
             instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.rotation);
             instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.position);
-            instanceObject.transform.localScale = new Vector3(-1.0f,1.0f,1.0f);
+            instanceObject.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
             instanceObjects.Add(instanceObject);
         }
 

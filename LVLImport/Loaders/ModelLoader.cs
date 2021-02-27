@@ -72,6 +72,12 @@ public class ModelLoader : Loader {
             dataOffset += vBufLength;
         }
 
+        // flip x
+        for (int vertIdx = 0; vertIdx < positions.Length; ++vertIdx)
+        {
+            positions[vertIdx].x = -positions[vertIdx].x;
+        }
+
         mesh.SetVertices(positions);
         mesh.SetNormals(normals);
         mesh.SetUVs(0,texcoords);
@@ -79,7 +85,15 @@ public class ModelLoader : Loader {
         i = 0;
         foreach (Segment seg in segments)
         {
-            mesh.SetTriangles(seg.GetIndexBuffer(), i, true, offsets[i]);
+            ushort[] indices = seg.GetIndexBuffer();
+            for (int ii = 0; ii < indices.Length; ii += 3)
+            {
+                ushort tmp = indices[ii];
+                indices[ii] = indices[ii + 2];
+                indices[ii + 2] = tmp;
+            }
+
+            mesh.SetTriangles(indices, i, true, offsets[i]);
             i++;
         }
 
