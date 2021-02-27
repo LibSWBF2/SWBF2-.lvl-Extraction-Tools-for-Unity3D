@@ -253,7 +253,7 @@ public class LVLImportWindow : EditorWindow {
                     
                     if (startLoadClasses)
                     {
-                        string levelName = level.name;
+                        string levelName = level.Name;
                         GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
                         root.transform.localPosition = offset;
 

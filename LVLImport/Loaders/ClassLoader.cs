@@ -190,7 +190,7 @@ public class ClassLoader : Loader {
 
                     if (childTx == null)
                     {
-                        Debug.LogError("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
+                        Debug.LogWarning("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
                         lastAttached.transform.SetParent(obj.transform, false);
                     }
                     else 
