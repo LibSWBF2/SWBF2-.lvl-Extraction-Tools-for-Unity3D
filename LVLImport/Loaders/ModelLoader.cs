@@ -324,7 +324,6 @@ public class ModelLoader : Loader {
 
     public bool AddCollisionPrimitives(GameObject newObject, Model model, HashSet<string> colliderNames = null)
     {
-        colliderNames = null;
         //Get list of primitives, requested or found.
         List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
         if (colliderNames == null || colliderNames.Count == 0)
