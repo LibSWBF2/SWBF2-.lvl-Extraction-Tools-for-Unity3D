@@ -110,29 +110,6 @@ public class WorldLoader : Loader {
 
     private List<GameObject> ImportInstances(Instance[] instances)
     {
-        try 
-        {
-            HashSet<string> neededClasses = new HashSet<string>();
-            foreach (var i in instances)
-            {
-                neededClasses.Add(i.entityClassName);
-            }
-
-            //AssetDatabase.StartAssetEditing();
-
-            foreach (string neededClass in neededClasses)
-            {
-                ClassLoader.Instance.LoadGeneralClass(neededClass);
-            }
-        }
-        finally
-        {
-           // AssetDatabase.StopAssetEditing();
-           // AssetDatabase.Refresh();
-        }
-
-
-
         List<GameObject> instanceObjects = new List<GameObject>();
 
         foreach (Instance inst in instances)
@@ -152,7 +129,7 @@ public class WorldLoader : Loader {
                 case "armedbuilding":
                 case "animatedbuilding":
                 case "commandpost":
-                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName);
+                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
                     break;
 
                 default:
@@ -175,9 +152,6 @@ public class WorldLoader : Loader {
             instanceObjects.Add(instanceObject);
         }
 
-        ClassLoader.Instance.PrintDB();
-        //ClassLoader.Instance.DeleteAndClearDB();
-
         return instanceObjects;
     }
 
@@ -191,13 +165,14 @@ public class WorldLoader : Loader {
             AssetDatabase.CreateAsset(terrainMesh, Path.Combine(SaveDirectory, name + "_terrain.mesh"));
         }
 
-
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
         terrainMesh.RecalculateNormals();
 
+
         GameObject terrainObj = new GameObject("Terrain");
+        terrainObj.isStatic = true;
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
@@ -257,7 +232,10 @@ public class WorldLoader : Loader {
 
             if (SaveAssets)
             {
-                File.WriteAllBytes(SaveDirectory + "/blendmap_slice_" + i.ToString() + ".png", blendTex.EncodeToPNG());
+                string blendSlicePath = SaveDirectory + "/blendmap_slice_" + i.ToString() + ".png";
+                File.WriteAllBytes(blendSlicePath, blendTex.EncodeToPNG());
+                AssetDatabase.ImportAsset(blendSlicePath, ImportAssetOptions.Default);
+                blendTex = (Texture2D) AssetDatabase.LoadAssetAtPath(blendSlicePath, typeof(Texture2D));
             }
 
             renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
@@ -288,6 +266,12 @@ public class WorldLoader : Loader {
         float ceiling = terrain.heightUpperBound;
         
         TerrainData terData = new TerrainData();
+
+        if (SaveAssets)
+        {
+            AssetDatabase.CreateAsset(terData, SaveDirectory + "/" + name + "_terrain_data.asset");
+        }
+
         terData.heightmapResolution = (int) dim + 1;
         terData.size = new Vector3(dim * dimScale, ceiling - floor, dim * dimScale);
         terData.baseMapResolution = 512;
