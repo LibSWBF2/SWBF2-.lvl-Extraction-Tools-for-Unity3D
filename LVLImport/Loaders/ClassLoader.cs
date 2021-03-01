@@ -59,13 +59,27 @@ public class ClassLoader : Loader {
     }
 
 
+    private bool IsStaticObjectClass(EntityClass ec)
+    {
+        switch (ec.GetBaseName())
+        {
+        case "door":
+        case "animatedprop":                  
+        case "animatedbuilding":
+            return false;
+        default:
+            return true;            
+        }
+    }
+
+
     /*
     Temporary solution until I get to recording the default properties of
     each base class.  That'll come with ODF -> Scriptable Object conversion.
     This loads the most relevant dependencies of a given ODF. 
     */
 
-    public GameObject LoadGeneralClass(string name)
+    public GameObject LoadGeneralClass(string name, bool tryMakeStatic = false)
     {
         if (name == null || name == "") return null;
 
@@ -76,7 +90,6 @@ public class ClassLoader : Loader {
             if (SaveAssets)
             {
                 duplicate = PrefabUtility.InstantiatePrefab(classObjectDatabase[name]) as GameObject;
-                //duplicate = PrefabUtility.InstantiatePrefab(PrefabUtility.GetPrefabInstanceHandle(classObjectDatabase[name])) as GameObject;
             }
             else 
             {
@@ -101,16 +114,20 @@ public class ClassLoader : Loader {
             return null;
         }
 
-        uint[] properties;
-        string[] values;
+        List<uint> properties;
+        List<string> values;
         
         try {
-            if (!ecWrapper.GetOverriddenProperties(out properties, out values))
+            if (!ecWrapper.GetOverriddenProperties(out uint[] p_, out string[] v_))
             {
                 Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+                return null;
             }
+            properties = new List<uint>(p_);
+            values = new List<string>(v_);
         } catch
         {
+            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
             return null;
         }
 
@@ -123,9 +140,41 @@ public class ClassLoader : Loader {
         HashSet<string> ordinanceColliders = new HashSet<string>();
 
         string currentAnimationSet = "";
-        string geometryName = "";
 
-        for (int i = 0; i < properties.Length; i++)
+        int geomNameIndex;
+        string geometryName = "";
+        if ((geomNameIndex = properties.FindIndex(a => a == GEOMETRYNAME)) != -1)
+        {
+            geometryName = values[geomNameIndex];
+            try {
+                if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
+                {
+                    Debug.LogError(String.Format("Failed to load model ({1}) used by object: {0}", name, geometryName));
+                    return obj;
+                }
+
+                if (tryMakeStatic && IsStaticObjectClass(ecWrapper))
+                {
+                    obj.isStatic = true;
+                    foreach (var tx in UnityUtils.GetChildTransforms(obj.transform))
+                    {
+                        tx.gameObject.isStatic = true;
+                    }
+                }
+            }
+            catch 
+            {
+                Debug.LogError(String.Format("Failed to load model ({1}) used by object: {0}", name, geometryName));
+                return obj;
+            }
+        }
+
+
+
+
+
+
+        for (int i = 0; i < properties.Count; i++)
         {
             uint property = properties[i];
             string propertyValue = values[i];
@@ -158,6 +207,7 @@ public class ClassLoader : Loader {
                 case ANIMATION:
                     break;
 
+                /*
                 case GEOMETRYNAME:
 
                     geometryName = propertyValue;
@@ -174,6 +224,7 @@ public class ClassLoader : Loader {
                         return obj;
                     }
                     break;
+                */
 
                 case ATTACHODF:
                     lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
@@ -182,7 +233,7 @@ public class ClassLoader : Loader {
                 // TODO: Hardpoint children are frequently missing...
                 case ATTACHTOHARDPOINT:
 
-                    lastAttached = LoadGeneralClass(lastAttachedName);
+                    lastAttached = LoadGeneralClass(lastAttachedName, tryMakeStatic);
                     if (lastAttached == null) break;
 
 
@@ -228,14 +279,7 @@ public class ClassLoader : Loader {
     }
 
 
-    public void PrintDB()
-    {
-        foreach (string objname in classObjectDatabase.Keys)
-        {
-            Debug.LogWarning(PrefabUtility.GetPrefabInstanceStatus(classObjectDatabase[objname]).ToString());
-        }
-    }
-
+    
 
     public void DeleteAndClearDB()
     {
