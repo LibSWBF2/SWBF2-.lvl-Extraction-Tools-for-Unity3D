@@ -28,13 +28,15 @@ public class ModelLoader : Loader {
 
     public void ResetDB()
     {
-        //todo
+        //todox
     }
 
     // Cylinder collision mesh as substitute for cylinder primitive.
     // Perhaps a gameobject with three children, each having a box collider, rotated to 
     // form a 6 sided cylinder would be more performant?  
     private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
+
+
 
 
     /*
@@ -75,7 +77,7 @@ public class ModelLoader : Loader {
         mesh.SetVertices(positions);
         mesh.SetNormals(normals);
         mesh.SetUVs(0,texcoords);
-        
+
         i = 0;
         foreach (Segment seg in segments)
         {

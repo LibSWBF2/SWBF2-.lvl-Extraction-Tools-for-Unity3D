@@ -61,6 +61,24 @@ public static class UnityUtils {
         return null;
     }
 
+
+
+    public static List<Transform> GetChildTransforms(Transform curTx)
+    {
+        List<Transform> txs = new List<Transform>();
+        for (int j = 0; j < curTx.childCount; j++)
+        {
+            var curChild = curTx.GetChild(j);
+            txs.Add(curChild);
+            txs.AddRange(GetChildTransforms(curChild));
+        }
+
+        return txs;
+    }    
+
+
+
+
     //Reversed libSWBF2 GLM transform decomp + munge conversion leads to this mess.
     //Perhaps quat components are switched up in lib's XFRM -> Quat converter
 	public static UnityEngine.Quaternion QuatFromLibWorld(LibSWBF2.Types.Vector4 vec)
