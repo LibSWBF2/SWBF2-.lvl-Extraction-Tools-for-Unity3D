@@ -28,8 +28,8 @@ public class TextureLoader : Loader {
         texDataBase.Clear();
     }
 
-
-    public Texture2D ImportTexture(string name) 
+    public Texture2D ImportUITexture(string name) => ImportTexture(name, true);
+    public Texture2D ImportTexture(string name, bool mirror=false) 
     {
         if (texDataBase.ContainsKey(name))
         {
@@ -42,8 +42,8 @@ public class TextureLoader : Loader {
         {
             Texture2D newTexture = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
             newTexture.name = tex.name;
-            byte[] data = tex.GetBytesRGBA();
-            newTexture.LoadRawTextureData(MirrorVertically(tex.GetBytesRGBA(), tex.width, tex.height, 4));
+            byte[] data = mirror ? MirrorVertically(tex.GetBytesRGBA(), tex.width, tex.height, 4) : tex.GetBytesRGBA();
+            newTexture.LoadRawTextureData(data);
             newTexture.Apply();
 
             if (SaveAssets)
