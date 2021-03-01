@@ -1,5 +1,7 @@
 */
 !LVLImport/
+Flail.cs
+Grab.cs
 
 # ignore build asset bundles
 /AssetBundles

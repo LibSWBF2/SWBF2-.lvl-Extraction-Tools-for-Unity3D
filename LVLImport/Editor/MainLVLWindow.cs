@@ -104,6 +104,12 @@ public class LVLImportWindow : EditorWindow {
     }
 
 
+    void Update()
+    {
+    	Repaint();
+    }
+
+
 
     void OnGUI()
     {
@@ -248,12 +254,14 @@ public class LVLImportWindow : EditorWindow {
                         }
                     }
 
+                    AssetDatabase.Refresh();
+
 
                     UnityEngine.Vector3 spawnLoc = new UnityEngine.Vector3(0,0,0); 
                     
                     if (startLoadClasses)
                     {
-                        string levelName = level.name;
+                        string levelName = level.Name;
                         GameObject root = new GameObject(levelName == null ? "objects" : levelName.Replace(".lvl",""));
                         root.transform.localPosition = offset;
 
@@ -261,7 +269,7 @@ public class LVLImportWindow : EditorWindow {
 
                         try
                         {
-                            AssetDatabase.StartAssetEditing();
+                            //AssetDatabase.StartAssetEditing();
 
                             foreach (var ec in level.GetWrappers<EntityClass>())
                             {
@@ -274,8 +282,8 @@ public class LVLImportWindow : EditorWindow {
                         }
                         finally
                         {
-                            AssetDatabase.StopAssetEditing();
-                            AssetDatabase.Refresh();
+                            //AssetDatabase.StopAssetEditing();
+                            //AssetDatabase.Refresh();
                         }
 
                         foreach (GameObject newClass in importedObjs)
