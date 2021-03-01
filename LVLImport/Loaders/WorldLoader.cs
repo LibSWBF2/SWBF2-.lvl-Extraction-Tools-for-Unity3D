@@ -116,26 +116,26 @@ public class WorldLoader : Loader {
 
     private List<GameObject> ImportInstances(Instance[] instances)
     {
-        try 
-        {
-            HashSet<string> neededClasses = new HashSet<string>();
-            foreach (var i in instances)
-            {
-                neededClasses.Add(i.entityClassName);
-            }
+        //try 
+        //{
+        //    HashSet<string> neededClasses = new HashSet<string>();
+        //    foreach (var i in instances)
+        //    {
+        //        neededClasses.Add(i.entityClassName);
+        //    }
 
-            //AssetDatabase.StartAssetEditing();
+        //    //AssetDatabase.StartAssetEditing();
 
-            foreach (string neededClass in neededClasses)
-            {
-                ClassLoader.Instance.LoadGeneralClass(neededClass);
-            }
-        }
-        finally
-        {
-           // AssetDatabase.StopAssetEditing();
-           // AssetDatabase.Refresh();
-        }
+        //    foreach (string neededClass in neededClasses)
+        //    {
+        //        ClassLoader.Instance.LoadGeneralClass(neededClass);
+        //    }
+        //}
+        //finally
+        //{
+        //   // AssetDatabase.StopAssetEditing();
+        //   // AssetDatabase.Refresh();
+        //}
 
 
 
