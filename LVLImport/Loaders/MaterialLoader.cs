@@ -94,6 +94,8 @@ public class MaterialLoader : Loader {
                 materialDataBase[materialName] = material;
             }
 
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+
             return materialDataBase[materialName];
         }
     }

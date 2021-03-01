@@ -31,6 +31,8 @@ public class TextureLoader : Loader {
     public Texture2D ImportUITexture(string name) => ImportTexture(name, true);
     public Texture2D ImportTexture(string name, bool mirror=false) 
     {
+        string texPath = SaveDirectory + "/" + name + ".png";
+
         if (texDataBase.ContainsKey(name))
         {
             return texDataBase[name];
@@ -38,7 +40,7 @@ public class TextureLoader : Loader {
 
         var tex = container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
 
-        if (tex != null && tex.width * tex.width > 0)
+        if (tex != null && tex.height * tex.width > 0)
         {
             Texture2D newTexture = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
             newTexture.name = tex.name;
@@ -48,7 +50,9 @@ public class TextureLoader : Loader {
 
             if (SaveAssets)
             {
-                File.WriteAllBytes(SaveDirectory + "/" + name + ".png", newTexture.EncodeToPNG());
+                File.WriteAllBytes(texPath, newTexture.EncodeToPNG());
+                AssetDatabase.ImportAsset(texPath, ImportAssetOptions.Default);
+                newTexture = (Texture2D) AssetDatabase.LoadAssetAtPath(texPath, typeof(Texture2D));
             }
 
             texDataBase[name] = newTexture;
