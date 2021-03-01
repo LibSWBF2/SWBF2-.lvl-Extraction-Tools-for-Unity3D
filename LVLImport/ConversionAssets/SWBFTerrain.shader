@@ -1,4 +1,4 @@
-Shader "ConversionAssets/TerrainTest"
+Shader "ConversionAssets/SWBFTerrain"
 {
     Properties {
         _Layer0Tex ("Layer 0 Texture", 2D) = "black" {}

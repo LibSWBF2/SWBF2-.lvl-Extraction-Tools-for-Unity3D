@@ -19,7 +19,9 @@ using UMaterial = UnityEngine.Material;
 
 public class MaterialLoader : Loader {
 
-    public static UMaterial defaultMaterial = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
+    public static Shader DefaultShader { get; private set; } = Shader.Find("ConversionAssets/SWBFStandard");
+    public static Shader TerrainShader { get; private set; } = Shader.Find("ConversionAssets/SWBFTerrain");
+
 
     public static MaterialLoader Instance { get; private set; } = null;
     static MaterialLoader()
@@ -44,7 +46,7 @@ public class MaterialLoader : Loader {
 
         if (texName == "")
         {
-            return defaultMaterial;
+            return new UMaterial(DefaultShader);
         } 
         else 
         {
@@ -52,7 +54,7 @@ public class MaterialLoader : Loader {
 
             if (!materialDataBase.ContainsKey(materialName))
             {
-                UMaterial material = new UMaterial(defaultMaterial);
+                UMaterial material = new UMaterial(DefaultShader);
 
                 if (SaveAssets)
                 {

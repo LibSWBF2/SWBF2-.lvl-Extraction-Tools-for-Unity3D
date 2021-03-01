@@ -208,7 +208,7 @@ public class WorldLoader : Loader {
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
        
-        UMaterial terrainMat = new UMaterial(Shader.Find("ConversionAssets/TerrainTest"));
+        UMaterial terrainMat = new UMaterial(MaterialLoader.TerrainShader);
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terrainMat, Path.Combine(SaveDirectory, name + "_terrain.mat"));
