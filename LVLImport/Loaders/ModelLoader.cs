@@ -66,18 +66,16 @@ public class ModelLoader : Loader {
         {
             int vBufLength = (int) seg.GetVertexBufferLength();
 
-            Array.Copy(seg.GetVertexBuffer<Vector3>(), 0, positions, dataOffset, vBufLength);
-            Array.Copy(seg.GetNormalsBuffer<Vector3>(), 0, normals, dataOffset, vBufLength);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset);
+            //UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset);
+
+            //Array.Copy(seg.GetVertexBuffer<Vector3>(), 0, positions, dataOffset, vBufLength);
+            //Array.Copy(seg.GetNormalsBuffer<Vector3>(), 0, normals, dataOffset, vBufLength);
             Array.Copy(seg.GetUVBuffer<Vector2>(), 0, texcoords, dataOffset, vBufLength);
 
             offsets[i++] = dataOffset;
             dataOffset += vBufLength;
-        }
-
-        // flip x
-        for (int vertIdx = 0; vertIdx < positions.Length; ++vertIdx)
-        {
-            positions[vertIdx].x = -positions[vertIdx].x;
         }
 
         mesh.SetVertices(positions);
@@ -87,15 +85,7 @@ public class ModelLoader : Loader {
         i = 0;
         foreach (Segment seg in segments)
         {
-            ushort[] indices = seg.GetIndexBuffer();
-            for (int ii = 0; ii < indices.Length; ii += 3)
-            {
-                ushort tmp = indices[ii];
-                indices[ii] = indices[ii + 2];
-                indices[ii + 2] = tmp;
-            }
-
-            mesh.SetTriangles(indices, i, true, offsets[i]);
+            mesh.SetTriangles(UnityUtils.ReverseWinding(seg.GetIndexBuffer()), i, true, offsets[i]);
             i++;
         }
 
@@ -114,8 +104,8 @@ public class ModelLoader : Loader {
         foreach (var node in hierarchy)
         {
             var nodeTransform = new GameObject(node.name.ToLower()).transform;
-            nodeTransform.localRotation = UnityUtils.QuatFromLib(node.rotation);
-            nodeTransform.localPosition = UnityUtils.Vec3FromLib(node.location);
+            nodeTransform.localRotation = UnityUtils.QuatFromLibSkel(node.rotation);
+            nodeTransform.localPosition = UnityUtils.Vec3FromLibSkel(node.location);
             skeleton[node.name] = nodeTransform;
         }
 
@@ -279,8 +269,8 @@ public class ModelLoader : Loader {
         for (int boneNum = 0; boneNum < bonesSWBF.Length; boneNum++)
         {
             var curBoneSWBF = bonesSWBF[boneNum];
-            skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLib(curBoneSWBF.rotation);
-            skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLib(curBoneSWBF.location);
+            skeleton[curBoneSWBF.name].localRotation = UnityUtils.QuatFromLibSkel(curBoneSWBF.rotation);
+            skeleton[curBoneSWBF.name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.location);
         }
 
         return true;
@@ -375,8 +365,8 @@ public class ModelLoader : Loader {
             if (boneTx == null) continue;
 
             GameObject primObj = new GameObject(prim.name);
-            primObj.transform.localPosition = UnityUtils.Vec3FromLib(prim.position);
-            primObj.transform.localRotation = UnityUtils.QuatFromLib(prim.rotation);
+            primObj.transform.localPosition = UnityUtils.Vec3FromLibSkel(prim.position);
+            primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.rotation);
             primObj.transform.SetParent(boneTx, false);
 
             switch (prim.primitiveType)
@@ -464,7 +454,11 @@ public class ModelLoader : Loader {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    collMeshUnity.vertices = collMesh.GetVertices<Vector3>();
+                    
+                    Vector3[] positions = collMesh.GetVertices<Vector3>();
+                    UnityUtils.ConvertSpaceAndFillVec3(positions,positions,0);
+                    collMeshUnity.vertices = positions;
+                    
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
@@ -481,27 +475,5 @@ public class ModelLoader : Loader {
         
         return true;      
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

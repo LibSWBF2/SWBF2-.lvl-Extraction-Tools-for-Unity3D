@@ -33,11 +33,11 @@ public class AnimationLoader : Loader {
                                                 "localPosition.y",
                                                 "localPosition.z"  };
     //In case space conversions are needed
-    private static float[] ComponentMultipliers = {  1.0f,
+    private static float[] ComponentMultipliers = {  -1.0f,
                                                       1.0f,
                                                      1.0f,
-                                                     1.0f,
-                                                      1.0f,
+                                                     -1.0f,
+                                                      -1.0f,
                                                       1.0f,
                                                      1.0f  };
 
