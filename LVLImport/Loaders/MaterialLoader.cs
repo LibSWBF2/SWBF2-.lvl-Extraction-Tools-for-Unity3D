@@ -99,7 +99,9 @@ public class MaterialLoader : Loader {
     }
 
 
-
+    // This is for special objects needing tempfixes.  Right now,
+    // we don't have skydomes properly lit by their suns, so we just add 
+    // emission to compensate
     public void PatchMaterial(GameObject obj, string patchType="")
     {
         var renderer = obj.GetComponent<MeshRenderer>();
@@ -116,14 +118,10 @@ public class MaterialLoader : Loader {
                 }
             }
         }
-        else
-        {
-            Debug.Log("Can't patch skydome mat, renderer is null...");
-        }
     }
 
 
-    /*From https://answers.unity.com/questions/1004666/change-material-rendering-mode-in-runtime.html */
+    /* From https://answers.unity.com/questions/1004666/change-material-rendering-mode-in-runtime.html */
     public static void SetRenderMode(ref UMaterial standardShaderMaterial, int blendMode)
     {
         switch (blendMode)
