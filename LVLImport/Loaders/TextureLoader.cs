@@ -70,6 +70,68 @@ public class TextureLoader : Loader {
         }
     }
 
+    public Texture2DArray ImportTextures(string[] names, bool mirror = false)
+    {
+        int maxWidth = 0;
+        int maxHeight = 0;
+
+        LibSWBF2.Wrappers.Texture[] libTextures = new LibSWBF2.Wrappers.Texture[names.Length];
+        for (int i = 0; i < names.Length; ++i)
+        {
+            libTextures[i] = container.FindWrapper<LibSWBF2.Wrappers.Texture>(names[i]);
+            maxWidth = Mathf.Max(maxWidth, libTextures[i].width);
+            maxHeight = Mathf.Max(maxHeight, libTextures[i].height);
+        }
+
+        byte[] buffer = new byte[maxWidth * maxHeight * 4];
+
+        Texture2DArray textures = new Texture2DArray(maxWidth, maxHeight, names.Length, TextureFormat.RGBA32, false);
+        for (int i = 0; i < names.Length; ++i)
+        {
+            var tex = libTextures[i];
+
+            if (tex.width < textures.width || tex.height < textures.height)
+            {
+                byte[] data = tex.GetBytesRGBA();
+
+                for (int row = 0; row < maxHeight; ++row)
+                {
+                    int dstWidth = textures.width * 4;
+                    int dstStartIdx = row * textures.width * 4;
+                    if (row < tex.height)
+                    {
+                        int srcWidth = tex.width * 4;
+                        int srcStartIdx = row * tex.width * 4;
+
+                        Array.Copy(data, srcStartIdx, buffer, dstStartIdx, srcWidth);
+                        for (int x = dstWidth - srcWidth; x < dstWidth; ++x)
+                        {
+                            // fill remaining collumns with 0
+                            buffer[dstStartIdx + x] = 0;
+                        }
+                    }
+                    else
+                    {
+                        for (int x = 0; x < dstWidth; ++x)
+                        {
+                            // fill remaining rows with 0
+                            buffer[dstStartIdx + x] = 0;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                buffer = tex.GetBytesRGBA();
+            }
+
+            buffer = mirror ? MirrorVertically(buffer, tex.width, tex.height, 4) : buffer;
+            textures.SetPixelData(buffer, 0, i);
+        }
+        textures.Apply();
+        return textures;
+    }
+
 
     static byte[] MirrorVertically(byte[] data, int width, int height, int stride)
     {

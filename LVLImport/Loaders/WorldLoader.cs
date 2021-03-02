@@ -22,8 +22,8 @@ public class WorldLoader : Loader {
     public bool ImportTerrain = true;
     public bool TerrainAsMesh = false;
     public static bool UseHDRP;
-
     public static WorldLoader Instance { get; private set; } = null;
+
     static WorldLoader()
     {
         Instance = new WorldLoader();
@@ -74,7 +74,14 @@ public class WorldLoader : Loader {
                 GameObject terrainGameObject;
                 if (TerrainAsMesh)
                 {
-                    terrainGameObject = ImportTerrainAsMesh(terrain, world.name);
+                    if (UseHDRP)
+                    {
+                        terrainGameObject = ImportTerrainAsMeshHDRP(terrain);
+                    }
+                    else
+                    {
+                        terrainGameObject = ImportTerrainAsMesh(terrain, world.name);
+                    }
                 }
                 else 
                 {
@@ -182,7 +189,7 @@ public class WorldLoader : Loader {
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
        
-        UMaterial terrainMat = new UMaterial(MaterialLoader.TerrainShader);
+        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDShader);
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terrainMat, Path.Combine(SaveDirectory, name + "_terrain.mat"));
@@ -190,20 +197,19 @@ public class WorldLoader : Loader {
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
-        terrainMat.mainTexture = TextureLoader.Instance.ImportTexture(terrain.layerTextures[0]);
 
         int i = 0;
-        //foreach (string texName in terrain.layerTextures)
-        //{
-        //    Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
-        //    string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
+        foreach (string texName in terrain.layerTextures)
+        {
+            Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
+            string layerTexName = "_LayerXXTex".Replace("XX", i.ToString());
 
-        //    if (tex != null)
-        //    {
-        //        renderer.sharedMaterial.SetTexture(layerTexName, tex);  
-        //    }
-        //    i++;
-        //}
+            if (tex != null)
+            {
+                renderer.sharedMaterial.SetTexture(layerTexName, tex);
+            }
+            i++;
+        }
 
         terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
         
@@ -262,6 +268,74 @@ public class WorldLoader : Loader {
     }
 
 
+    private GameObject ImportTerrainAsMeshHDRP(LibTerrain terrain)
+    {
+        Mesh terrainMesh = new Mesh();
+
+        terrainMesh.indexFormat = IndexFormat.UInt32;
+        terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
+        terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int)s));
+        terrainMesh.RecalculateNormals();
+
+        GameObject terrainObj = new GameObject("Terrain");
+        terrainObj.isStatic = true;
+
+        MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
+        filter.sharedMesh = terrainMesh;
+
+        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainHDRPShader);
+
+        MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = terrainMat;
+
+        Texture2DArray layers = TextureLoader.Instance.ImportTextures(terrain.layerTextures.ToArray());
+        terrainMat.SetTexture("Texture2DArray_7458b9063e46411289f9d5f3dc012ed7", layers);
+
+        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);
+        int numBlendTextures = ((int)numLayers / 4) + 1;
+
+        Texture2DArray blends = new Texture2DArray((int)blendDim, (int)blendDim, numBlendTextures, UnityEngine.TextureFormat.RGBA32, false);
+        for (int blendIdx = 0; blendIdx < numBlendTextures; ++blendIdx)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                Color[] colors = blends.GetPixels(blendIdx, 0);
+
+                for (int w = 0; w < blendDim; w++)
+                {
+                    for (int h = 0; h < blendDim; h++)
+                    {
+                        Color col = Color.black;
+                        int baseIndex = (int)(numLayers * (w * blendDim + h));
+                        int offset = i * 4;
+
+                        for (int z = 0; z < 4; z++)
+                        {
+                            if (offset + z < numLayers)
+                            {
+                                col[z] = ((float)blendMapRaw[baseIndex + offset + z]) / 255.0f;
+                            }
+                        }
+
+                        colors[(blendDim - w - 1) * blendDim + h] = col;
+                    }
+                }
+
+                blends.SetPixels(colors, blendIdx, 0);
+            }
+        }
+        blends.Apply();
+        terrainMat.SetTexture("Texture2DArray_efc64de5ab5243fd9397c56dc64194ca", blends);
+        terrainMat.SetFloat("Vector1_665d2bac01fe4570bbe0622def4f5bce", layers.depth);
+
+        terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
+        float bound = (float)(dim * dimScale);
+        renderer.sharedMaterial.SetFloat("_XBound", bound);
+        renderer.sharedMaterial.SetFloat("_ZBound", bound);
+
+        terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f, 1.0f, -1.0f);
+        return terrainObj;
+    }
 
 
     private GameObject ImportTerrainAsUnity(LibTerrain terrain, string name)
@@ -437,7 +511,7 @@ public class WorldLoader : Loader {
                 else if (ltype == 1.0f)
                 {
                     lightComp = lightObj.AddHDLight(HDLightTypeAndShape.Directional);
-                    lightComp.intensity = 1000000.0f;
+                    lightComp.intensity = 400000.0f;
                 }
 
                 lightComp.EnableColorTemperature(false);

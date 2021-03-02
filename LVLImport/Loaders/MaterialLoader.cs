@@ -21,11 +21,10 @@ public class MaterialLoader : Loader
 {
     static Shader DefaultSTDShader         = Shader.Find("ConversionAssets/SWBFStandard");
     static Shader DefaultHDRPShader        = Shader.Find("HDRP/Lit");
-    static Shader DefaultTerrainSTDShader  = Shader.Find("ConversionAssets/SWBFTerrain");
-    static Shader DefaultTerrainHDRPShader = Shader.Find("HDRP/Lit");
+    public static Shader DefaultTerrainSTDShader  = Shader.Find("ConversionAssets/SWBFTerrain");
+    public static Shader DefaultTerrainHDRPShader = Shader.Find("Shader Graphs/SWBFTerrainHDRP");
 
     public static Shader DefaultShader => UseHDRP ? DefaultHDRPShader : DefaultSTDShader;
-    public static Shader TerrainShader => UseHDRP ? DefaultTerrainHDRPShader : DefaultTerrainSTDShader;
 
 
     public static bool UseHDRP;
