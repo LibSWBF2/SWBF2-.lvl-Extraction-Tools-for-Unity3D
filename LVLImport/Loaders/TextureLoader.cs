@@ -28,8 +28,6 @@ public class TextureLoader : Loader {
         texDataBase.Clear();
     }
 
-
-
     public Texture2D ImportTexture(string name) 
     {
         string texPath = SaveDirectory + "/" + name + ".png";
@@ -43,15 +41,10 @@ public class TextureLoader : Loader {
 
         if (tex != null && tex.height * tex.width > 0)
         {
-            Texture2D newTexture = new Texture2D(tex.width,tex.height);
+            Texture2D newTexture = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
+            newTexture.name = tex.name;
             byte[] data = tex.GetBytesRGBA();
-
-            Color[] colors = newTexture.GetPixels(0);
-            for (int i = 0; i < tex.height * tex.width; i++)
-            {
-                colors[i] = new Color(data[i*4]/255.0f,data[i*4 + 1]/255.0f,data[i*4 + 2]/255.0f,data[i*4 + 3]/255.0f);
-            }
-            newTexture.SetPixels(colors,0);
+            newTexture.LoadRawTextureData(MirrorVertically(tex.GetBytesRGBA(), tex.width, tex.height, 4));
             newTexture.Apply();
 
             if (SaveAssets)
@@ -66,8 +59,21 @@ public class TextureLoader : Loader {
         }
         else 
         {
-            Debug.LogError(String.Format("Texture: {0} failed to load!", name));
+            Debug.LogWarningFormat("Texture: {0} failed to load!", name);
             return null;
         }
+    }
+
+
+    static byte[] MirrorVertically(byte[] data, int width, int height, int stride)
+    {
+        int byteWidth = width * stride;
+        byte[] mirrored = new byte[data.Length];
+        for (int rowIdx = 0; rowIdx < height; ++rowIdx)
+        {
+            int rowReverseIdx = height - rowIdx - 1;
+            Array.Copy(data, rowReverseIdx * byteWidth, mirrored, rowIdx * byteWidth, byteWidth);
+        }
+        return mirrored;
     }
 }
