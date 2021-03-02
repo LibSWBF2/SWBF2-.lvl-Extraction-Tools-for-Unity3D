@@ -68,10 +68,6 @@ public class ModelLoader : Loader {
 
             UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset);
             UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset);
-            //UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset);
-
-            //Array.Copy(seg.GetVertexBuffer<Vector3>(), 0, positions, dataOffset, vBufLength);
-            //Array.Copy(seg.GetNormalsBuffer<Vector3>(), 0, normals, dataOffset, vBufLength);
             Array.Copy(seg.GetUVBuffer<Vector2>(), 0, texcoords, dataOffset, vBufLength);
 
             offsets[i++] = dataOffset;
@@ -141,7 +137,7 @@ public class ModelLoader : Loader {
 
         if (txStatus != 0 && txStatus != segments.Length)
         {
-            Debug.LogError(String.Format("Model {0} has heterogeneous pretransformation!", model.name));
+            Debug.LogWarningFormat("Model {0} has heterogeneous pretransformation!  Please tell devs about this!!", model.name);
             return 0;
         }
 
@@ -442,7 +438,7 @@ public class ModelLoader : Loader {
         }
         catch 
         {
-            Debug.LogError(modelName + ": Error in process of CollisionMesh fetch...");
+            Debug.LogWarning(modelName + ": Error in process of CollisionMesh fetch...");
             return false;
         }
 
@@ -467,7 +463,7 @@ public class ModelLoader : Loader {
             } 
             catch
             {
-                Debug.LogError(modelName + ": Error while creating mesh collider...");
+                Debug.LogWarning(modelName + ": Error while creating mesh collider...");
             } 
         }
 
