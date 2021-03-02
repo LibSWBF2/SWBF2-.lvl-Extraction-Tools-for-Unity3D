@@ -33,11 +33,11 @@ public class AnimationLoader : Loader {
                                                 "localPosition.y",
                                                 "localPosition.z"  };
     //In case space conversions are needed
-    private static float[] ComponentMultipliers = {  1.0f,
+    private static float[] ComponentMultipliers = {  -1.0f,
                                                       1.0f,
                                                      1.0f,
-                                                     1.0f,
-                                                      1.0f,
+                                                     -1.0f,
+                                                      -1.0f,
                                                       1.0f,
                                                      1.0f  };
 
@@ -134,7 +134,7 @@ public class AnimationLoader : Loader {
 
     	if (animBank == null)
     	{
-    		Debug.LogError(String.Format("AnimationBank {0} failed to load!", animBankName));
+    		Debug.LogWarningFormat("AnimationBank {0} failed to load!", animBankName);
     		return null;
     	}
 
@@ -169,7 +169,7 @@ public class AnimationLoader : Loader {
     	}
     	else 
     	{
-    		Debug.LogError(String.Format("AnimationBank {0} does contain the animation: {1}!", animBankName, animationName));
+    		Debug.LogWarningFormat("AnimationBank {0} does contain the animation {1}!", animBankName, animationName);
     		return null;
     	}
     }

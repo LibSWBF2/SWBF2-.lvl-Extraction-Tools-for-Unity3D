@@ -110,7 +110,7 @@ public class ClassLoader : Loader {
         var ecWrapper = container.FindWrapper<EntityClass>(name);
         if (ecWrapper == null)
         {
-            Debug.LogError(String.Format("\tObject class: {0} not defined in loaded levels...", name));
+            Debug.LogWarningFormat("\tObject class: {0} not defined in loaded levels...", name);
             return null;
         }
 
@@ -120,14 +120,14 @@ public class ClassLoader : Loader {
         try {
             if (!ecWrapper.GetOverriddenProperties(out uint[] p_, out string[] v_))
             {
-                Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+                Debug.LogWarningFormat("\tFailed to load object class: {0}", name);
                 return null;
             }
             properties = new List<uint>(p_);
             values = new List<string>(v_);
         } catch
         {
-            Debug.LogError(String.Format("\tFailed to load object class: {0}", name));
+            Debug.LogWarningFormat("\tFailed to load object class: {0}", name);
             return null;
         }
 
@@ -149,7 +149,7 @@ public class ClassLoader : Loader {
             try {
                 if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
                 {
-                    Debug.LogError(String.Format("Failed to load model ({1}) used by object: {0}", name, geometryName));
+                    Debug.LogWarningFormat("Failed to load model {1} used by object {0}", name, geometryName);
                     return obj;
                 }
 
@@ -164,7 +164,7 @@ public class ClassLoader : Loader {
             }
             catch 
             {
-                Debug.LogError(String.Format("Failed to load model ({1}) used by object: {0}", name, geometryName));
+                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", name, geometryName);
                 return obj;
             }
         }
@@ -241,7 +241,7 @@ public class ClassLoader : Loader {
 
                     if (childTx == null)
                     {
-                        Debug.LogWarning("\t" + name + ": Couldnt find hardpoint: " + propertyValue);
+                        Debug.LogWarningFormat("\t{0}: Couldn't find hardpoint {1}", name, propertyValue);
                         lastAttached.transform.SetParent(obj.transform, false);
                     }
                     else 

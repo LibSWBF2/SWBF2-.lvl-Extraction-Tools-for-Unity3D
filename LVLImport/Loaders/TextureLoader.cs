@@ -44,13 +44,18 @@ public class TextureLoader : Loader {
         {
             Texture2D newTexture = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
             newTexture.name = tex.name;
-            byte[] data = mirror ? MirrorVertically(tex.GetBytesRGBA(), tex.width, tex.height, 4) : tex.GetBytesRGBA();
+
+            byte[] data = tex.GetBytesRGBA();
+            data = mirror ? MirrorVertically(data, tex.width, tex.height, 4) : data;
+
             newTexture.LoadRawTextureData(data);
             newTexture.Apply();
 
             if (SaveAssets)
             {
                 File.WriteAllBytes(texPath, newTexture.EncodeToPNG());
+                // TODO: figure out how to save texture assets in an AssetEditing block without
+                // lost refs after save/light bake...
                 AssetDatabase.ImportAsset(texPath, ImportAssetOptions.Default);
                 newTexture = (Texture2D) AssetDatabase.LoadAssetAtPath(texPath, typeof(Texture2D));
             }

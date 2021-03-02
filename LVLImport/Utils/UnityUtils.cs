@@ -120,6 +120,49 @@ public static class UnityUtils {
     }
 
 
+
+    //Skeleton transform conversion to match vertex data handedness flip
+    public static UnityEngine.Quaternion QuatFromLibSkel(LibSWBF2.Types.Vector4 vec)
+    {
+        return new UnityEngine.Quaternion(-vec.X, vec.Y, vec.Z, -vec.W);
+    }
+
+    //''
+    public static UVector3 Vec3FromLibSkel(LibSWBF2.Types.Vector3 vec)
+    {
+        return new UVector3(-vec.X, vec.Y, vec.Z);
+    }
+
+
+
+    public static void ConvertSpaceAndFillVec3(UVector3[] vectorsIn, UVector3[] vectorsOut, int offset=0, bool flipX = true)
+    {
+        if (vectorsIn != null){
+            for (int i = 0; i < vectorsIn.Length; i++)
+            {
+                UVector3 cur = vectorsIn[i];
+                cur.x = flipX ? -cur.x : cur.x;
+                vectorsOut[i + offset] = cur;
+            }
+        } 
+    }
+
+
+    public static ushort[] ReverseWinding(ushort[] indices)
+    {
+        ushort temp;
+        for (int i = 0; i < indices.Length; i+=3)
+        {
+            temp = indices[i];
+            indices[i] = indices[i+2];
+            indices[i+2] = temp;
+        }
+        return indices;
+    }
+
+
+
+
     /*
     Only parameter of note is fix.  This is used for broken skeletons
     (so far only example is Jabba from tat3.lvl) where 
