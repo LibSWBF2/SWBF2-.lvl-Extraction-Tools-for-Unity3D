@@ -182,8 +182,7 @@ public class ModelLoader : Loader {
     node with attached segments.
     */
 
-    public bool AddStaticMeshes(GameObject newObject, Model model,
-                                                    Dictionary<string, Transform> skeleton)
+    bool AddStaticMeshes(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, bool shadowSensitive)
     {
         List<Segment> segments = (from segment in model.GetSegments() where !segment.boneName.Equals("") select segment).ToList();
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
@@ -212,6 +211,8 @@ public class ModelLoader : Loader {
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.material)).ToArray();
+            renderer.shadowCastingMode = shadowSensitive ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            renderer.receiveShadows = shadowSensitive;
         }
 
         return true;
@@ -294,7 +295,7 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    public bool AddModelComponents(GameObject newObject, Model model)
+    bool AddModelComponents(GameObject newObject, Model model, bool shadowSensitive)
     {   
         if (model == null || newObject == null)
         {
@@ -306,7 +307,7 @@ public class ModelLoader : Loader {
             return false;
         }
 
-        AddStaticMeshes(newObject, model, skeleton);
+        AddStaticMeshes(newObject, model, skeleton, shadowSensitive);
         
         if (model.isSkinned)
         {
@@ -316,9 +317,9 @@ public class ModelLoader : Loader {
         return true;
     }
 
-    public bool AddModelComponents(GameObject newObject, string modelName)
+    public bool AddModelComponents(GameObject newObject, string modelName, bool shadowSensitive=true)
     {
-        return AddModelComponents(newObject, container.FindWrapper<Model>(modelName));
+        return AddModelComponents(newObject, container.FindWrapper<Model>(modelName), shadowSensitive);
     }
 
 

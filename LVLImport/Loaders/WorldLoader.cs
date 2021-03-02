@@ -1,17 +1,14 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 using UnityEngine;
 using UnityEngine.Rendering;
-using Unity.Collections;
+using UnityEngine.Rendering.HighDefinition;
 using UnityEditor;
 
-using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
-using LibSWBF2.Utils;
 
 using LibTerrain = LibSWBF2.Wrappers.Terrain;
 using UMaterial = UnityEngine.Material;
@@ -24,6 +21,7 @@ public class WorldLoader : Loader {
 
     public bool ImportTerrain = true;
     public bool TerrainAsMesh = false;
+    public static bool UseHDRP;
 
     public static WorldLoader Instance { get; private set; } = null;
     static WorldLoader()
@@ -52,6 +50,8 @@ public class WorldLoader : Loader {
 
     public void ImportWorld(World world, out bool hasTerrain)
     {
+        MaterialLoader.UseHDRP = UseHDRP;
+
         hasTerrain = false;
         GameObject worldRoot = new GameObject(world.name);
 
@@ -190,19 +190,20 @@ public class WorldLoader : Loader {
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
+        terrainMat.mainTexture = TextureLoader.Instance.ImportTexture(terrain.layerTextures[0]);
 
         int i = 0;
-        foreach (string texName in terrain.layerTextures)
-        {
-            Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
-            string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
+        //foreach (string texName in terrain.layerTextures)
+        //{
+        //    Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
+        //    string layerTexName = "_LayerXXTex".Replace("XX",i.ToString());
 
-            if (tex != null)
-            {
-                renderer.sharedMaterial.SetTexture(layerTexName, tex);  
-            }
-            i++;
-        }
+        //    if (tex != null)
+        //    {
+        //        renderer.sharedMaterial.SetTexture(layerTexName, tex);  
+        //    }
+        //    i++;
+        //}
 
         terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
         
@@ -415,37 +416,68 @@ public class WorldLoader : Loader {
             lightPos.Y += .2f;
             lightObj.transform.position = UnityUtils.Vec3FromLibWorld(lightPos);
 
-
-            ULight lightComp = lightObj.AddComponent<ULight>();
-            lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
-
             float ltype = sl.GetFloat("Type");
             float range = sl.GetFloat("Range");
 
-            if (ltype == 2.0f)
-            {   
-                lightComp.type = UnityEngine.LightType.Point;
-                lightComp.range = range;
-                lightComp.intensity = 4.0f;           
-            }
-            else if (ltype == 3.0f)
+
+            if (UseHDRP)
             {
-                lightComp.type = UnityEngine.LightType.Spot;
-                lightComp.range = range;
-                lightComp.spotAngle = sl.GetVec2("Cone").X * Mathf.Rad2Deg;   
-                lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
+                HDAdditionalLightData lightComp = null;
+
+                if (ltype == 2.0f)
+                {
+                    lightComp = lightObj.AddHDLight(HDLightTypeAndShape.Point);
+                    lightComp.intensity = 10000.0f;
+                }
+                else if (ltype == 3.0f)
+                {
+                    lightComp = lightObj.AddHDLight(HDLightTypeAndShape.ConeSpot);
+                    lightComp.intensity = 10000.0f;
+                }
+                else if (ltype == 1.0f)
+                {
+                    lightComp = lightObj.AddHDLight(HDLightTypeAndShape.Directional);
+                    lightComp.intensity = 1000000.0f;
+                }
+
+                lightComp.EnableColorTemperature(false);
+                lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
+                lightComp.shadowUpdateMode = ShadowUpdateMode.EveryFrame;
+                lightComp.EnableShadows(true);
             }
-            else if (ltype == 1.0f)
+            else
             {
-                lightComp.type = UnityEngine.LightType.Directional;
-                lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
-                //lightComp.range = light.range;
-                //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
-            }
-            else 
-            {
-                Debug.LogWarning("Cant handle light type for " + light.name + " yet");
-                continue;
+                ULight lightComp = lightObj.AddComponent<ULight>();
+                lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
+
+                if (ltype == 2.0f)
+                {   
+                    lightComp.type = UnityEngine.LightType.Point;
+                    lightComp.range = range;
+                    lightComp.intensity = 4.0f;           
+                }
+                else if (ltype == 3.0f)
+                {
+                    lightComp.type = UnityEngine.LightType.Spot;
+                    lightComp.range = range;
+                    lightComp.spotAngle = sl.GetVec2("Cone").X * Mathf.Rad2Deg;   
+                    lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
+                }
+                else if (ltype == 1.0f)
+                {
+                    lightComp.type = UnityEngine.LightType.Directional;
+                    lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
+                    //lightComp.range = light.range;
+                    //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
+                }
+                else 
+                {
+                    Debug.LogWarning("Cant handle light type for " + light.name + " yet");
+                    continue;
+                }
+
+                lightComp.shadows = LightShadows.Soft;
+                lightComp.lightmapBakeType = LightmapBakeType.Realtime;
             }
 
             if (IsGlobal)
@@ -489,10 +521,10 @@ public class WorldLoader : Loader {
                 string geometryName = sD.GetString("Geometry");
                 GameObject domeModelObj = new GameObject(geometryName);
 
-                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName);
-                try {
-                    MaterialLoader.Instance.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
-                } catch {}
+                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, false);
+                //try {
+                //    MaterialLoader.Instance.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
+                //} catch {}
 
                 if (SaveAssets)
                 {
@@ -515,7 +547,7 @@ public class WorldLoader : Loader {
             string geometryName = domeObjectField.scope.GetString("Geometry");
             GameObject domeObject = new GameObject(geometryName);
 
-            ModelLoader.Instance.AddModelComponents(domeObject, geometryName);
+            ModelLoader.Instance.AddModelComponents(domeObject, geometryName, false);
 
             if (SaveAssets)
             {

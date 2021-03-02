@@ -17,10 +17,18 @@ using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
 
 
-public class MaterialLoader : Loader {
+public class MaterialLoader : Loader
+{
+    static Shader DefaultSTDShader         = Shader.Find("ConversionAssets/SWBFStandard");
+    static Shader DefaultHDRPShader        = Shader.Find("HDRP/Lit");
+    static Shader DefaultTerrainSTDShader  = Shader.Find("ConversionAssets/SWBFTerrain");
+    static Shader DefaultTerrainHDRPShader = Shader.Find("HDRP/Lit");
 
-    public static Shader DefaultShader { get; private set; } = Shader.Find("ConversionAssets/SWBFStandard");
-    public static Shader TerrainShader { get; private set; } = Shader.Find("ConversionAssets/SWBFTerrain");
+    public static Shader DefaultShader => UseHDRP ? DefaultHDRPShader : DefaultSTDShader;
+    public static Shader TerrainShader => UseHDRP ? DefaultTerrainHDRPShader : DefaultTerrainSTDShader;
+
+
+    public static bool UseHDRP;
 
 
     public static MaterialLoader Instance { get; private set; } = null;
@@ -62,34 +70,60 @@ public class MaterialLoader : Loader {
                 }
 
                 material.name = materialName;
-                material.SetFloat("_Glossiness", 0.0f);
 
-                if (matFlags.HasFlag(MaterialFlags.Hardedged))
+                if (UseHDRP)
                 {
-                    SetRenderMode(ref material, 1);
-                }
-                else if (matFlags.HasFlag(MaterialFlags.Transparent))
-                {
-                    SetRenderMode(ref material, 2);
-                }
+                    if (matFlags.HasFlag(MaterialFlags.Doublesided))
+                    {
+                        material.SetFloat("_DoubleSidedEnable", 1.0f);
+                    }
+                    if (matFlags.HasFlag(MaterialFlags.Transparent))
+                    {
+                        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    }
 
-                if (matFlags.HasFlag(MaterialFlags.Doublesided))
-                {
-                    material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
-                }
+                    material.SetFloat("_Metallic", 0.0f);
+                    material.SetFloat("_Smoothness", 0.0f);
 
-                Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
-                if (importedTex != null)
-                {
-                    material.mainTexture = importedTex;
+                    Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
+                    if (importedTex != null)
+                    {
+                        //material.EnableKeyword("_DISABLE_SSR_TRANSPARENT");
+                        material.EnableKeyword("_NORMALMAP_TANGENT_SPACE");
+                        material.mainTexture = importedTex;
+                    }
                 }
-
-                if (matFlags.HasFlag(MaterialFlags.Glow))
+                else
                 {
-                    material.EnableKeyword("_EMISSION");
-                    material.SetTexture("_EmissionMap", importedTex);
-                    material.SetColor("_EmissionColor", Color.white);
-                }         
+                    material.SetFloat("_Glossiness", 0.0f);
+
+                    if (matFlags.HasFlag(MaterialFlags.Hardedged))
+                    {
+                        SetRenderMode(ref material, 1);
+                    }
+                    else if (matFlags.HasFlag(MaterialFlags.Transparent))
+                    {
+                        SetRenderMode(ref material, 2);
+                    }
+
+                    if (matFlags.HasFlag(MaterialFlags.Doublesided))
+                    {
+                        material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
+                    }
+
+                    Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
+                    if (importedTex != null)
+                    {
+                        material.mainTexture = importedTex;
+                    }
+
+                    if (matFlags.HasFlag(MaterialFlags.Glow))
+                    {
+                        material.EnableKeyword("_EMISSION");
+                        material.SetTexture("_EmissionMap", importedTex);
+                        material.SetColor("_EmissionColor", Color.white);
+                    }
+                }
 
                 materialDataBase[materialName] = material;
             }
@@ -100,33 +134,8 @@ public class MaterialLoader : Loader {
         }
     }
 
-
-
-    public void PatchMaterial(GameObject obj, string patchType="")
-    {
-        var renderer = obj.GetComponent<MeshRenderer>();
-
-        if (renderer != null)
-        {
-            foreach (UMaterial mat in renderer.sharedMaterials)
-            {
-                if (patchType.Equals("skydome"))
-                {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetTexture("_EmissionMap", mat.GetTexture("_MainTex"));
-                    mat.SetColor("_EmissionColor", Color.white);
-                }
-            }
-        }
-        else
-        {
-            Debug.Log("Can't patch skydome mat, renderer is null...");
-        }
-    }
-
-
     /*From https://answers.unity.com/questions/1004666/change-material-rendering-mode-in-runtime.html */
-    public static void SetRenderMode(ref UMaterial standardShaderMaterial, int blendMode)
+    static void SetRenderMode(ref UMaterial standardShaderMaterial, int blendMode)
     {
         switch (blendMode)
         {
