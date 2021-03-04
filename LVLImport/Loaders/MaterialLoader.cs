@@ -19,12 +19,16 @@ using UMaterial = UnityEngine.Material;
 
 public class MaterialLoader : Loader
 {
-    static Shader DefaultSTDShader         = Shader.Find("ConversionAssets/SWBFStandard");
-    static Shader DefaultHDRPShader        = Shader.Find("HDRP/Lit");
-    public static Shader DefaultTerrainSTDShader  = Shader.Find("ConversionAssets/SWBFTerrain");
-    public static Shader DefaultTerrainHDRPShader = Shader.Find("Shader Graphs/SWBFTerrainHDRP");
+    static UMaterial DefaultSTDMaterial  = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
+    static UMaterial DefaultHDRPMaterial = new UMaterial(Shader.Find("HDRP/Lit"));
+    public static UMaterial DefaultTerrainSTDMaterial  = new UMaterial(Shader.Find("ConversionAssets/SWBFTerrain"));
+    public static UMaterial DefaultTerrainHDRPMaterial = new UMaterial(Shader.Find("Shader Graphs/SWBFTerrainHDRP"));
 
-    public static Shader DefaultShader => UseHDRP ? DefaultHDRPShader : DefaultSTDShader;
+    // what a stupid workaround....
+    static UMaterial DefaultHDRPTransparentMaterial = Resources.Load<UMaterial>("HDRPTransparent");
+    static UMaterial DefaultHDRPUnlitMaterial = Resources.Load<UMaterial>("HDRPUnlit");
+
+    public static UMaterial DefaultMaterial => UseHDRP ? DefaultHDRPMaterial : DefaultSTDMaterial;
 
 
     public static bool UseHDRP;
@@ -46,14 +50,14 @@ public class MaterialLoader : Loader
 
 
 
-    public UMaterial LoadMaterial(LibMaterial mat)
+    public UMaterial LoadMaterial(LibMaterial mat, bool unlit = false)
     {
         string texName = mat.textures[0];
         MaterialFlags matFlags = mat.materialFlags;
 
         if (texName == "")
         {
-            return new UMaterial(DefaultShader);
+            return new UMaterial(DefaultMaterial);
         } 
         else 
         {
@@ -61,39 +65,81 @@ public class MaterialLoader : Loader
 
             if (!materialDataBase.ContainsKey(materialName))
             {
-                UMaterial material = new UMaterial(DefaultShader);
-
-                if (SaveAssets)
-                {
-                    AssetDatabase.CreateAsset(material, Path.Combine(SaveDirectory, materialName + ".mat")); 
-                }
-
-                material.name = materialName;
+                UMaterial material = null;
 
                 if (UseHDRP)
                 {
+                    Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
+
+                    // glowing materials use the textures alpha channel as glow map
+                    // glowing materials can therefore NOT be transparent
+                    if (matFlags.HasFlag(MaterialFlags.Glow) && !matFlags.HasFlag(MaterialFlags.Transparent))
+                    {
+                        material = new UMaterial(unlit ? DefaultHDRPUnlitMaterial : DefaultHDRPMaterial);
+                        material.EnableKeyword("_EMISSIVE_MAPPING_BASE");
+                        material.EnableKeyword("_EMISSIVE_COLOR_MAP");
+                        if (importedTex != null)
+                        {
+                            material.SetTexture("_EmissiveColorMap", AlphaToGrayscale(importedTex));
+                        }
+                        material.SetColor("_EmissiveColor", Color.white * 30.0f);
+                        material.SetFloat("_EmissiveExposureWeight", 0.0f);
+                        //material.SetFloat("_EmissiveIntensity", 7.0f);
+                    }
+                    else if (matFlags.HasFlag(MaterialFlags.Transparent))
+                    {
+                        material = new UMaterial(DefaultHDRPTransparentMaterial);
+
+                        //material.SetFloat("_AlphaCutoffEnable", 1.0f);
+                        //material.SetFloat("_SurfaceType", 1.0f);
+                        //material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                        //material.EnableKeyword("_ENABLE_FOG_ON_TRANSPARENT");
+                        //material.EnableKeyword("ENABLE_ALPHA");
+                        //material.EnableKeyword("_DISABLE_SSR_TRANSPARENT");
+                        //material.EnableKeyword("_ALPHATEST_ON");
+                        //material.EnableKeyword("_ALPHATOMASK_ON");
+                        //material.SetFloat("_TransparentZWrite", 1.0f);
+                        //material.SetFloat("_EnableBlendModePreserveSpecularLighting", 0.0f);
+                        //material.SetFloat("_AlphaDstBlend", 10.0f);
+                        //material.SetFloat("_SrcBlend", 1.0f);
+                        //material.SetFloat("_DstBlend", 10.0f);
+                        //material.SetFloat("_ZWrite", 0.0f);
+                        //material.SetFloat("_StencilRefDepth", 0.0f);
+                        //material.SetFloat("_StencilRefGBuffer", 22.0f);
+                        //material.SetFloat("_StencilRefMV", 32.0f);
+                        //material.SetFloat("_ZTestDepthEqualForOpaque", 4.0f);
+                        //material.SetOverrideTag("RenderType", "Transparent");
+                        //material.renderQueue = 3000;
+                    }
+                    else
+                    {
+                        material = new UMaterial(unlit ? DefaultHDRPUnlitMaterial : DefaultHDRPMaterial);
+                    }
+
                     if (matFlags.HasFlag(MaterialFlags.Doublesided))
                     {
                         material.SetFloat("_DoubleSidedEnable", 1.0f);
-                    }
-                    if (matFlags.HasFlag(MaterialFlags.Transparent))
-                    {
-                        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                     }
 
                     material.SetFloat("_Metallic", 0.0f);
                     material.SetFloat("_Smoothness", 0.0f);
 
-                    Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
                     if (importedTex != null)
                     {
                         //material.EnableKeyword("_DISABLE_SSR_TRANSPARENT");
-                        material.EnableKeyword("_NORMALMAP_TANGENT_SPACE");
+                        //material.EnableKeyword("_NORMALMAP_TANGENT_SPACE");
                         material.mainTexture = importedTex;
                     }
                 }
                 else
                 {
+                    material = new UMaterial(DefaultMaterial);
+
+                    if (SaveAssets)
+                    {
+                        AssetDatabase.CreateAsset(material, Path.Combine(SaveDirectory, materialName + ".mat"));
+                    }
+
                     material.SetFloat("_Glossiness", 0.0f);
 
                     if (matFlags.HasFlag(MaterialFlags.Hardedged))
@@ -124,6 +170,7 @@ public class MaterialLoader : Loader
                     }
                 }
 
+                material.name = materialName;
                 materialDataBase[materialName] = material;
             }
 
@@ -179,5 +226,25 @@ public class MaterialLoader : Loader
                 standardShaderMaterial.renderQueue = 3000;
                 break;
         }
+    }
+
+    static Texture2D AlphaToGrayscale(Texture2D rgba)
+    {
+        Debug.Assert(rgba.format == UnityEngine.TextureFormat.RGBA32);
+
+        Texture2D grayscale = new Texture2D(rgba.width, rgba.height, UnityEngine.TextureFormat.RGB24, false);
+        int numPixels = rgba.width * rgba.height;
+        byte[] src = rgba.GetRawTextureData();
+        byte[] dst = new byte[numPixels * 3];
+        for (int i = 0; i < numPixels; ++i)
+        {
+            byte alpha = src[(i * 4) + 3];
+            dst[(i * 3) + 0] = alpha;
+            dst[(i * 3) + 1] = alpha;
+            dst[(i * 3) + 2] = alpha;
+        }
+        grayscale.LoadRawTextureData(dst);
+        grayscale.Apply();
+        return grayscale;
     }
 }

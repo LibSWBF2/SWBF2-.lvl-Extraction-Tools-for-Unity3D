@@ -168,7 +168,7 @@ public class ModelLoader : Loader {
     node with attached segments.
     */
 
-    bool AddStaticMeshes(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, bool shadowSensitive)
+    bool AddStaticMeshes(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, bool shadowSensitive, bool unlit)
     {
         List<Segment> segments = (from segment in model.GetSegments() where !segment.boneName.Equals("") select segment).ToList();
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
@@ -196,7 +196,7 @@ public class ModelLoader : Loader {
             filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray(), model.name + "_" + boneName);
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.material)).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.material, unlit)).ToArray();
             renderer.shadowCastingMode = shadowSensitive ? ShadowCastingMode.On : ShadowCastingMode.Off;
             renderer.receiveShadows = shadowSensitive;
         }
@@ -281,7 +281,7 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    bool AddModelComponents(GameObject newObject, Model model, bool shadowSensitive)
+    bool AddModelComponents(GameObject newObject, Model model, bool shadowSensitive, bool unlit)
     {   
         if (model == null || newObject == null)
         {
@@ -293,7 +293,7 @@ public class ModelLoader : Loader {
             return false;
         }
 
-        AddStaticMeshes(newObject, model, skeleton, shadowSensitive);
+        AddStaticMeshes(newObject, model, skeleton, shadowSensitive, unlit);
         
         if (model.isSkinned)
         {
@@ -303,9 +303,9 @@ public class ModelLoader : Loader {
         return true;
     }
 
-    public bool AddModelComponents(GameObject newObject, string modelName, bool shadowSensitive=true)
+    public bool AddModelComponents(GameObject newObject, string modelName, bool shadowSensitive=true, bool unlit = false)
     {
-        return AddModelComponents(newObject, container.FindWrapper<Model>(modelName), shadowSensitive);
+        return AddModelComponents(newObject, container.FindWrapper<Model>(modelName), shadowSensitive, unlit);
     }
 
 

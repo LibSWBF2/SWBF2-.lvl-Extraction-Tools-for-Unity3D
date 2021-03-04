@@ -196,7 +196,7 @@ public class WorldLoader : Loader
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
        
-        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDShader);
+        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDMaterial);
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terrainMat, Path.Combine(SaveDirectory, name + "_terrain.mat"));
@@ -290,7 +290,7 @@ public class WorldLoader : Loader
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
 
-        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainHDRPShader);
+        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainHDRPMaterial);
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
@@ -615,10 +615,7 @@ public class WorldLoader : Loader
                 string geometryName = sD.GetString("Geometry");
                 GameObject domeModelObj = new GameObject(geometryName);
 
-                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, false);
-                //try {
-                //    MaterialLoader.Instance.PatchMaterial(domeModelObj.transform.GetChild(0).gameObject, "skydome");
-                //} catch {}
+                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, false, true);
 
                 if (SaveAssets)
                 {

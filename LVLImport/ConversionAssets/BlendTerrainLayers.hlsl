@@ -28,7 +28,7 @@ void BlendTerrainLayers_float(
     float3 worldPos,
     out float3 output)
 {
-    float2 modulo = float2(32.0, 32.0);
+    float2 modulo = float2(24.0, 24.0);
 
     float2 gridLoc = abs(worldPos.xz);
     float2 uvTex = (gridLoc % modulo) / modulo;
@@ -76,10 +76,7 @@ void BlendTerrainLayers_float(
             blend = SAMPLE_TEXTURE2D(blend3, ss, (worldPos.xz + bounds) / (2.0 * bounds));
         }
 
-        //float lol = (worldPos.xz + bounds) / (2.0 * bounds) * 0.1;
-        //output = float3(lol, lol, lol);
         output += layerCol * blend[i % 4];
-        //output = layerTexDims[1][0] / layerTexDimMax;
     }
 }
 
