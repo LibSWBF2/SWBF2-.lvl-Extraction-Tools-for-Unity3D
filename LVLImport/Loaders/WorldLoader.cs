@@ -17,12 +17,23 @@ using ULight = UnityEngine.Light;
 
 
 
-public class WorldLoader : Loader {
-
+public class WorldLoader : Loader
+{
     public bool ImportTerrain = true;
     public bool TerrainAsMesh = false;
     public static bool UseHDRP;
     public static WorldLoader Instance { get; private set; } = null;
+
+
+    Dictionary<string, GameObject> loadedSkydomes;
+    string[] BlendUniforms = new string[4] 
+    {
+        "Texture2D_e354f4a9e36f4302a8feaefa8efd534f",   // Blend0
+        "Texture2D_495af9007a884b93af8983df8b78ffb8",   // Blend1
+        "Texture2D_174e3d4b45f741aaa690bfad9266cec2",   // Blend2
+        "Texture2D_0661f9003d2e44729888f3e8310ba999",   // Blend3
+    };
+
 
     static WorldLoader()
     {
@@ -33,10 +44,6 @@ public class WorldLoader : Loader {
     {
         loadedSkydomes = new Dictionary<string, GameObject>();        
     }
-
-
-    private Dictionary<string, GameObject> loadedSkydomes;
-
 
     public void Reset()
     {
@@ -288,50 +295,63 @@ public class WorldLoader : Loader {
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
 
-        Texture2DArray layers = TextureLoader.Instance.ImportTextures(terrain.layerTextures.ToArray());
+        Texture2DArray layers = TextureLoader.Instance.ImportTextures(terrain.layerTextures.ToArray(), out float[] xAbsDims);
         terrainMat.SetTexture("Texture2DArray_7458b9063e46411289f9d5f3dc012ed7", layers);
+        terrainMat.SetFloat("Vector1_665d2bac01fe4570bbe0622def4f5bce", layers.depth);
 
         terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);
-        int numBlendTextures = ((int)numLayers / 4) + 1;
-
-        Texture2DArray blends = new Texture2DArray((int)blendDim, (int)blendDim, numBlendTextures, UnityEngine.TextureFormat.RGBA32, false);
-        for (int blendIdx = 0; blendIdx < numBlendTextures; ++blendIdx)
+        for (int i = 0; i < 4; i++)
         {
-            for (int i = 0; i < 4; i++)
+            Texture2D blendTex = new Texture2D((int)blendDim, (int)blendDim);
+
+            Color[] colors = blendTex.GetPixels(0);
+
+            for (int w = 0; w < blendDim; w++)
             {
-                Color[] colors = blends.GetPixels(blendIdx, 0);
-
-                for (int w = 0; w < blendDim; w++)
+                for (int h = 0; h < blendDim; h++)
                 {
-                    for (int h = 0; h < blendDim; h++)
+                    Color col = Color.black;
+                    int baseIndex = (int)(numLayers * (w * blendDim + h));
+                    int offset = i * 4;
+
+                    for (int z = 0; z < 4; z++)
                     {
-                        Color col = Color.black;
-                        int baseIndex = (int)(numLayers * (w * blendDim + h));
-                        int offset = i * 4;
-
-                        for (int z = 0; z < 4; z++)
+                        if (offset + z < numLayers)
                         {
-                            if (offset + z < numLayers)
-                            {
-                                col[z] = ((float)blendMapRaw[baseIndex + offset + z]) / 255.0f;
-                            }
+                            col[z] = ((float)blendMapRaw[baseIndex + offset + z]) / 255.0f;
                         }
-
-                        colors[(blendDim - w - 1) * blendDim + h] = col;
                     }
-                }
 
-                blends.SetPixels(colors, blendIdx, 0);
+                    colors[(blendDim - w - 1) * blendDim + h] = col;
+                }
             }
+
+            blendTex.SetPixels(colors, 0);
+            blendTex.Apply();
+
+            renderer.sharedMaterial.SetTexture(BlendUniforms[i], blendTex);
         }
-        blends.Apply();
-        terrainMat.SetTexture("Texture2DArray_efc64de5ab5243fd9397c56dc64194ca", blends);
-        terrainMat.SetFloat("Vector1_665d2bac01fe4570bbe0622def4f5bce", layers.depth);
 
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
         float bound = (float)(dim * dimScale);
-        renderer.sharedMaterial.SetFloat("_XBound", bound);
-        renderer.sharedMaterial.SetFloat("_ZBound", bound);
+        renderer.sharedMaterial.SetFloat("Vector1_49103558bb1244ff8ac124e1bd984b90", bound);
+
+        Vector4[] layerTexDims = new Vector4[4];
+        float absDimMax = 0.0f;
+        Debug.Assert(xAbsDims.Length <= 16);
+        for (int i = 0; i < xAbsDims.Length; ++i)
+        {
+            absDimMax = Mathf.Max(absDimMax, xAbsDims[i]);
+        }
+        for (int i = 0; i < xAbsDims.Length; ++i)
+        {
+            layerTexDims[i / 4][i % 4] = xAbsDims[i] / absDimMax;
+        }
+
+        renderer.sharedMaterial.SetVector("Vector4_1e6425e6507a4b929dc007ed28cce2a1", layerTexDims[0]);
+        renderer.sharedMaterial.SetVector("Vector4_bb80c51fa149447d9ecd026c6a02f191", layerTexDims[1]);
+        renderer.sharedMaterial.SetVector("Vector4_0d4ad4ff048e46a8aa2f1787736e6b9f", layerTexDims[2]);
+        renderer.sharedMaterial.SetVector("Vector4_bbab58e8dc3648e2951866e087bc80dd", layerTexDims[3]);
 
         terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f, 1.0f, -1.0f);
         return terrainObj;

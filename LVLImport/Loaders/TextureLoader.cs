@@ -9,8 +9,8 @@ using UnityEditor;
 using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
-
-public class TextureLoader : Loader {
+public class TextureLoader : Loader
+{
 
     public static TextureLoader Instance { get; private set; } = null;
 
@@ -70,10 +70,11 @@ public class TextureLoader : Loader {
         }
     }
 
-    public Texture2DArray ImportTextures(string[] names, bool mirror = false)
+    public Texture2DArray ImportTextures(string[] names, out float[] xDims, bool mirror = false)
     {
         int maxWidth = 0;
         int maxHeight = 0;
+        xDims = new float[names.Length];
 
         LibSWBF2.Wrappers.Texture[] libTextures = new LibSWBF2.Wrappers.Texture[names.Length];
         for (int i = 0; i < names.Length; ++i)
@@ -89,6 +90,7 @@ public class TextureLoader : Loader {
         for (int i = 0; i < names.Length; ++i)
         {
             var tex = libTextures[i];
+            xDims[i] = tex.width;
 
             if (tex.width < textures.width || tex.height < textures.height)
             {

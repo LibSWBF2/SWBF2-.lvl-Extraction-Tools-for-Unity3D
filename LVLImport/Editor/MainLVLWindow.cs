@@ -183,7 +183,7 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
 
-        
+        WorldLoader.UseHDRP = GUILayout.Toggle(WorldLoader.UseHDRP, "Use HDRP");
         GUILayout.BeginHorizontal();
        
         startLoadWorlds = GUILayout.Button("Import Worlds",GUILayout.Width(100)) ? true : currentlyLoading && startLoadWorlds;
@@ -197,6 +197,7 @@ public class LVLImportWindow : EditorWindow {
         if (startLoading)
         {
             container = new Container();
+            WorldLoader.UseHDRP = true;
 
             fileHandles = new List<uint>();
             foreach (string path in filesToLoad)
