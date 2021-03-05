@@ -153,12 +153,12 @@ public class WorldLoader : Loader
                     break;
 
                 default:
-                    break; 
+                    continue;
             }
 
-            if (instanceObject == null)
+            if (baseName == "commandpost")
             {
-                continue;
+                instanceObject.AddComponent<GC_commandpost>().Init(inst);
             }
 
             if (!inst.name.Equals(""))
@@ -491,6 +491,7 @@ public class WorldLoader : Loader
         GameObject localLightsRoot = new GameObject("LocalLights");
         lightObjects.Add(localLightsRoot);
 
+        bool sunFound = false;
         foreach (Field light in lightFields) 
         {
             string lightName = light.GetString();
@@ -536,8 +537,12 @@ public class WorldLoader : Loader
 
                 lightComp.EnableColorTemperature(false);
                 lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
-                lightComp.shadowUpdateMode = ShadowUpdateMode.EveryFrame;
-                lightComp.EnableShadows(true);
+                if (!sunFound)
+                {
+                    lightComp.EnableShadows(true);
+                    lightComp.shadowUpdateMode = ShadowUpdateMode.EveryFrame;
+                    sunFound = true;
+                }
             }
             else
             {

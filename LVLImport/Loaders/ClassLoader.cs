@@ -44,6 +44,21 @@ public class ClassLoader : Loader {
     }
 
 
+    public void AssignProp<T>(Instance inst, string propName, ref T value)
+    {
+        if (inst.GetProperty(propName, out string outVal))
+        {
+            if (typeof(T) == typeof(Collision))
+            {
+                // TODO: find region instance
+                throw new NotImplementedException();
+            }
+            else
+            {
+                value = (T)Convert.ChangeType(outVal, typeof(T));
+            }
+        }
+    }
 
 
     public string GetBaseClassName(string name)
