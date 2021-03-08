@@ -7,7 +7,7 @@ using System.Linq;
 
 using UnityEngine;
 using UnityEditor;
-
+using LibSWBF2;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
 
@@ -33,7 +33,7 @@ public class LVLImportWindow : EditorWindow {
     Container container;
 
     static List<string> filesToLoad = new List<string>();
-    List<uint>   fileHandles = new List<uint>();
+    List<SWBF2Handle> fileHandles = new List<SWBF2Handle>();
 
 
 
@@ -199,7 +199,7 @@ public class LVLImportWindow : EditorWindow {
             container = new Container();
             WorldLoader.UseHDRP = true;
 
-            fileHandles = new List<uint>();
+            fileHandles = new List<SWBF2Handle>();
             foreach (string path in filesToLoad)
             {
                 fileHandles.Add(container.AddLevel(path));
@@ -214,7 +214,7 @@ public class LVLImportWindow : EditorWindow {
         {
             for (int i = 0; i < filesToLoad.Count; i++)
             {
-                uint handle = fileHandles[i];
+                SWBF2Handle handle = fileHandles[i];
                 float progress = container.GetProgress(handle);
                 EditorGUI.ProgressBar(new Rect(3, 250 + 30 * i, position.width - 6, 20), progress, filesToLoad[i]);
             }
@@ -239,7 +239,7 @@ public class LVLImportWindow : EditorWindow {
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
 
 
-                foreach (uint handle in fileHandles)
+                foreach (SWBF2Handle handle in fileHandles)
                 {
                     Level level = container.GetLevel(handle);
                     if (level == null)

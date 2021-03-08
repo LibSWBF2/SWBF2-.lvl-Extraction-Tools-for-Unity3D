@@ -59,7 +59,7 @@ public class WorldLoader : Loader
         ImportWorld(world, out _);
     }
 
-    public void ImportWorld(World world, out bool hasTerrain)
+    public GameObject ImportWorld(World world, out bool hasTerrain)
     {
         MaterialLoader.UseHDRP = UseHDRP;
 
@@ -127,6 +127,8 @@ public class WorldLoader : Loader
 
             loadedSkydomes[world.skydomeName] = skyRoot;
         }
+
+        return worldRoot;
     }
 
     public Collider GetRegion(string regionName)
