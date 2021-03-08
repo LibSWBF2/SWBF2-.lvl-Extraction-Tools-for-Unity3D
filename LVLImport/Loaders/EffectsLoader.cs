@@ -37,9 +37,12 @@ public class EffectsLoader : Loader {
 
     public void ImportEffects(string[] names)
     {
+        UVector3 spawnLoc = UVector3.zero;
         foreach (string name in names)
         {
-            ImportEffect(name);
+            var o = ImportEffect(name);
+            o.transform.localPosition = spawnLoc;
+            spawnLoc.z += 2.0f;
         }
     }
 
@@ -110,17 +113,9 @@ public class EffectsLoader : Loader {
         Scope scSpawner = scEmitter.GetField("Spawner").scope;
         Scope scGeometry = scEmitter.GetField("Geometry").scope;
 
-
-        Scope lSpread = null;
-        try 
-        {
-            lSpread = scSpawner.GetField("Spread").scope;
-        }
-        catch 
-        {
-            GameObject.DestroyImmediate(fxObject);
-            return null;
-        }
+        /*
+        Handle burst
+        */
         
         // Set starting position distribution
         var shapeModule = uEmitter.shape;
@@ -158,8 +153,44 @@ public class EffectsLoader : Loader {
         rotModule.enabled = true;
         rotModule.z = AngleCurveFromVec(scSpawner.GetVec3("RotationVelocity"));
 
+
+        /*
+        Geometry
+        */
+
+        string geomType = scGeometry.GetString("Type");
+
+        if (geomType == "EMITTER")
+        {
+            var subEmitterModule = uEmitter.subEmitters;
+            subEmitterModule.enabled = true;
+
+            //Get subemitters...
+            foreach (var subEmitter in UnpackNestedEmitters(scGeometry.GetField("ParticleEmitter")))
+            {
+                var emObj = GetEmitter(subEmitter);
+                if (emObj != null)
+                {
+                    emObj.transform.parent = fxObject.transform;
+                    subEmitterModule.AddSubEmitter(emObj.GetComponent<ParticleSystem>(), 
+                                                    ParticleSystemSubEmitterType.Birth, 
+                                                    ParticleSystemSubEmitterProperties.InheritEverything);
+                }
+            }
+
+        }
+
         UMaterial mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
-        mat.mainTexture = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        var tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        if (tex != null)
+        {
+            mat.mainTexture = tex;
+        }
+        else 
+        {
+            mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
+        }
+
 
         // Need to find a way of doing this without triggering the annoying GUI reset!
         // Ideally without editing out the shader's GUI ref...
@@ -216,7 +247,6 @@ public class EffectsLoader : Loader {
     // Get spawner's starting position properties as a box's scale + position
     private void SpreadToPositionAndScale(Scope spawner, out UVector3 scale, out UVector3 position)
     {
-        Scope spreadScope = spawner.GetField("Spread").scope;
         Scope offsetScope = spawner.GetField("Offset").scope;
 
         var intervalX = offsetScope.GetVec2("PositionX");
@@ -241,7 +271,23 @@ public class EffectsLoader : Loader {
     // The out param scaleCurve is the "VelocityScale" property 
     private List<ParticleSystem.MinMaxCurve> SpreadToVelocityIntervals(Scope spawner, out ParticleSystem.MinMaxCurve scaleCurve) 
     {
-        Scope spreadScope = spawner.GetField("Spread").scope;
+        Field velDis = spawner.GetField("Spread");
+        if (velDis == null)
+        {
+            velDis = spawner.GetField("Circle");
+        }
+
+        Scope spreadScope;
+        if (velDis != null)
+        {
+            spreadScope = velDis.scope;
+        }
+        else
+        {
+            scaleCurve = new ParticleSystem.MinMaxCurve(0.0f);
+            return new List<ParticleSystem.MinMaxCurve>();
+        }
+
         var vX = spreadScope.GetVec2("PositionX");
         var vY = spreadScope.GetVec2("PositionY");
         var vZ = spreadScope.GetVec2("PositionZ");
@@ -262,9 +308,20 @@ public class EffectsLoader : Loader {
     // child/subemitter, it will be in the "Geometry" scope.
     private List<Field> UnpackNestedEmitters(Config fxConfig)
     {
+        var emitter = fxConfig.GetField("ParticleEmitter");
+        if (emitter != null)
+        {
+            return UnpackNestedEmitters(emitter);
+        }
+        return null;
+    }
+
+
+    private List<Field> UnpackNestedEmitters(Field emitter)
+    {
         List<Field> emitters = new List<Field>();
 
-        Field curEmitter = fxConfig.GetField("ParticleEmitter");
+        Field curEmitter = emitter;
 
         while (curEmitter != null)
         {
@@ -309,11 +366,11 @@ public class EffectsLoader : Loader {
         List<GradientColorKey> gradMaxColKeys = new List<GradientColorKey>();
         List<GradientAlphaKey> gradMaxAlphaKeys = new List<GradientAlphaKey>();
 
-        Color minColLast = initialGrad.colorMin; //initialGrad.gradientMin.colorKeys[0].color;
-        Color maxColLast = initialGrad.colorMax; //initialGrad.gradientMax.colorKeys[0].color;
+        Color minColLast = initialGrad.colorMin;
+        Color maxColLast = initialGrad.colorMax;
 
-        float minAlphaLast = minColLast.a; //initialGrad.gradientMin.alphaKeys[0].alpha;
-        float maxAlphaLast = maxColLast.a; //initialGrad.gradientMax.alphaKeys[0].alpha;
+        float minAlphaLast = minColLast.a;
+        float maxAlphaLast = maxColLast.a;
 
 
         float lifeTime = transformerScope.GetFloat("LifeTime");
