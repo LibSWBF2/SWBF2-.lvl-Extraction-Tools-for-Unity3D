@@ -34,7 +34,7 @@ public class ModelLoader : Loader {
     // Cylinder collision mesh as substitute for cylinder primitive.
     // Perhaps a gameobject with three children, each having a box collider, rotated to 
     // form a 6 sided cylinder would be more performant?  
-    private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
+    public readonly static Mesh CylinderCollision = Resources.Load<Mesh>("CylinderCollider");
 
 
 
@@ -381,7 +381,7 @@ public class ModelLoader : Loader {
                     if (prim.GetCylinderDims(out float r, out float h))
                     {
                         MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
-                        meshColl.sharedMesh = cylColl;
+                        meshColl.sharedMesh = CylinderCollision;
                         meshColl.convex = true;
                         primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
                     }

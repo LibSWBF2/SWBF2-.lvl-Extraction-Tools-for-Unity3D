@@ -159,16 +159,12 @@ public class WorldLoader : Loader
                 case "armedbuilding":
                 case "animatedbuilding":
                 case "commandpost":
-                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
+                    //instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
+                    instanceObject = ClassLoader.Instance.LoadInstance(inst);
                     break;
 
                 default:
                     continue;
-            }
-
-            if (baseName == "commandpost")
-            {
-                instanceObject.AddComponent<GC_commandpost>().Init(inst);
             }
 
             if (!inst.name.Equals(""))

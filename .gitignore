@@ -53,3 +53,5 @@ sysinfo.txt
 *.fbx
 *.tga
 
+# explicitly allow .obj files (wavefront 3D object)
+!*.obj
