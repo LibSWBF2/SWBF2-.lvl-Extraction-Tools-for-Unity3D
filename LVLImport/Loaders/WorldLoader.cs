@@ -145,7 +145,7 @@ public class WorldLoader : Loader
         foreach (Instance inst in instances)
         {
             string entityClassName = inst.entityClassName;
-            string baseName = ClassLoader.Instance.GetBaseClassName(entityClassName);
+            string baseName = ClassLoader.GetBaseClassName(entityClassName);
 
             GameObject instanceObject = null;
 

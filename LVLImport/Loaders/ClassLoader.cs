@@ -33,6 +33,9 @@ public class ClassLoader : Loader {
     public const uint ORDNANCECOLLISION = 0xfb2bdf07;
 
 
+    Dictionary<string, Type> ClassMap = new Dictionary<string, Type>();
+
+
     public void ResetDB()
     {
         classObjectDatabase.Clear();
@@ -43,25 +46,29 @@ public class ClassLoader : Loader {
     {
     }
 
+    public void RegisterClassScript(string swbfClassName, Type script)
+    {
+        ClassMap.Add(swbfClassName, script);
+    }
 
-    public void AssignProp<T>(Instance inst, string propName, ref T value)
+    public static void AssignProp<T>(Instance inst, string propName, ref T value) where T : struct
     {
         if (inst.GetProperty(propName, out string outVal))
         {
-            if (typeof(T) == typeof(Collision))
-            {
-                // TODO: find region instance
-                throw new NotImplementedException();
-            }
-            else
-            {
-                value = (T)Convert.ChangeType(outVal, typeof(T));
-            }
+            value = (T)Convert.ChangeType(outVal, typeof(T));
+        }
+    }
+
+    public static void AssignProp(Instance inst, string propName, ref Collider value)
+    {
+        if (inst.GetProperty(propName, out string outVal))
+        {
+            value = WorldLoader.Instance.GetRegion(outVal);
         }
     }
 
 
-    public string GetBaseClassName(string name)
+    public static string GetBaseClassName(string name)
     {
         var ecWrapper = container.FindWrapper<EntityClass>(name);
 
@@ -74,7 +81,7 @@ public class ClassLoader : Loader {
     }
 
 
-    private bool IsStaticObjectClass(EntityClass ec)
+    static bool IsStaticObjectClass(EntityClass ec)
     {
         switch (ec.GetBaseName())
         {
@@ -87,6 +94,37 @@ public class ClassLoader : Loader {
         }
     }
 
+    public GameObject LoadInstance(Instance inst)
+    {
+        GameObject obj = new GameObject(inst.name);
+
+        if (inst.GetProperty("GeometryName", out string geometryName))
+        {
+            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
+            {
+                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.name, geometryName);
+                return obj;
+            }
+
+            var ecWrapper = container.FindWrapper<EntityClass>(inst.entityClassName);
+            if (ClassMap.TryGetValue(ecWrapper.GetBaseName(), out Type scriptType))
+            {
+                ISWBFGameClass classScript = (ISWBFGameClass)obj.AddComponent(scriptType);
+                classScript.Init(inst);
+            }
+
+            if (IsStaticObjectClass(ecWrapper))
+            {
+                obj.isStatic = true;
+                foreach (var tx in UnityUtils.GetChildTransforms(obj.transform))
+                {
+                    tx.gameObject.isStatic = true;
+                }
+            }
+        }
+
+        return obj;
+    }
 
     /*
     Temporary solution until I get to recording the default properties of
