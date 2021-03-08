@@ -26,6 +26,8 @@ public class WorldLoader : Loader
 
 
     Dictionary<string, GameObject> loadedSkydomes;
+    Dictionary<string, Collider> LoadedRegions;
+
     string[] BlendUniforms = new string[4] 
     {
         "Texture2D_e354f4a9e36f4302a8feaefa8efd534f",   // Blend0
@@ -42,12 +44,14 @@ public class WorldLoader : Loader
 
     private WorldLoader()
     {
-        loadedSkydomes = new Dictionary<string, GameObject>();        
+        loadedSkydomes = new Dictionary<string, GameObject>();
+        LoadedRegions = new Dictionary<string, Collider>();
     }
 
     public void Reset()
     {
-        loadedSkydomes = new Dictionary<string, GameObject>();
+        loadedSkydomes.Clear();
+        LoadedRegions.Clear();
     }
 
     public void ImportWorld(World world)
@@ -62,6 +66,10 @@ public class WorldLoader : Loader
         hasTerrain = false;
         GameObject worldRoot = new GameObject(world.name);
 
+        //Regions - Import before instances, since instances may reference regions
+        var regionsRoot = ImportRegions(world.GetRegions());
+        regionsRoot.transform.parent = worldRoot.transform;
+
         //Instances
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
@@ -71,7 +79,6 @@ public class WorldLoader : Loader
             instanceObject.transform.parent = instancesRoot.transform;
         }
         
-
         //Terrain
         if (ImportTerrain)
         {
@@ -109,11 +116,6 @@ public class WorldLoader : Loader
         }
 
 
-        //Regions
-        var regionsRoot = ImportRegions(world.GetRegions());
-        regionsRoot.transform.parent = worldRoot.transform;
-
-
         //Skydome, check if already loaded first
         if (!loadedSkydomes.ContainsKey(world.skydomeName))
         {
@@ -127,6 +129,14 @@ public class WorldLoader : Loader
         }
     }
 
+    public Collider GetRegion(string regionName)
+    {
+        if (LoadedRegions.TryGetValue(regionName, out Collider region))
+        {
+            return region;
+        }
+        return null;
+    }
 
     private List<GameObject> ImportInstances(Instance[] instances)
     {
@@ -670,19 +680,39 @@ public class WorldLoader : Loader
 
             LibVec3 sz = region.size;
 
-            //if (region.type.Equals("box"))
-            //{
-            BoxCollider coll = regionObj.AddComponent<BoxCollider>();
-            coll.size = new Vector3(sz.X,sz.Y,sz.Z);
-            coll.isTrigger = true;
-            //}
-            //else 
-            //{
-            //    CapsuleCollider coll = region.AddComponent<CapsuleCollider>();
-            //    coll.height = new Vector3(sz.X,sz.Y,sz.Z);
-            //}
+            Collider collider = null;
+            if (region.type == "box")
+            {
+                BoxCollider coll = regionObj.AddComponent<BoxCollider>();
+                coll.size = new Vector3(sz.X, sz.Y, sz.Z);
+                collider = coll;
+            }
+            else if (region.type == "sphere")
+            {
+                SphereCollider coll = regionObj.AddComponent<SphereCollider>();
+                coll.radius = sz.X;
+                collider = coll;
+            }
+            else if (region.type == "cylinder")
+            {
+                MeshCollider coll = regionObj.AddComponent<MeshCollider>();
+                coll.convex = true;
+                coll.sharedMesh = ModelLoader.CylinderCollision;
+                regionObj.transform.localScale = new Vector3(sz.X, sz.Y, sz.Z);
+                collider = coll;
+            }
+            else
+            {
+                throw new Exception(string.Format("IMPLEMENT '{0}'!", region.type));
+            }
 
+            collider.isTrigger = true;
             regionObj.transform.parent = regionsRoot.transform;
+
+            if (!LoadedRegions.ContainsKey(region.name))
+            {
+                LoadedRegions.Add(region.name, collider);
+            }
         }
 
         return regionsRoot;
