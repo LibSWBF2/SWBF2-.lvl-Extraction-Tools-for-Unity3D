@@ -71,6 +71,8 @@ public abstract class Loader {
         ClassLoader.Instance.ResetDB();
 
         WorldLoader.Instance.SaveAssets = false;
+
+        SoundLoader.ResetDB();
     }
 
 

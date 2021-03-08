@@ -67,6 +67,15 @@ public class ClassLoader : Loader {
         }
     }
 
+    public static void AssignProp(Instance inst, string propName, int argIdx, ref AudioClip value)
+    {
+        if (inst.GetProperty(propName, out string outVal))
+        {
+            string[] args = outVal.Split(' ');
+            value = SoundLoader.LoadSound(args[argIdx]);
+        }
+    }
+
 
     public static string GetBaseClassName(string name)
     {
