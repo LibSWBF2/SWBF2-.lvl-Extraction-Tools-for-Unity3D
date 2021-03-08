@@ -329,7 +329,7 @@ public class LVLImportWindow : EditorWindow {
         else 
         {
             CurrentLoader = EffectsLoader.Instance;
-            EffectsLoader.Instance.ImportEffects(new string[] {"com_sfx_ord_flame", "com_sfx_vehicleflame", "com_sfx_explosion_lg"});
+            EffectsLoader.Instance.ImportEffects(new string[] {"com_sfx_ord_flame", "com_sfx_vehicleflame", "com_sfx_explosion_lg", "com_sfx_explosion_sm", "com_sfx_explosion_xl", "com_sfx_weap_grenade_thermal_exp"});
         }
 
         CurrentLoader.SetBatch(levels.ToArray());
