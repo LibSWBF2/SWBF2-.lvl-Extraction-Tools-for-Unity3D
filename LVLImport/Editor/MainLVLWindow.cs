@@ -274,7 +274,7 @@ public class LVLImportWindow : EditorWindow {
 
                             foreach (var ec in level.GetWrappers<EntityClass>())
                             {
-                                GameObject newClass = ClassLoader.Instance.LoadGeneralClass(ec.name);
+                                GameObject newClass = ClassLoader.Instance.LoadGeneralClass(ec.Name);
                                 if (newClass != null)
                                 {
                                     importedObjs.Add(newClass);

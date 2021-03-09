@@ -1,5 +1,5 @@
 using System;
-using System.IO;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -55,7 +55,7 @@ public class ClassLoader : Loader {
     {
         if (inst.GetProperty(propName, out string outVal))
         {
-            value = (T)Convert.ChangeType(outVal, typeof(T));
+            value = (T)Convert.ChangeType(outVal, typeof(T), CultureInfo.InvariantCulture);
         }
     }
 
@@ -86,13 +86,13 @@ public class ClassLoader : Loader {
             return "";
         }
 
-        return ecWrapper.GetBaseName();
+        return ecWrapper.BaseName;
     }
 
 
     static bool IsStaticObjectClass(EntityClass ec)
     {
-        switch (ec.GetBaseName())
+        switch (ec.BaseName)
         {
         case "door":
         case "animatedprop":                  
@@ -116,7 +116,7 @@ public class ClassLoader : Loader {
             }
 
             var ecWrapper = container.FindWrapper<EntityClass>(inst.entityClassName);
-            if (ClassMap.TryGetValue(ecWrapper.GetBaseName(), out Type scriptType))
+            if (ClassMap.TryGetValue(ecWrapper.BaseName, out Type scriptType))
             {
                 ISWBFGameClass classScript = (ISWBFGameClass)obj.AddComponent(scriptType);
                 classScript.Init(inst);
