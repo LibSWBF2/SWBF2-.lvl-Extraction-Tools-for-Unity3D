@@ -56,10 +56,10 @@ public class WorldLoader : Loader
 
     public void ImportWorld(World world)
     {
-        ImportWorld(world, out _);
+        ImportWorld(world, out _, out _);
     }
 
-    public GameObject ImportWorld(World world, out bool hasTerrain)
+    public GameObject ImportWorld(World world, out bool hasTerrain, out List<(GameObject, ISWBFClass)> instances)
     {
         MaterialLoader.UseHDRP = UseHDRP;
 
@@ -74,9 +74,10 @@ public class WorldLoader : Loader
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
 
-        foreach (GameObject instanceObject in ImportInstances(world.GetInstances()))
+        instances = ImportInstances(world.GetInstances());
+        foreach ((GameObject, ISWBFClass) instanceObject in instances)
         {
-            instanceObject.transform.parent = instancesRoot.transform;
+            instanceObject.Item1.transform.parent = instancesRoot.transform;
         }
         
         //Terrain
@@ -140,9 +141,9 @@ public class WorldLoader : Loader
         return null;
     }
 
-    private List<GameObject> ImportInstances(Instance[] instances)
+    private List<(GameObject, ISWBFClass)> ImportInstances(Instance[] instances)
     {
-        List<GameObject> instanceObjects = new List<GameObject>();
+        List<(GameObject, ISWBFClass)> instanceObjects = new List<(GameObject, ISWBFClass)>();
 
         foreach (Instance inst in instances)
         {
@@ -150,7 +151,7 @@ public class WorldLoader : Loader
             string baseName = ClassLoader.GetBaseClassName(entityClassName);
 
             GameObject instanceObject = null;
-
+            ISWBFClass classScript = null;
             switch (baseName)
             {
                 case "door":
@@ -162,22 +163,17 @@ public class WorldLoader : Loader
                 case "animatedbuilding":
                 case "commandpost":
                     //instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
-                    instanceObject = ClassLoader.Instance.LoadInstance(inst);
+                    (instanceObject, classScript) = ClassLoader.Instance.LoadInstance(inst);
                     break;
 
                 default:
                     continue;
             }
 
-            if (!inst.Name.Equals(""))
-            {
-                instanceObject.name = inst.Name;
-            }
-
             instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.Rotation);
             instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.Position);
             instanceObject.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
-            instanceObjects.Add(instanceObject);
+            instanceObjects.Add((instanceObject, classScript));
         }
 
         return instanceObjects;

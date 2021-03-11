@@ -113,22 +113,23 @@ public class ClassLoader : Loader {
         return GetRootClass(parentClass);
     }
 
-    public GameObject LoadInstance(Instance inst)
+    public (GameObject, ISWBFClass) LoadInstance(Instance inst)
     {
         GameObject obj = new GameObject(inst.Name);
+        ISWBFClass classScript = null;
 
         if (inst.GetProperty("GeometryName", out string geometryName))
         {
             if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
             {
                 Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.Name, geometryName);
-                return obj;
+                return (obj, null);
             }
 
             var entClass = GetRootClass(container.Get<EntityClass>(inst.EntityClassName));
             if (ClassMap.TryGetValue(entClass.BaseClassName, out Type scriptType))
             {
-                ISWBFGameClass classScript = (ISWBFGameClass)obj.AddComponent(scriptType);
+                classScript = (ISWBFClass)obj.AddComponent(scriptType);
                 classScript.InitClass(entClass);
                 classScript.InitInstance(inst);
             }
@@ -143,7 +144,7 @@ public class ClassLoader : Loader {
             }
         }
 
-        return obj;
+        return (obj, classScript);
     }
 
     /*
