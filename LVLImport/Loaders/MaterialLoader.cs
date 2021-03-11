@@ -52,8 +52,8 @@ public class MaterialLoader : Loader
 
     public UMaterial LoadMaterial(LibMaterial mat, bool unlit = false)
     {
-        string texName = mat.textures[0];
-        MaterialFlags matFlags = mat.materialFlags;
+        string texName = mat.Textures[0];
+        MaterialFlags matFlags = mat.MaterialFlags;
 
         if (texName == "")
         {

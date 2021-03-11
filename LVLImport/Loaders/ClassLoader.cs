@@ -79,20 +79,20 @@ public class ClassLoader : Loader {
 
     public static string GetBaseClassName(string name)
     {
-        var ecWrapper = container.FindWrapper<EntityClass>(name);
+        var ecWrapper = container.Get<EntityClass>(name);
 
         if (ecWrapper == null)
         {
             return "";
         }
 
-        return ecWrapper.BaseName;
+        return ecWrapper.BaseClassName;
     }
 
 
     static bool IsStaticObjectClass(EntityClass ec)
     {
-        switch (ec.BaseName)
+        switch (ec.BaseClassName)
         {
         case "door":
         case "animatedprop":                  
@@ -105,7 +105,7 @@ public class ClassLoader : Loader {
 
     static EntityClass GetRootClass(EntityClass cl)
     {
-        EntityClass parentClass = cl.GetBase();
+        EntityClass parentClass = cl.BaseClass;
         if (parentClass == null)
         {
             return cl;
@@ -115,20 +115,21 @@ public class ClassLoader : Loader {
 
     public GameObject LoadInstance(Instance inst)
     {
-        GameObject obj = new GameObject(inst.name);
+        GameObject obj = new GameObject(inst.Name);
 
         if (inst.GetProperty("GeometryName", out string geometryName))
         {
             if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
             {
-                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.name, geometryName);
+                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.Name, geometryName);
                 return obj;
             }
 
-            var entClass = GetRootClass(container.FindWrapper<EntityClass>(inst.entityClassName));
-            if (ClassMap.TryGetValue(entClass.BaseName, out Type scriptType))
+            var entClass = GetRootClass(container.Get<EntityClass>(inst.EntityClassName));
+            if (ClassMap.TryGetValue(entClass.BaseClassName, out Type scriptType))
             {
                 ISWBFGameClass classScript = (ISWBFGameClass)obj.AddComponent(scriptType);
+                classScript.InitClass(entClass);
                 classScript.InitInstance(inst);
             }
 
@@ -179,7 +180,7 @@ public class ClassLoader : Loader {
             return duplicate;
         }
 
-        var ecWrapper = container.FindWrapper<EntityClass>(name);
+        var ecWrapper = container.Get<EntityClass>(name);
         if (ecWrapper == null)
         {
             Debug.LogWarningFormat("\tObject class: {0} not defined in loaded levels...", name);

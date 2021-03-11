@@ -249,7 +249,7 @@ public class LVLImportWindow : EditorWindow {
 
                     if (startLoadWorlds)
                     {
-                        foreach (World world in level.GetWrappers<World>())
+                        foreach (World world in level.Get<World>())
                         {
                             WorldLoader.Instance.ImportWorld(world);
                         }
@@ -272,7 +272,7 @@ public class LVLImportWindow : EditorWindow {
                         {
                             //AssetDatabase.StartAssetEditing();
 
-                            foreach (var ec in level.GetWrappers<EntityClass>())
+                            foreach (var ec in level.Get<EntityClass>())
                             {
                                 GameObject newClass = ClassLoader.Instance.LoadGeneralClass(ec.Name);
                                 if (newClass != null)

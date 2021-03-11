@@ -38,15 +38,15 @@ public class TextureLoader : Loader
             return texDataBase[name];
         }
 
-        var tex = container.FindWrapper<LibSWBF2.Wrappers.Texture>(name);
+        var tex = container.Get<LibSWBF2.Wrappers.Texture>(name);
 
-        if (tex != null && tex.height * tex.width > 0)
+        if (tex != null && tex.Height * tex.Width > 0)
         {
-            Texture2D newTexture = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
-            newTexture.name = tex.name;
+            Texture2D newTexture = new Texture2D(tex.Width, tex.Height, TextureFormat.RGBA32, false);
+            newTexture.name = tex.Name;
 
             byte[] data = tex.GetBytesRGBA();
-            data = mirror ? MirrorVertically(data, tex.width, tex.height, 4) : data;
+            data = mirror ? MirrorVertically(data, tex.Width, tex.Height, 4) : data;
 
             newTexture.LoadRawTextureData(data);
             newTexture.Apply();
@@ -79,9 +79,9 @@ public class TextureLoader : Loader
         LibSWBF2.Wrappers.Texture[] libTextures = new LibSWBF2.Wrappers.Texture[names.Length];
         for (int i = 0; i < names.Length; ++i)
         {
-            libTextures[i] = container.FindWrapper<LibSWBF2.Wrappers.Texture>(names[i]);
-            maxWidth = Mathf.Max(maxWidth, libTextures[i].width);
-            maxHeight = Mathf.Max(maxHeight, libTextures[i].height);
+            libTextures[i] = container.Get<LibSWBF2.Wrappers.Texture>(names[i]);
+            maxWidth = Mathf.Max(maxWidth, libTextures[i].Width);
+            maxHeight = Mathf.Max(maxHeight, libTextures[i].Height);
         }
 
         byte[] buffer = new byte[maxWidth * maxHeight * 4];
@@ -90,9 +90,9 @@ public class TextureLoader : Loader
         for (int i = 0; i < names.Length; ++i)
         {
             var tex = libTextures[i];
-            xDims[i] = tex.width;
+            xDims[i] = tex.Width;
 
-            if (tex.width < textures.width || tex.height < textures.height)
+            if (tex.Width < textures.width || tex.Height < textures.height)
             {
                 byte[] data = tex.GetBytesRGBA();
 
@@ -100,10 +100,10 @@ public class TextureLoader : Loader
                 {
                     int dstWidth = textures.width * 4;
                     int dstStartIdx = row * textures.width * 4;
-                    if (row < tex.height)
+                    if (row < tex.Height)
                     {
-                        int srcWidth = tex.width * 4;
-                        int srcStartIdx = row * tex.width * 4;
+                        int srcWidth = tex.Width * 4;
+                        int srcStartIdx = row * tex.Width * 4;
 
                         Array.Copy(data, srcStartIdx, buffer, dstStartIdx, srcWidth);
                         for (int x = dstWidth - srcWidth; x < dstWidth; ++x)
@@ -127,7 +127,7 @@ public class TextureLoader : Loader
                 buffer = tex.GetBytesRGBA();
             }
 
-            buffer = mirror ? MirrorVertically(buffer, tex.width, tex.height, 4) : buffer;
+            buffer = mirror ? MirrorVertically(buffer, tex.Width, tex.Height, 4) : buffer;
             textures.SetPixelData(buffer, 0, i);
         }
         textures.Apply();
