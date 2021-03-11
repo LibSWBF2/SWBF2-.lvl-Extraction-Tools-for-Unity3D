@@ -47,6 +47,7 @@ public class EffectsLoader : Loader {
     }
 
 
+
     public void ImportEffects(string[] names)
     {
         UVector3 spawnLoc = UVector3.zero;
@@ -54,7 +55,7 @@ public class EffectsLoader : Loader {
         {
             var o = ImportEffect(name);
             o.transform.localPosition = spawnLoc;
-            spawnLoc.z += 2.0f;
+            spawnLoc.z += 5.0f;
         }
     }
 
@@ -127,7 +128,9 @@ public class EffectsLoader : Loader {
 
         var em = uEmitter.emission;
         em.enabled = true;
-        em.rateOverTime = 0; // I think this is needed to use bursts...
+        em.rateOverTime = 0;
+
+        var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
 
         ParticleSystem.Burst burst = new ParticleSystem.Burst();
         float interval = scEmitter.GetVec2("BurstDelay").Y;
@@ -139,25 +142,36 @@ public class EffectsLoader : Loader {
         var numRange = scEmitter.GetVec2("BurstCount");
         burst.minCount = (short) numRange.X;
         burst.maxCount = (short) numRange.Y;
-        burst.cycleCount = 0;
-
-        em.SetBursts(new ParticleSystem.Burst[]{burst});
 
         // Needs to be used to avoid thousands of particles in some cases
-        var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
         if (maxParticles > 0.0f)
         {
             mainModule.maxParticles = (int) maxParticles;
+
+            burst.cycleCount = (int) (maxParticles / numRange.Y);
+            Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
         }
+        else 
+        {
+            burst.cycleCount = 0;
+        }
+
+        em.SetBursts(new ParticleSystem.Burst[]{burst});
+
 
 
         // Set starting position distribution
         var shapeModule = uEmitter.shape;
+        
+        // This is hard because circles are weighted spawners which saturate their resulting values
         if (scSpawner.GetField("Circle") != null)
         {
             shapeModule.shapeType = ParticleSystemShapeType.Sphere;
-            shapeModule.radius = GetCircleRadius(scSpawner);
+            shapeModule.
+            //shapeModule.radius = GetCircleRadius(scSpawner);
+            mainModule.startSpeed = GetCircleRadius(scSpawner);
         }
+        // This is pretty easy to emulate
         else if (scSpawner.GetField("Spread") != null)
         {
             // Set position distribution from the Offset field
@@ -167,25 +181,35 @@ public class EffectsLoader : Loader {
             shapeModule.position = spreadPos;
 
             // Set starting velocity distribution
-            var curves = SpreadToVelocityIntervals(scSpawner, out ParticleSystem.MinMaxCurve scaleCurve);
+            var curves = SpreadToVelocityIntervals(scSpawner, out ParticleSystem.MinMaxCurve scaleCurveOut);
             var velModule = uEmitter.velocityOverLifetime;
             velModule.enabled = true;
             velModule.x = curves[0];
             velModule.y = curves[1];
             velModule.z = curves[2];
-            velModule.speedModifier = scaleCurve;
+            velModule.speedModifier = scaleCurveOut;
         }
         else 
         {
-            Debug.LogWarningFormat("Unknown spawner distribution found! (not Spread or Circle)");
+            Debug.LogWarningFormat("Effect {0} has unhandled spawner type!", emitter.GetString());
             return null;
         }
+
+
+        if (ScaleTransformationToCurve(scTransformer, scSpawner.GetVec3("Size").Z, out ParticleSystem.MinMaxCurve curveOut))
+        {
+            var scaleModule = uEmitter.sizeOverLifetime;
+            scaleModule.enabled = true;
+            scaleModule.size = curveOut;
+        }
+
+
 
         // Set basic props in mainModule
         float lifeTime = scTransformer.GetFloat("LifeTime");
         mainModule.startLifetime = lifeTime;
         mainModule.duration = lifeTime;
-        mainModule.startSize = scSpawner.GetVec3("Size").Z;
+        //mainModule.startSize = scSpawner.GetVec3("Size").Z;
         mainModule.startRotation = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
 
         // Will eventually avoid enabling this when color doesn't change
@@ -205,6 +229,8 @@ public class EffectsLoader : Loader {
 
         string geomType = scGeometry.GetString("Type");
 
+        Texture2D tex = null;
+        UMaterial mat = null;
         if (geomType == "EMITTER")
         {
             var subEmitterModule = uEmitter.subEmitters;
@@ -217,22 +243,59 @@ public class EffectsLoader : Loader {
                 if (emObj != null)
                 {
                     emObj.transform.parent = fxObject.transform;
-                    subEmitterModule.AddSubEmitter(emObj.GetComponent<ParticleSystem>(), 
-                                                    ParticleSystemSubEmitterType.Birth, 
-                                                    ParticleSystemSubEmitterProperties.InheritNothing);
+                    ParticleSystem emPs = emObj.GetComponent<ParticleSystem>();
+                    var emPsVelModule = emPs.velocityOverLifetime;
+                    emPsVelModule.enabled = false;
+                    var emPsMainModule = emPs.main;
+                    shapeModule.radius = 0.0f;
+                    mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
+
+                    subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
                 }
             }
+            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        }
+        else if (geomType == "GEOMETRY")
+        {
+            Model model = container.FindWrapper<Model>(scGeometry.GetString("Model"));
+            if (model == null)
+            {
+                Debug.LogWarningFormat("Failed to load model {0} used by emitter {1}", model.name, emitter.GetString());
+                return fxObject;
+            }
+
+            Mesh geomMesh = ModelLoader.Instance.GetFirstMesh(model);
+            if (geomMesh != null)
+            {
+                geomMesh.name = model.name;
+
+                psR.renderMode = ParticleSystemRenderMode.Mesh;
+                psR.SetMeshes(new Mesh[]{ geomMesh });
+            }
+            var mats = ModelLoader.Instance.GetNeededMaterials(model);
+            if (mats.Count > 0)
+            {
+                mat = mats[0];
+            }
+        }
+        else
+        {
+            // For now we handle billboards, sparks, and particles equivalently 
+            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
 
-        UMaterial mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
-        var tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
-        if (tex != null)
+
+        if (mat == null)
         {
-            mat.mainTexture = tex;
-        }
-        else 
-        {
-            mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
+            mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
+            if (tex != null)
+            {
+                mat.mainTexture = tex;
+            }
+            else 
+            {
+                mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
+            }
         }
 
 
@@ -287,10 +350,43 @@ public class EffectsLoader : Loader {
     }
 
 
-    private float GetCircleRadius(Scope spawner)
+
+    private bool HandleCircle(ParticleSystem ps, Scope scSpawner)
     {
-        var range = spawner.GetField("Circle").scope.GetVec2("PositionX");
-        return range.Y;
+        var circle = scSpawner.GetField("Circle");
+        if (circle == null)
+        {
+            return false;
+        }
+
+        var velScale = scSpawner.GetVec2("VelocityScale"); 
+        var posScale = scSpawner.GetVec2("PositionScale"); 
+
+        var velModule = ps.velocityOverLifetime;
+        velModule.enabled = true;
+
+        var velLimitModule = ps.limitVelocityOverLifetime;
+        velLimitModule.enabled = true;
+
+        velLimitModule.limit = CurveFromVec(velScale);
+
+        
+
+
+
+    }
+
+
+
+
+
+    private ParticleSystem.MinMaxCurve GetCircleRadius(Scope spawner)
+    {
+        var vScale = spawner.GetVec2("VelocityScale");
+        return new ParticleSystem.MinMaxCurve(vScale.X, vScale.Y);
+
+        //var range = spawner.GetField("Circle").scope.GetVec2("PositionX");
+        //return range.Y;
     }
 
 
@@ -362,7 +458,7 @@ public class EffectsLoader : Loader {
 
     // Fx files/configs/chunks have subsequent emitters as children.  This function just 
     // recursively unpacks and returns the emitters in a list.  If an emitter is a proper
-    // child/subemitter, it will be in the "Geometry" scope.
+    // child/subemitter, it will be in the "Geometry" scope, and not included in the returned list.
     private List<Field> UnpackNestedEmitters(Config fxConfig)
     {
         var emitter = fxConfig.GetField("ParticleEmitter");
@@ -374,6 +470,7 @@ public class EffectsLoader : Loader {
     }
 
 
+    // Careful: the passed emitter is included in the returned list!
     private List<Field> UnpackNestedEmitters(Field emitter)
     {
         List<Field> emitters = new List<Field>();
@@ -488,6 +585,69 @@ public class EffectsLoader : Loader {
 
         return new ParticleSystem.MinMaxGradient(gradMin, gradMax);
     }
+
+
+    private bool ScaleTransformationToCurve(Scope transformerScope, float initialScale, out ParticleSystem.MinMaxCurve curveOut)
+    {
+        float lifeTime = transformerScope.GetFloat("LifeTime");
+        float timeIndex = 0.0f;
+
+        AnimationCurve curve = new AnimationCurve();
+        curve.AddKey(0.0f, initialScale);
+
+        Field curScaleKey = transformerScope.GetField("Size"); 
+        
+        while (curScaleKey != null && curScaleKey.scope.GetField("Scale") != null)
+        {
+            curve.AddKey(curScaleKey.scope.GetFloat("LifeTime") / lifeTime, curScaleKey.scope.GetFloat("Scale"));
+            curScaleKey = curScaleKey.scope.GetField("Next");
+        }
+
+        if (curve == null)
+        {
+            curveOut = new ParticleSystem.MinMaxCurve(1.0f);
+            return false;
+        }
+        else
+        {
+            curveOut = new ParticleSystem.MinMaxCurve(1.0f, curve);
+            return true;
+        }
+    }
+
+
+    /*
+    private bool PositionTransformationToCurve(Scope transformerScope, List<ParticleSystem.MinMaxCurve> initCurves)
+    {
+        float lifeTime = transformerScope.GetFloat("LifeTime");
+        float timeIndex = 0.0f;
+
+        AnimationCurve curve = new AnimationCurve();
+        curve.AddKey(0.0f, initialVel);
+
+        Field curScaleKey = transformerScope.GetField("Position"); 
+        
+        while (curScaleKey != null && curScaleKey.scope.GetField("Accelerate") != null)
+        {
+
+
+            curve.AddKey(curScaleKey.scope.GetFloat("LifeTime") / lifeTime, curScaleKey.scope.GetFloat("Accelerate"));
+            curScaleKey = curScaleKey.scope.GetField("Next");
+        }
+
+        if (curve == null)
+        {
+            curveOut = new ParticleSystem.MinMaxCurve(1.0f);
+            return false;
+        }
+        else
+        {
+            curveOut = new ParticleSystem.MinMaxCurve(1.0f, curve);
+            return true;
+        }        
+    }
+    */
+
 
 
     // From standard particle shader GUI source...
