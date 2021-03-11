@@ -36,6 +36,24 @@ public class ModelLoader : Loader {
     // form a 6 sided cylinder would be more performant?  
     private static Mesh cylColl = (Mesh)AssetDatabase.LoadAssetAtPath("Assets/LVLImport/ConversionAssets/CylinderCollider.obj", typeof(Mesh));
 
+    
+    public List<UMaterial> GetNeededMaterials(Model model)
+    {
+        List<UMaterial> mats = new List<UMaterial>();
+        foreach (Segment seg in model.GetSegments())
+        {
+            mats.Add(MaterialLoader.Instance.LoadMaterial(seg.material));
+        }
+        return mats;
+    }
+    
+
+    public Mesh GetFirstMesh(Model model)
+    {
+        return GetMeshFromSegments(model.GetSegments());
+    }
+
+
 
 
 
@@ -47,7 +65,7 @@ public class ModelLoader : Loader {
     {
         Mesh mesh = new Mesh();
 
-        if (SaveAssets)
+        if (SaveAssets && !meshName.Equals(""))
         {
             AssetDatabase.CreateAsset(mesh, Path.Combine(SaveDirectory, meshName + ".mesh")); 
         }
