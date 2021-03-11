@@ -51,25 +51,25 @@ public class ClassLoader : Loader {
         ClassMap.Add(swbfClassName, script);
     }
 
-    public static void AssignProp<T>(Instance inst, string propName, ref T value) where T : struct
+    public static void AssignProp<T1, T2>(T1 instOrClass, string propName, ref T2 value) where T1 : ISWBFProperties where T2 : struct
     {
-        if (inst.GetProperty(propName, out string outVal))
+        if (instOrClass.GetProperty(propName, out string outVal))
         {
-            value = (T)Convert.ChangeType(outVal, typeof(T), CultureInfo.InvariantCulture);
+            value = (T2)Convert.ChangeType(outVal, typeof(T2), CultureInfo.InvariantCulture);
         }
     }
 
-    public static void AssignProp(Instance inst, string propName, ref Collider value)
+    public static void AssignProp<T1>(T1 instOrClass, string propName, ref Collider value) where T1 : ISWBFProperties
     {
-        if (inst.GetProperty(propName, out string outVal))
+        if (instOrClass.GetProperty(propName, out string outVal))
         {
             value = WorldLoader.Instance.GetRegion(outVal);
         }
     }
 
-    public static void AssignProp(Instance inst, string propName, int argIdx, ref AudioClip value)
+    public static void AssignProp<T1>(T1 instOrClass, string propName, int argIdx, ref AudioClip value) where T1 : ISWBFProperties
     {
-        if (inst.GetProperty(propName, out string outVal))
+        if (instOrClass.GetProperty(propName, out string outVal))
         {
             string[] args = outVal.Split(' ');
             value = SoundLoader.LoadSound(args[argIdx]);
@@ -103,6 +103,16 @@ public class ClassLoader : Loader {
         }
     }
 
+    static EntityClass GetRootClass(EntityClass cl)
+    {
+        EntityClass parentClass = cl.GetBase();
+        if (parentClass == null)
+        {
+            return cl;
+        }
+        return GetRootClass(parentClass);
+    }
+
     public GameObject LoadInstance(Instance inst)
     {
         GameObject obj = new GameObject(inst.name);
@@ -115,14 +125,14 @@ public class ClassLoader : Loader {
                 return obj;
             }
 
-            var ecWrapper = container.FindWrapper<EntityClass>(inst.entityClassName);
-            if (ClassMap.TryGetValue(ecWrapper.BaseName, out Type scriptType))
+            var entClass = GetRootClass(container.FindWrapper<EntityClass>(inst.entityClassName));
+            if (ClassMap.TryGetValue(entClass.BaseName, out Type scriptType))
             {
                 ISWBFGameClass classScript = (ISWBFGameClass)obj.AddComponent(scriptType);
-                classScript.Init(inst);
+                classScript.InitInstance(inst);
             }
 
-            if (IsStaticObjectClass(ecWrapper))
+            if (IsStaticObjectClass(entClass))
             {
                 obj.isStatic = true;
                 foreach (var tx in UnityUtils.GetChildTransforms(obj.transform))
