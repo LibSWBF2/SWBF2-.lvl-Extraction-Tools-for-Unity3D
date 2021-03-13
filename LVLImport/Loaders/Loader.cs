@@ -10,6 +10,21 @@ using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 
+public struct LoadStatus {
+
+    public float Progress;
+    public string CurrentTask;
+
+    public LoadStatus(float p, string ct)
+    {
+        CurrentTask = ct;
+        Progress = p;
+    }
+}
+
+
+
+
 public abstract class Loader {
 
     // Used by different loader classes
