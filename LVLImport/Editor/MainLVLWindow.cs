@@ -36,9 +36,9 @@ public class LVLImportWindow : EditorWindow {
     static Container container;
 
     static List<string> filesToLoad = new List<string>();
-    static List<uint> fileHandles = new List<uint>();
+    static List<LibSWBF2.SWBF2Handle> fileHandles = new List<LibSWBF2.SWBF2Handle>();
 
-    Loader CurrentLoader = null;
+    IEnumerator<LoadStatus> CurrentLoad = null;
 
 
     enum ImporterAction
@@ -243,12 +243,12 @@ public class LVLImportWindow : EditorWindow {
         Debug.Assert(CurrentState == ImporterState.Loading);
         for (int i = 0; i < filesToLoad.Count; i++)
         {
-            uint handle = fileHandles[i];
+            LibSWBF2.SWBF2Handle handle = fileHandles[i];
             float progress = container.GetProgress(handle);
             EditorGUI.ProgressBar(new Rect(3, 250 + 30 * i, position.width - 6, 20), progress, filesToLoad[i]);
         }
 
-        return container.IsDone(); 
+        return container.IsDone();
     }
 
 
@@ -256,11 +256,18 @@ public class LVLImportWindow : EditorWindow {
     {
         Debug.Assert(CurrentState == ImporterState.Importing);
 
-        if (CurrentLoader.IterateBatch())
+        if (CurrentLoad != null)
         {
-            float progress = CurrentLoader.GetProgress(out string desc);
-            EditorGUI.ProgressBar(new Rect(3, 250 + 0, position.width - 6, 20), progress, desc);
-            return false;
+            if (!CurrentLoad.MoveNext())
+            {
+                return true;
+            }
+            else 
+            {
+                var status = CurrentLoad.Current;
+                EditorGUI.ProgressBar(new Rect(3, 250 + 0, position.width - 6, 20), status.Progress, status.CurrentTask);
+                return false;
+            }
         }
         else 
         {
@@ -276,10 +283,10 @@ public class LVLImportWindow : EditorWindow {
 
         container = new Container();
 
-        fileHandles = new List<uint>();
+        fileHandles = new List<LibSWBF2.SWBF2Handle>();
         foreach (string path in filesToLoad)
         {
-            fileHandles.Add(container.AddLevel(path));
+            fileHandles.Add((LibSWBF2.SWBF2Handle) container.AddLevel(path));
         }
 
         container.LoadLevels();
@@ -320,19 +327,16 @@ public class LVLImportWindow : EditorWindow {
 
         if (CurrentAction == ImporterAction.ImportWorlds)
         {
-            CurrentLoader = WorldLoader.Instance;
+            CurrentLoad = WorldLoader.Instance.ImportWorldBatch(levels.ToArray());
         }
         else if (CurrentAction == ImporterAction.ImportClasses)
         {
-            CurrentLoader = ClassLoader.Instance;
+            CurrentLoad = ClassLoader.Instance.ImportClassBatch(levels.ToArray());
         }
         else 
         {
-            CurrentLoader = EffectsLoader.Instance;
             EffectsLoader.Instance.ImportEffects(new string[] {"com_sfx_ord_flame", "com_sfx_weap_rad_exp_md", "com_sfx_weap_rad_exp_sm", "com_sfx_explosion_xl"});
         }
-
-        CurrentLoader.SetBatch(levels.ToArray());
     }
 
 
@@ -365,6 +369,10 @@ public class LVLImportWindow : EditorWindow {
             if (ExecStateLoading())
             {
                 TransitionToImporting();
+            }
+            else 
+            {
+
             }
         }
         else if (CurrentState == ImporterState.Importing)

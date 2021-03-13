@@ -41,99 +41,41 @@ public class ClassLoader : Loader {
     }
 
 
-    private BatchLoadState batch = null;
-
-    class LevelLoadState
+    public IEnumerator<LoadStatus> ImportClassBatch(Level[] levels)
     {
-        public Transform LevelRoot;
-        public EntityClass[] Classes;
-        public int EntityClassIndex;
-
-        public UVector3 SpawnOffset;
-        public float RootZOffset;
-
-        public LevelLoadState(Level lvl)
+        float ZOffset = 0.0f;
+        
+        foreach (Level lvl in levels)
         {
-            LevelRoot = new GameObject(lvl.Name).transform;
-            Classes = lvl.GetWrappers<EntityClass>();
-            EntityClassIndex = 0;
-            SpawnOffset = Vector3.zero;
-            RootZOffset = 0.0f;
-        }
-    }
+            Transform LevelRoot = new GameObject(lvl.Name).transform;
+            EntityClass[] Classes = lvl.Get<EntityClass>();
+            UVector3 SpawnOffset = Vector3.zero;
+            float RootZOffset = 0.0f;
 
-    class BatchLoadState
-    {
-        public List<LevelLoadState> LevelImports;
-        public int LevelImportIndex;
-        public float ZOffset;
-
-        public BatchLoadState(Level[] lvls)
-        {
-            LevelImports = new List<LevelLoadState>();
-            LevelImportIndex = 0;
-            foreach (Level l in lvls)
+            for (int i = 0; i < Classes.Length; i++)
             {
-                LevelImports.Add(new LevelLoadState(l));
+                GameObject ecObj = LoadGeneralClass(Classes[i].Name);
+
+                if (ecObj != null)
+                {
+                    yield return new LoadStatus(i/(float) Classes.Length, lvl.Name + ": " + ecObj.name);
+
+                    ecObj.transform.parent = LevelRoot;
+                    
+                    var extents = UnityUtils.GetMaxBounds(ecObj).extents;
+                    
+                    RootZOffset = Math.Max(RootZOffset, extents.z);
+
+                    SpawnOffset += new Vector3(extents.x,0,0);
+                    ecObj.transform.localPosition = SpawnOffset;
+                    SpawnOffset += new Vector3(extents.x,0,0);
+                }
             }
-            ZOffset = 0.0f;
+
+            LevelRoot.localPosition = new Vector3(0.0f, 0.0f, RootZOffset + ZOffset);
+            ZOffset += RootZOffset * 2.0f;
         }
     }
-
-    public override void SetBatch(Level[] levels)
-    {
-        batch = new BatchLoadState(levels);
-    }
-
-
-    public override float GetProgress(out string desc)
-    {
-        if (batch == null || batch.LevelImportIndex >= batch.LevelImports.Count)
-        {
-            desc = "";
-            return 0.0f;
-        }
-
-        var lvlImp = batch.LevelImports[batch.LevelImportIndex];
-
-        desc = lvlImp.LevelRoot.gameObject.name + ": " + lvlImp.Classes[lvlImp.EntityClassIndex].name;
-        return (float) lvlImp.EntityClassIndex / (float) lvlImp.Classes.Length;   
-    }
-
-
-    public override bool IterateBatch()
-    {
-        if (batch.LevelImportIndex >= batch.LevelImports.Count)
-        {
-            return false;
-        }
-
-        var lvlImp = batch.LevelImports[batch.LevelImportIndex];
-
-        GameObject ecObj = LoadGeneralClass(lvlImp.Classes[lvlImp.EntityClassIndex].name);
-        if (ecObj != null)
-        {
-            ecObj.transform.parent = lvlImp.LevelRoot;
-            var extent = UnityUtils.GetMaxBounds(ecObj).extents;
-            float xExtent = extent.x;
-            lvlImp.RootZOffset = Math.Max(lvlImp.RootZOffset, extent.z);
-
-            lvlImp.SpawnOffset += new Vector3(xExtent,0,0);
-            ecObj.transform.localPosition = lvlImp.SpawnOffset;
-            lvlImp.SpawnOffset += new Vector3(xExtent,0,0);
-        }
-
-        if (++lvlImp.EntityClassIndex >= lvlImp.Classes.Length)
-        {
-            lvlImp.LevelRoot.localPosition = new Vector3(0.0f, 0.0f, lvlImp.RootZOffset + batch.ZOffset);
-            batch.ZOffset += lvlImp.RootZOffset * 2.0f;
-            ++batch.LevelImportIndex;
-        }
-
-        return true;
-    }
-
-
 
 
 
@@ -146,20 +88,20 @@ public class ClassLoader : Loader {
 
     public string GetBaseClassName(string name)
     {
-        var ecWrapper = container.FindWrapper<EntityClass>(name);
+        var ecWrapper = container.Get<EntityClass>(name);
 
         if (ecWrapper == null)
         {
             return "";
         }
 
-        return ecWrapper.GetBaseName();
+        return ecWrapper.BaseClassName;
     }
 
 
     private bool IsStaticObjectClass(EntityClass ec)
     {
-        switch (ec.GetBaseName())
+        switch (ec.BaseClassName)
         {
         case "door":
         case "animatedprop":                  
@@ -205,7 +147,7 @@ public class ClassLoader : Loader {
             return duplicate;
         }
 
-        var ecWrapper = container.FindWrapper<EntityClass>(name);
+        var ecWrapper = container.Get<EntityClass>(name);
         if (ecWrapper == null)
         {
             Debug.LogWarningFormat("\tObject class: {0} not defined in loaded levels...", name);
@@ -266,7 +208,6 @@ public class ClassLoader : Loader {
                 return obj;
             }
         }
-
 
 
 
@@ -378,7 +319,6 @@ public class ClassLoader : Loader {
 
 
     
-
     public void DeleteAndClearDB()
     {
         foreach (string objname in classObjectDatabase.Keys)
@@ -394,6 +334,4 @@ public class ClassLoader : Loader {
         }
         classObjectDatabase.Clear();
     }
-
-
 }

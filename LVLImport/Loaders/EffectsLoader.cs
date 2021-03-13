@@ -89,7 +89,7 @@ public class EffectsLoader : Loader {
     // to child gameobjects.
     public GameObject ImportEffect(Config fxConfig)
     {
-        GameObject fxObject = new GameObject(String.Format("0x{0:x}", fxConfig.name));
+        GameObject fxObject = new GameObject(String.Format("0x{0:x}", fxConfig.Name));
 
         foreach (Field emitter in UnpackNestedEmitters(fxConfig))
         {
@@ -112,11 +112,11 @@ public class EffectsLoader : Loader {
         ParticleSystem uEmitter = fxObject.AddComponent<ParticleSystem>();
         ParticleSystemRenderer psR = fxObject.GetComponent<ParticleSystemRenderer>();
 
-        Scope scEmitter = emitter.scope;
+        Scope scEmitter = emitter.Scope;
         
-        Scope scTransformer = scEmitter.GetField("Transformer").scope;
-        Scope scSpawner = scEmitter.GetField("Spawner").scope;
-        Scope scGeometry = scEmitter.GetField("Geometry").scope;
+        Scope scTransformer = scEmitter.GetField("Transformer").Scope;
+        Scope scSpawner = scEmitter.GetField("Spawner").Scope;
+        Scope scGeometry = scEmitter.GetField("Geometry").Scope;
 
         var mainModule = uEmitter.main;
 
@@ -167,7 +167,7 @@ public class EffectsLoader : Loader {
         if (scSpawner.GetField("Circle") != null)
         {
             shapeModule.shapeType = ParticleSystemShapeType.Sphere;
-            shapeModule.
+            //shapeModule.
             //shapeModule.radius = GetCircleRadius(scSpawner);
             mainModule.startSpeed = GetCircleRadius(scSpawner);
         }
@@ -257,17 +257,17 @@ public class EffectsLoader : Loader {
         }
         else if (geomType == "GEOMETRY")
         {
-            Model model = container.FindWrapper<Model>(scGeometry.GetString("Model"));
+            Model model = container.Get<Model>(scGeometry.GetString("Model"));
             if (model == null)
             {
-                Debug.LogWarningFormat("Failed to load model {0} used by emitter {1}", model.name, emitter.GetString());
+                Debug.LogWarningFormat("Failed to load model {0} used by emitter {1}", model.Name, emitter.GetString());
                 return fxObject;
             }
 
             Mesh geomMesh = ModelLoader.Instance.GetFirstMesh(model);
             if (geomMesh != null)
             {
-                geomMesh.name = model.name;
+                geomMesh.name = model.Name;
 
                 psR.renderMode = ParticleSystemRenderMode.Mesh;
                 psR.SetMeshes(new Mesh[]{ geomMesh });
@@ -353,6 +353,7 @@ public class EffectsLoader : Loader {
 
     private bool HandleCircle(ParticleSystem ps, Scope scSpawner)
     {
+        return false;
         var circle = scSpawner.GetField("Circle");
         if (circle == null)
         {
@@ -385,7 +386,7 @@ public class EffectsLoader : Loader {
         var vScale = spawner.GetVec2("VelocityScale");
         return new ParticleSystem.MinMaxCurve(vScale.X, vScale.Y);
 
-        //var range = spawner.GetField("Circle").scope.GetVec2("PositionX");
+        //var range = spawner.GetField("Circle").Scope.GetVec2("PositionX");
         //return range.Y;
     }
 
@@ -394,7 +395,7 @@ public class EffectsLoader : Loader {
     // Get spawner's starting position properties as a box's scale + position
     private void SpreadToPositionAndScale(Scope spawner, out UVector3 scale, out UVector3 position)
     {
-        Scope offsetScope = spawner.GetField("Offset").scope;
+        Scope offsetScope = spawner.GetField("Offset").Scope;
 
         var intervalX = offsetScope.GetVec2("PositionX");
         var intervalY = offsetScope.GetVec2("PositionY");
@@ -429,7 +430,7 @@ public class EffectsLoader : Loader {
         Scope spreadScope;
         if (velDis != null)
         {
-            spreadScope = velDis.scope;
+            spreadScope = velDis.Scope;
         }
         else
         {
@@ -481,7 +482,7 @@ public class EffectsLoader : Loader {
         {
             emitters.Add(curEmitter);
 
-            Field nextEmitter = curEmitter.scope.GetField("ParticleEmitter");
+            Field nextEmitter = curEmitter.Scope.GetField("ParticleEmitter");
             if (nextEmitter != null)
             {
                 curEmitter = nextEmitter;
@@ -539,7 +540,7 @@ public class EffectsLoader : Loader {
         Field curKey = transformerScope.GetField("Color");
         while (curKey != null)
         {
-            Scope scKey = curKey.scope;
+            Scope scKey = curKey.Scope;
 
             timeIndex = scKey.GetFloat("LifeTime") / lifeTime;
 
@@ -597,10 +598,10 @@ public class EffectsLoader : Loader {
 
         Field curScaleKey = transformerScope.GetField("Size"); 
         
-        while (curScaleKey != null && curScaleKey.scope.GetField("Scale") != null)
+        while (curScaleKey != null && curScaleKey.Scope.GetField("Scale") != null)
         {
-            curve.AddKey(curScaleKey.scope.GetFloat("LifeTime") / lifeTime, curScaleKey.scope.GetFloat("Scale"));
-            curScaleKey = curScaleKey.scope.GetField("Next");
+            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetFloat("Scale"));
+            curScaleKey = curScaleKey.Scope.GetField("Next");
         }
 
         if (curve == null)
@@ -627,12 +628,12 @@ public class EffectsLoader : Loader {
 
         Field curScaleKey = transformerScope.GetField("Position"); 
         
-        while (curScaleKey != null && curScaleKey.scope.GetField("Accelerate") != null)
+        while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
         {
 
 
-            curve.AddKey(curScaleKey.scope.GetFloat("LifeTime") / lifeTime, curScaleKey.scope.GetFloat("Accelerate"));
-            curScaleKey = curScaleKey.scope.GetField("Next");
+            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetFloat("Accelerate"));
+            curScaleKey = curScaleKey.Scope.GetField("Next");
         }
 
         if (curve == null)
