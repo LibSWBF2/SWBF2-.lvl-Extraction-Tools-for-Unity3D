@@ -11,8 +11,8 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 
 
-public class ClassLoader : Loader {
-
+public class ClassLoader : Loader
+{
     public static ClassLoader Instance { get; private set; } = null;
 
     static ClassLoader()
@@ -33,22 +33,9 @@ public class ClassLoader : Loader {
     public const uint ORDNANCECOLLISION = 0xfb2bdf07;
 
 
-    Dictionary<string, Type> ClassMap = new Dictionary<string, Type>();
-
-
     public void ResetDB()
     {
         classObjectDatabase.Clear();
-    }
-
-
-    public void DeleteAll()
-    {
-    }
-
-    public void RegisterClassScript(string swbfClassName, Type script)
-    {
-        ClassMap.Add(swbfClassName, script);
     }
 
     public static void AssignProp<T1, T2>(T1 instOrClass, string propName, ref T2 value) where T1 : ISWBFProperties where T2 : struct
@@ -73,6 +60,31 @@ public class ClassLoader : Loader {
         {
             string[] args = outVal.Split(' ');
             value = SoundLoader.LoadSound(args[argIdx]);
+        }
+    }
+
+    public static void AssignProp<T1, T2>(T1 instOrClass, string propName, Ref<T2> value) where T1 : ISWBFProperties
+    {
+        if (instOrClass.GetProperty(propName, out string outVal))
+        {
+            value.Set((T2)Convert.ChangeType(outVal, typeof(T2), CultureInfo.InvariantCulture));
+        }
+    }
+
+    public static void AssignProp<T1>(T1 instOrClass, string propName, Ref<Collider> value) where T1 : ISWBFProperties
+    {
+        if (instOrClass.GetProperty(propName, out string outVal))
+        {
+            value.Set(WorldLoader.Instance.GetRegion(outVal));
+        }
+    }
+
+    public static void AssignProp<T1>(T1 instOrClass, string propName, int argIdx, Ref<AudioClip> value) where T1 : ISWBFProperties
+    {
+        if (instOrClass.GetProperty(propName, out string outVal))
+        {
+            string[] args = outVal.Split(' ');
+            value.Set(SoundLoader.LoadSound(args[argIdx]));
         }
     }
 
@@ -103,7 +115,7 @@ public class ClassLoader : Loader {
         }
     }
 
-    static EntityClass GetRootClass(EntityClass cl)
+    public static EntityClass GetRootClass(EntityClass cl)
     {
         EntityClass parentClass = cl.BaseClass;
         if (parentClass == null)
@@ -113,27 +125,19 @@ public class ClassLoader : Loader {
         return GetRootClass(parentClass);
     }
 
-    public (GameObject, ISWBFClass) LoadInstance(Instance inst)
+    public GameObject LoadInstance(Instance inst)
     {
         GameObject obj = new GameObject(inst.Name);
-        ISWBFClass classScript = null;
 
         if (inst.GetProperty("GeometryName", out string geometryName))
         {
             if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
             {
                 Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.Name, geometryName);
-                return (obj, null);
+                return obj;
             }
 
             var entClass = GetRootClass(container.Get<EntityClass>(inst.EntityClassName));
-            if (ClassMap.TryGetValue(entClass.BaseClassName, out Type scriptType))
-            {
-                classScript = (ISWBFClass)obj.AddComponent(scriptType);
-                classScript.InitClass(entClass);
-                classScript.InitInstance(inst);
-            }
-
             if (IsStaticObjectClass(entClass))
             {
                 obj.isStatic = true;
@@ -144,7 +148,7 @@ public class ClassLoader : Loader {
             }
         }
 
-        return (obj, classScript);
+        return obj;
     }
 
     /*

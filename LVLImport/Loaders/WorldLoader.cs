@@ -56,10 +56,10 @@ public class WorldLoader : Loader
 
     public void ImportWorld(World world)
     {
-        ImportWorld(world, out _, out _);
+        ImportWorld(world, out _);
     }
 
-    public GameObject ImportWorld(World world, out bool hasTerrain, out List<(GameObject, ISWBFClass)> instances)
+    public GameObject ImportWorld(World world, out bool hasTerrain)
     {
         MaterialLoader.UseHDRP = UseHDRP;
 
@@ -74,10 +74,10 @@ public class WorldLoader : Loader
         GameObject instancesRoot = new GameObject("Instances");
         instancesRoot.transform.parent = worldRoot.transform;
 
-        instances = ImportInstances(world.GetInstances());
-        foreach ((GameObject, ISWBFClass) instanceObject in instances)
+        List<GameObject> instances = ImportInstances(world.GetInstances());
+        foreach (GameObject instanceObject in instances)
         {
-            instanceObject.Item1.transform.parent = instancesRoot.transform;
+            instanceObject.transform.parent = instancesRoot.transform;
         }
         
         //Terrain
@@ -141,9 +141,9 @@ public class WorldLoader : Loader
         return null;
     }
 
-    private List<(GameObject, ISWBFClass)> ImportInstances(Instance[] instances)
+    private List<GameObject> ImportInstances(Instance[] instances)
     {
-        List<(GameObject, ISWBFClass)> instanceObjects = new List<(GameObject, ISWBFClass)>();
+        List<GameObject> instanceObjects = new List<GameObject>();
 
         foreach (Instance inst in instances)
         {
@@ -151,7 +151,6 @@ public class WorldLoader : Loader
             string baseName = ClassLoader.GetBaseClassName(entityClassName);
 
             GameObject instanceObject = null;
-            ISWBFClass classScript = null;
             switch (baseName)
             {
                 case "door":
@@ -163,7 +162,7 @@ public class WorldLoader : Loader
                 case "animatedbuilding":
                 case "commandpost":
                     //instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
-                    (instanceObject, classScript) = ClassLoader.Instance.LoadInstance(inst);
+                    instanceObject = ClassLoader.Instance.LoadInstance(inst);
                     break;
 
                 default:
@@ -173,7 +172,7 @@ public class WorldLoader : Loader
             instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.Rotation);
             instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.Position);
             instanceObject.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
-            instanceObjects.Add((instanceObject, classScript));
+            instanceObjects.Add(instanceObject);
         }
 
         return instanceObjects;
@@ -279,7 +278,7 @@ public class WorldLoader : Loader
     }
 
 
-    private GameObject ImportTerrainAsMeshHDRP(LibTerrain terrain)
+    public GameObject ImportTerrainAsMeshHDRP(LibTerrain terrain)
     {
         Mesh terrainMesh = new Mesh();
 
@@ -465,7 +464,7 @@ public class WorldLoader : Loader
     /*
     Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
     */
-    private List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
+    public List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
     {
         List<GameObject> lightObjects = new List<GameObject>();
 
@@ -600,7 +599,7 @@ public class WorldLoader : Loader
     }
 
 
-    private GameObject ImportSkydome(Config skydomeConfig)
+    public GameObject ImportSkydome(Config skydomeConfig)
     {
         if (skydomeConfig == null) return null;
 
@@ -665,7 +664,7 @@ public class WorldLoader : Loader
     
 
 
-    private GameObject ImportRegions(Region[] regions)
+    public GameObject ImportRegions(Region[] regions)
     {
         GameObject regionsRoot = new GameObject("Regions");
         foreach (Region region in regions)
