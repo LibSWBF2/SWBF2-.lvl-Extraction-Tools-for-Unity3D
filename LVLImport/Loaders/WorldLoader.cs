@@ -14,6 +14,7 @@ using LibTerrain = LibSWBF2.Wrappers.Terrain;
 using UMaterial = UnityEngine.Material;
 using LibVec3 = LibSWBF2.Types.Vector3;
 using ULight = UnityEngine.Light;
+using SWBFRegion = LibSWBF2.Wrappers.Region;
 
 
 
@@ -25,8 +26,8 @@ public class WorldLoader : Loader
     public static WorldLoader Instance { get; private set; } = null;
 
 
-    Dictionary<string, GameObject> loadedSkydomes;
-    Dictionary<string, Collider> LoadedRegions;
+    Dictionary<string, GameObject> LoadedSkydomes;
+    public Dictionary<string, Collider> LoadedRegions { get; private set; }
 
     string[] BlendUniforms = new string[4] 
     {
@@ -44,13 +45,13 @@ public class WorldLoader : Loader
 
     private WorldLoader()
     {
-        loadedSkydomes = new Dictionary<string, GameObject>();
+        LoadedSkydomes = new Dictionary<string, GameObject>();
         LoadedRegions = new Dictionary<string, Collider>();
     }
 
     public void Reset()
     {
-        loadedSkydomes.Clear();
+        LoadedSkydomes.Clear();
         LoadedRegions.Clear();
     }
 
@@ -118,7 +119,7 @@ public class WorldLoader : Loader
 
 
         //Skydome, check if already loaded first
-        if (!loadedSkydomes.ContainsKey(world.SkydomeName))
+        if (!LoadedSkydomes.ContainsKey(world.SkydomeName))
         {
             var skyRoot = ImportSkydome(container.FindConfig(ConfigType.Skydome, world.SkydomeName));
             if (skyRoot != null)
@@ -126,7 +127,7 @@ public class WorldLoader : Loader
                 skyRoot.transform.parent = worldRoot.transform;
             }
 
-            loadedSkydomes[world.SkydomeName] = skyRoot;
+            LoadedSkydomes[world.SkydomeName] = skyRoot;
         }
 
         return worldRoot;
@@ -664,10 +665,10 @@ public class WorldLoader : Loader
     
 
 
-    public GameObject ImportRegions(Region[] regions)
+    public GameObject ImportRegions(SWBFRegion[] regions)
     {
         GameObject regionsRoot = new GameObject("Regions");
-        foreach (Region region in regions)
+        foreach (SWBFRegion region in regions)
         {
             GameObject regionObj = new GameObject(region.Name);
             regionObj.transform.position = UnityUtils.Vec3FromLibWorld(region.Position);
@@ -698,7 +699,7 @@ public class WorldLoader : Loader
             }
             else
             {
-                throw new Exception(string.Format("IMPLEMENT '{0}'!", region.Type));
+                throw new Exception(string.Format("Region implementation needed for '{0}'!", region.Type));
             }
 
             collider.isTrigger = true;

@@ -22,8 +22,6 @@ public class ClassLoader : Loader
 
     public Dictionary<string, GameObject> classObjectDatabase = new Dictionary<string, GameObject>();
 
-
-
     public const uint GEOMETRYNAME = 1204317002;
     public const uint ATTACHODF = 2849035403;
     public const uint ATTACHTOHARDPOINT = 1005041674;
@@ -37,57 +35,6 @@ public class ClassLoader : Loader
     {
         classObjectDatabase.Clear();
     }
-
-    public static void AssignProp<T1, T2>(T1 instOrClass, string propName, ref T2 value) where T1 : ISWBFProperties where T2 : struct
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            value = (T2)Convert.ChangeType(outVal, typeof(T2), CultureInfo.InvariantCulture);
-        }
-    }
-
-    public static void AssignProp<T1>(T1 instOrClass, string propName, ref Collider value) where T1 : ISWBFProperties
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            value = WorldLoader.Instance.GetRegion(outVal);
-        }
-    }
-
-    public static void AssignProp<T1>(T1 instOrClass, string propName, int argIdx, ref AudioClip value) where T1 : ISWBFProperties
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            string[] args = outVal.Split(' ');
-            value = SoundLoader.LoadSound(args[argIdx]);
-        }
-    }
-
-    public static void AssignProp<T1, T2>(T1 instOrClass, string propName, Ref<T2> value) where T1 : ISWBFProperties
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            value.Set((T2)Convert.ChangeType(outVal, typeof(T2), CultureInfo.InvariantCulture));
-        }
-    }
-
-    public static void AssignProp<T1>(T1 instOrClass, string propName, Ref<Collider> value) where T1 : ISWBFProperties
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            value.Set(WorldLoader.Instance.GetRegion(outVal));
-        }
-    }
-
-    public static void AssignProp<T1>(T1 instOrClass, string propName, int argIdx, Ref<AudioClip> value) where T1 : ISWBFProperties
-    {
-        if (instOrClass.GetProperty(propName, out string outVal))
-        {
-            string[] args = outVal.Split(' ');
-            value.Set(SoundLoader.LoadSound(args[argIdx]));
-        }
-    }
-
 
     public static string GetBaseClassName(string name)
     {
