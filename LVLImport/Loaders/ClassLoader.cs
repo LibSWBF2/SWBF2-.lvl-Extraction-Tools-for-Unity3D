@@ -64,6 +64,8 @@ public class ClassLoader : Loader
 
     public static EntityClass GetRootClass(EntityClass cl)
     {
+        if (cl == null) return null;
+
         EntityClass parentClass = cl.BaseClass;
         if (parentClass == null)
         {
