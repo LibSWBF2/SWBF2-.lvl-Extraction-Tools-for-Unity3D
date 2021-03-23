@@ -74,25 +74,50 @@ public class ClassLoader : Loader
         return GetRootClass(parentClass);
     }
 
-    public GameObject LoadInstance(Instance inst)
+    public GameObject Instantiate(ISWBFProperties instOrClass, string instName)
     {
-        GameObject obj = new GameObject(inst.Name);
+        //TODO: caching
 
-        if (inst.GetProperty("GeometryName", out string geometryName))
+        GameObject obj = new GameObject(instName);
+
+        if (instOrClass.GetProperty("GeometryName", out string geometryName))
         {
             if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
             {
-                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", inst.Name, geometryName);
+                Debug.LogWarningFormat("Failed to load model {1} used by object {0}", instName, geometryName);
                 return obj;
             }
 
-            var entClass = GetRootClass(container.Get<EntityClass>(inst.EntityClassName));
-            if (IsStaticObjectClass(entClass))
+            EntityClass odf = instOrClass.GetType() == typeof(Instance) ? ((Instance)instOrClass).EntityClass : ((EntityClass)instOrClass);
+            EntityClass root = GetRootClass(odf);
+            if (IsStaticObjectClass(root))
             {
                 obj.isStatic = true;
                 foreach (var tx in UnityUtils.GetChildTransforms(obj.transform))
                 {
                     tx.gameObject.isStatic = true;
+                }
+            }
+
+            // Default animation for soldier classes seems to be hardcoded.
+            // For example, there's no "AnimationName" anywhere in the odf hierarchy:
+            //   rep_inf_ep3_rifleman -> rep_inf_default_rifleman -> rep_inf_default -> com_inf_default
+            string animName = "human_0";
+            if (root.BaseClassName == "soldier" || instOrClass.GetProperty("AnimationName", out animName))
+            {
+                var clips = AnimationLoader.Instance.LoadAnimationBank(animName, obj.transform);
+                Animation animComponent = obj.GetComponent<Animation>();
+
+                if (animComponent == null)
+                {
+                    animComponent = obj.AddComponent<Animation>();
+                }
+
+                animComponent.playAutomatically = false;
+                foreach (var curClip in clips)
+                {
+                    animComponent.AddClip(curClip, curClip.name);
+                    animComponent.wrapMode = WrapMode.Once;
                 }
             }
         }

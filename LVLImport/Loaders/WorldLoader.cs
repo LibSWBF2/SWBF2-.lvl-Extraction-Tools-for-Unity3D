@@ -162,8 +162,7 @@ public class WorldLoader : Loader
                 case "armedbuilding":
                 case "animatedbuilding":
                 case "commandpost":
-                    //instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
-                    instanceObject = ClassLoader.Instance.LoadInstance(inst);
+                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
                     break;
 
                 default:
