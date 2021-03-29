@@ -187,7 +187,7 @@ public class ClassLoader : Loader {
 
                     currentAnimationSet = propertyValue;
 
-                    var clips = AnimationLoader.Instance.LoadAnimationBank(propertyValue, obj.transform);
+                    var clips = AnimationLoader.Instance.LoadAnimationBankLegacy(propertyValue, obj.transform);
                     Animation animComponent = obj.GetComponent<Animation>();
 
                     if (animComponent == null)
