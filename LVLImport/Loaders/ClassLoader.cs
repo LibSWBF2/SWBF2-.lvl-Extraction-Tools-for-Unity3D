@@ -56,6 +56,7 @@ public class ClassLoader : Loader
         case "door":
         case "animatedprop":                  
         case "animatedbuilding":
+        case "powerupstation":
             return false;
         default:
             return true;            
