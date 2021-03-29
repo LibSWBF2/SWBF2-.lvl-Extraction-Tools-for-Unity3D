@@ -17,11 +17,11 @@ public class AnimationLoader : Loader {
     public static AnimationLoader Instance { get; private set; } = null;
 
 
-    private Dictionary<uint, AnimationClip> animDatabase = new Dictionary<uint, AnimationClip>();
+    private Dictionary<uint, AnimationClip> AnimDatabase = new Dictionary<uint, AnimationClip>();
 
     public void ResetDB()
     {
-        animDatabase.Clear();
+        AnimDatabase.Clear();
     }
 
 
@@ -90,23 +90,21 @@ public class AnimationLoader : Loader {
     }
 
     
-    public List<AnimationClip> LoadAnimationBank(string animBankName, Transform tran)
+    public AnimationClip[] LoadAnimationBank(string animBankName, Transform tran)
     {
-        List<AnimationClip> clips = new List<AnimationClip>();
-
         var bank = container.Get<AnimationBank>(animBankName);
-
         if (bank == null)
         {
-            return clips;
+            return null;
         }
 
         var animCRCs = bank.GetAnimationCRCs();
-        foreach (uint animCRC in animCRCs)
+        AnimationClip[] clips = new AnimationClip[animCRCs.Length];
+
+        for (int i = 0; i < clips.Length; ++i)
         {
-            var clip = LoadAnimationClip(animBankName, animCRC, tran);
-            clip.name = TryFindAnimationName(animCRC);
-            clips.Add(clip);
+            var clip = LoadAnimationClip(animBankName, animCRCs[i], tran);
+            clips[i] = clip;
         }
 
         return clips;
@@ -114,20 +112,20 @@ public class AnimationLoader : Loader {
 
 
     public AnimationClip LoadAnimationClip(string animBankName, string animationName, Transform objectTransform)
-    {   
+    {
         //uint animBankCRC = HashUtils.GetCRC(animBankName);
         uint animCRC = HashUtils.GetCRC(animationName);
         return LoadAnimationClip(animBankName, animCRC, objectTransform);
     }
 
 
-    public AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform)
+    public AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform, bool legacy=true)
     {
     	uint animID = HashUtils.GetCRC(animBankName) * animationName;//HashUtils.GetCRC(animBankName + "/" + animationName);
 
-    	if (animDatabase.ContainsKey(animID))
+    	if (AnimDatabase.ContainsKey(animID))
     	{
-    		return animDatabase[animID];
+    		return AnimDatabase[animID];
     	}
 
     	var animBank = container.Get<AnimationBank>(animBankName);
@@ -156,14 +154,15 @@ public class AnimationLoader : Loader {
             }
 
 
-    		clip.legacy = true;
+    		clip.legacy = legacy;
 
     		for (int i = 0; i < objectTransform.childCount; i++)
     		{
 	    		WalkSkeletonAndCreateCurves(ref clip, animBank, objectTransform.GetChild(i), "", animCRC);
     		}
 
-    		animDatabase[animID] = clip;
+            clip.name = TryFindAnimationName(animationName);
+            AnimDatabase[animID] = clip;
 
     		return clip;
     	}
@@ -173,8 +172,6 @@ public class AnimationLoader : Loader {
     		return null;
     	}
     }
-
-
 
     static AnimationLoader()
     {
