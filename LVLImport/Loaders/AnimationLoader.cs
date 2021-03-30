@@ -132,7 +132,7 @@ public class AnimationLoader : Loader {
 
     	if (animBank == null)
     	{
-    		Debug.LogWarningFormat("AnimationBank {0} failed to load!", animBankName);
+    		//Debug.LogWarningFormat("AnimationBank {0} failed to load!", animBankName);
     		return null;
     	}
 
@@ -168,7 +168,7 @@ public class AnimationLoader : Loader {
     	}
     	else 
     	{
-    		Debug.LogWarningFormat("AnimationBank {0} does contain the animation {1}!", animBankName, animationName);
+    		//Debug.LogWarningFormat("AnimationBank {0} does contain the animation {1}!", animBankName, animationName);
     		return null;
     	}
     }

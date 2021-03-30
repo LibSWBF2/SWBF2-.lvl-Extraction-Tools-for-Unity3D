@@ -99,28 +99,6 @@ public class ClassLoader : Loader
                     tx.gameObject.isStatic = true;
                 }
             }
-
-            // Default animation for soldier classes seems to be hardcoded.
-            // For example, there's no "AnimationName" anywhere in the odf hierarchy:
-            //   rep_inf_ep3_rifleman -> rep_inf_default_rifleman -> rep_inf_default -> com_inf_default
-            string animName = "human_0";
-            if (root.BaseClassName == "soldier" || instOrClass.GetProperty("AnimationName", out animName))
-            {
-                var clips = AnimationLoader.Instance.LoadAnimationBank(animName, obj.transform);
-                Animation animComponent = obj.GetComponent<Animation>();
-
-                if (animComponent == null)
-                {
-                    animComponent = obj.AddComponent<Animation>();
-                }
-
-                animComponent.playAutomatically = false;
-                foreach (var curClip in clips)
-                {
-                    animComponent.AddClip(curClip, curClip.name);
-                    animComponent.wrapMode = WrapMode.Once;
-                }
-            }
         }
 
         return obj;
