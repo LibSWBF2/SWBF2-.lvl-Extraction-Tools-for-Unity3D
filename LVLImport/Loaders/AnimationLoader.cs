@@ -56,7 +56,7 @@ public class AnimationLoader : Loader {
 
 
     private void WalkSkeletonAndCreateCurves(ref AnimationClip clip, AnimationBank animBank,
-    										Transform bone, string curPath, uint animHash)
+    										Transform bone, string curPath, uint animHash, bool enableRootMotion)
     {
     	uint boneHash = HashUtils.GetCRC(bone.name);
 		
@@ -67,6 +67,13 @@ public class AnimationLoader : Loader {
 
     	for (int i = 0; i < 7; i++)
     	{
+            if (!enableRootMotion && 
+                (i == 4 || i == 6) &&  // position.x || position.z
+                bone.name.ToLowerInvariant() == "dummyroot")
+            {
+                continue;
+            }
+
             float mult = ComponentMultipliers[i];
 
 			if (animBank.GetCurve(animHash, boneHash, (uint) i,
@@ -85,7 +92,7 @@ public class AnimationLoader : Loader {
 
 		for (int i = 0; i < bone.childCount; i++)
 		{
-			WalkSkeletonAndCreateCurves(ref clip, animBank, bone.GetChild(i), relPath + "/", animHash);
+			WalkSkeletonAndCreateCurves(ref clip, animBank, bone.GetChild(i), relPath + "/", animHash, enableRootMotion);
 		}
     }
 
@@ -119,7 +126,7 @@ public class AnimationLoader : Loader {
     }
 
 
-    public AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform, bool legacy=true)
+    public AnimationClip LoadAnimationClip(string animBankName, uint animationName, Transform objectTransform, bool enableRootMotion=true, bool legacy=true)
     {
     	uint animID = HashUtils.GetCRC(animBankName) * animationName;//HashUtils.GetCRC(animBankName + "/" + animationName);
 
@@ -158,7 +165,7 @@ public class AnimationLoader : Loader {
 
     		for (int i = 0; i < objectTransform.childCount; i++)
     		{
-	    		WalkSkeletonAndCreateCurves(ref clip, animBank, objectTransform.GetChild(i), "", animCRC);
+	    		WalkSkeletonAndCreateCurves(ref clip, animBank, objectTransform.GetChild(i), "", animCRC, enableRootMotion);
     		}
 
             clip.name = TryFindAnimationName(animationName);
