@@ -298,6 +298,9 @@ public class WorldLoader : Loader
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
 
+        MeshCollider coll = terrainObj.AddComponent<MeshCollider>();
+        coll.sharedMesh = terrainMesh;
+
         string[] layerNames = new string[terrain.LayerTextures.Count];
         terrain.LayerTextures.CopyTo(layerNames, 0);
         Texture2DArray layers = TextureLoader.Instance.ImportTextures(layerNames, out float[] xAbsDims);
