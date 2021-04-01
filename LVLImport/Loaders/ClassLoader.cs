@@ -57,6 +57,13 @@ public class ClassLoader : Loader
         case "animatedprop":                  
         case "animatedbuilding":
         case "powerupstation":
+        case "soldier":
+        case "walkerdroid":
+        case "vehicle":
+        case "walker":
+        case "commandwalker":
+        case "hover":
+        case "flyer":
             return false;
         default:
             return true;            
