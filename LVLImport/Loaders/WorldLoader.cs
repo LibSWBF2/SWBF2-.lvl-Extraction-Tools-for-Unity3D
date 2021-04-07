@@ -15,8 +15,7 @@ using UMaterial = UnityEngine.Material;
 using LibVec3 = LibSWBF2.Types.Vector3;
 using ULight = UnityEngine.Light;
 using SWBFRegion = LibSWBF2.Wrappers.Region;
-
-
+using UnityEngine.Assertions.Must;
 
 public class WorldLoader : Loader
 {
@@ -27,9 +26,10 @@ public class WorldLoader : Loader
 
 
     Dictionary<string, GameObject> LoadedSkydomes;
+    Dictionary<string, SWBFPath> LoadedPaths;
     public Dictionary<string, Collider> LoadedRegions { get; private set; }
 
-    string[] BlendUniforms = new string[4] 
+    string[] BlendUniforms = new string[4]
     {
         "Texture2D_e354f4a9e36f4302a8feaefa8efd534f",   // Blend0
         "Texture2D_495af9007a884b93af8983df8b78ffb8",   // Blend1
@@ -47,12 +47,14 @@ public class WorldLoader : Loader
     {
         LoadedSkydomes = new Dictionary<string, GameObject>();
         LoadedRegions = new Dictionary<string, Collider>();
+        LoadedPaths = new Dictionary<string, SWBFPath>();
     }
 
     public void Reset()
     {
         LoadedSkydomes.Clear();
         LoadedRegions.Clear();
+        LoadedPaths.Clear();
     }
 
     public void ImportWorld(World world)
@@ -80,7 +82,7 @@ public class WorldLoader : Loader
         {
             instanceObject.transform.parent = instancesRoot.transform;
         }
-        
+
         //Terrain
         if (ImportTerrain)
         {
@@ -99,7 +101,7 @@ public class WorldLoader : Loader
                         terrainGameObject = ImportTerrainAsMesh(terrain, world.Name);
                     }
                 }
-                else 
+                else
                 {
                     terrainGameObject = ImportTerrainAsUnity(terrain, world.Name);
                 }
@@ -111,7 +113,7 @@ public class WorldLoader : Loader
 
 
         //Lighting
-        var lightingRoots = ImportLights(container.FindConfig(ConfigType.Lighting, world.Name)); 
+        var lightingRoots = ImportLights(container.FindConfig(ConfigType.Lighting, world.Name));
         foreach (var lightingRoot in lightingRoots)
         {
             lightingRoot.transform.parent = worldRoot.transform;
@@ -155,14 +157,14 @@ public class WorldLoader : Loader
             switch (baseName)
             {
                 case "door":
-                case "animatedprop":                  
+                case "animatedprop":
                 case "prop":
                 case "building":
                 case "destructablebuilding":
                 case "armedbuilding":
                 case "animatedbuilding":
                 case "commandpost":
-                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName,true);
+                    instanceObject = ClassLoader.Instance.LoadGeneralClass(entityClassName, true);
                     break;
 
                 default:
@@ -171,7 +173,7 @@ public class WorldLoader : Loader
 
             instanceObject.transform.rotation = UnityUtils.QuatFromLibWorld(inst.Rotation);
             instanceObject.transform.position = UnityUtils.Vec3FromLibWorld(inst.Position);
-            instanceObject.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
+            instanceObject.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
             instanceObjects.Add(instanceObject);
         }
 
@@ -190,7 +192,7 @@ public class WorldLoader : Loader
 
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
-        terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int) s));
+        terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int)s));
         terrainMesh.RecalculateNormals();
 
         GameObject terrainObj = new GameObject("Terrain");
@@ -198,7 +200,7 @@ public class WorldLoader : Loader
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
-       
+
         UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDMaterial);
         if (SaveAssets)
         {
@@ -221,11 +223,11 @@ public class WorldLoader : Loader
             i++;
         }
 
-        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
-        
+        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);
+
         for (i = 0; i < 4; i++)
         {
-            Texture2D blendTex = new Texture2D((int) blendDim, (int) blendDim);
+            Texture2D blendTex = new Texture2D((int)blendDim, (int)blendDim);
 
             Color[] colors = blendTex.GetPixels(0);
 
@@ -234,22 +236,22 @@ public class WorldLoader : Loader
                 for (int h = 0; h < blendDim; h++)
                 {
                     Color col = Color.black;
-                    int baseIndex = (int) (numLayers * (w * blendDim + h));
+                    int baseIndex = (int)(numLayers * (w * blendDim + h));
                     int offset = i * 4;
 
                     for (int z = 0; z < 4; z++)
                     {
                         if (offset + z < numLayers)
                         {
-                            col[z] = ((float) blendMapRaw[baseIndex + offset + z]) / 255.0f;  
+                            col[z] = ((float)blendMapRaw[baseIndex + offset + z]) / 255.0f;
                         }
                     }
 
                     colors[(blendDim - w - 1) * blendDim + h] = col;
                 }
-            } 
+            }
 
-            blendTex.SetPixels(colors,0);
+            blendTex.SetPixels(colors, 0);
             blendTex.Apply();
 
             if (SaveAssets)
@@ -257,14 +259,14 @@ public class WorldLoader : Loader
                 string blendSlicePath = SaveDirectory + "/blendmap_slice_" + i.ToString() + ".png";
                 File.WriteAllBytes(blendSlicePath, blendTex.EncodeToPNG());
                 AssetDatabase.ImportAsset(blendSlicePath, ImportAssetOptions.Default);
-                blendTex = (Texture2D) AssetDatabase.LoadAssetAtPath(blendSlicePath, typeof(Texture2D));
+                blendTex = (Texture2D)AssetDatabase.LoadAssetAtPath(blendSlicePath, typeof(Texture2D));
             }
 
             renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
         }
 
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
-        float bound = (float) (dim * dimScale);
+        float bound = (float)(dim * dimScale);
         renderer.sharedMaterial.SetFloat("_XBound", bound);
         renderer.sharedMaterial.SetFloat("_ZBound", bound);
 
@@ -273,7 +275,7 @@ public class WorldLoader : Loader
             PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
         }
 
-        terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f,1.0f,-1.0f);
+        terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f, 1.0f, -1.0f);
         return terrainObj;
     }
 
@@ -372,7 +374,7 @@ public class WorldLoader : Loader
         terrain.GetHeightMap(out uint dim, out uint dimScale, out float[] heightsRaw);
         float floor = terrain.HeightLowerBound;
         float ceiling = terrain.HeightUpperBound;
-        
+
         TerrainData terData = new TerrainData();
 
         if (SaveAssets)
@@ -380,26 +382,26 @@ public class WorldLoader : Loader
             AssetDatabase.CreateAsset(terData, SaveDirectory + "/" + name + "_terrain_data.asset");
         }
 
-        terData.heightmapResolution = (int) dim + 1;
+        terData.heightmapResolution = (int)dim + 1;
         terData.size = new Vector3(dim * dimScale, ceiling - floor, dim * dimScale);
         terData.baseMapResolution = 512;
         terData.SetDetailResolution(512, 8);
 
-        float[,] heights = new float[dim,dim];
-        bool[,] holes    = new bool[dim,dim];
+        float[,] heights = new float[dim, dim];
+        bool[,] holes = new bool[dim, dim];
 
         for (int x = 0; x < dim; x++)
         {
             for (int y = 0; y < dim; y++)
             {
                 float h = heightsRaw[(dim - 1 - x) * dim + y];
-                heights[x,y] = h < -0.1 ? 0 : h;
-                holes[x,y] = h < -0.1 ? false : true;
+                heights[x, y] = h < -0.1 ? 0 : h;
+                holes[x, y] = h < -0.1 ? false : true;
             }
         }
         terData.SetHeights(0, 0, heights);
-        terData.SetHoles(0,0,holes);
-        
+        terData.SetHoles(0, 0, holes);
+
 
         //Get list of textures used
         List<Texture2D> terTextures = new List<Texture2D>();
@@ -408,25 +410,25 @@ public class WorldLoader : Loader
             Texture2D tex = TextureLoader.Instance.ImportTexture(texName);
             if (tex != null)
             {
-                terTextures.Add(tex);  
+                terTextures.Add(tex);
             }
         }
 
-        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);  
+        terrain.GetBlendMap(out uint blendDim, out uint numLayers, out byte[] blendMapRaw);
 
 
         //Assign layers
         TerrainLayer[] terrainLayers = new TerrainLayer[numLayers];
-        
+
         for (int i = 0; i < numLayers && i < terTextures.Count; i++)
         {
             TerrainLayer newLayer = new TerrainLayer();
             newLayer.diffuseTexture = terTextures[i];
-            newLayer.tileSize = new Vector2(32,32);
+            newLayer.tileSize = new Vector2(32, 32);
             terrainLayers[i] = newLayer;
         }
 
-        terData.SetTerrainLayersRegisterUndo(terrainLayers,"Undo");
+        terData.SetTerrainLayersRegisterUndo(terrainLayers, "Undo");
 
 
         //Read blendmap
@@ -436,24 +438,24 @@ public class WorldLoader : Loader
         {
             for (int x = 0; x < blendDim; x++)
             {
-                int baseIndex = (int) (numLayers * (y * blendDim + x));
+                int baseIndex = (int)(numLayers * (y * blendDim + x));
                 for (int z = 0; z < numLayers; z++)
                 {
-                    blendMap[blendDim - y - 1,x,z] = ((float) blendMapRaw[baseIndex + z]) / 255.0f;    
+                    blendMap[blendDim - y - 1, x, z] = ((float)blendMapRaw[baseIndex + z]) / 255.0f;
                 }
             }
         }
 
-        terData.alphamapResolution = (int) blendDim;
+        terData.alphamapResolution = (int)blendDim;
         terData.SetAlphamaps(0, 0, blendMap);
         terData.SetBaseMapDirty();
 
 
         //Save terrain/create gameobj
         GameObject terrainObj = UnityEngine.Terrain.CreateTerrainGameObject(terData);
-        int dimOffset = -1 * ((int) (dimScale * dim)) / 2;
-        terrainObj.transform.position = new Vector3(dimOffset,floor,dimOffset);
-        
+        int dimOffset = -1 * ((int)(dimScale * dim)) / 2;
+        terrainObj.transform.position = new Vector3(dimOffset, floor, dimOffset);
+
         if (SaveAssets)
         {
             PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
@@ -467,7 +469,7 @@ public class WorldLoader : Loader
     /*
     Lighting -- Still don't know why Z coord has to be reversed + Y coord slightly increased...
     */
-    public List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient=false)
+    public List<GameObject> ImportLights(Config lightingConfig, bool SetAmbient = false)
     {
         List<GameObject> lightObjects = new List<GameObject>();
 
@@ -500,7 +502,7 @@ public class WorldLoader : Loader
         lightObjects.Add(localLightsRoot);
 
         bool sunFound = false;
-        foreach (Field light in lightFields) 
+        foreach (Field light in lightFields)
         {
             string lightName = light.GetString();
             Scope sl = light.Scope;
@@ -558,16 +560,16 @@ public class WorldLoader : Loader
                 lightComp.color = UnityUtils.ColorFromLib(sl.GetVec3("Color"));
 
                 if (ltype == 2.0f)
-                {   
+                {
                     lightComp.type = UnityEngine.LightType.Point;
                     lightComp.range = range;
-                    lightComp.intensity = 4.0f;           
+                    lightComp.intensity = 4.0f;
                 }
                 else if (ltype == 3.0f)
                 {
                     lightComp.type = UnityEngine.LightType.Spot;
                     lightComp.range = range;
-                    lightComp.spotAngle = sl.GetVec2("Cone").X * Mathf.Rad2Deg;   
+                    lightComp.spotAngle = sl.GetVec2("Cone").X * Mathf.Rad2Deg;
                     lightComp.intensity = IsGlobal ? 2.0f : 0.5f;
                 }
                 else if (ltype == 1.0f)
@@ -577,7 +579,7 @@ public class WorldLoader : Loader
                     //lightComp.range = light.range;
                     //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
                 }
-                else 
+                else
                 {
                     Debug.LogWarning("Cant handle light type for " + light.Name + " yet");
                     continue;
@@ -589,11 +591,11 @@ public class WorldLoader : Loader
 
             if (IsGlobal)
             {
-                lightObj.transform.SetParent(globalLightsRoot.transform,false);
+                lightObj.transform.SetParent(globalLightsRoot.transform, false);
             }
             else
             {
-                lightObj.transform.SetParent(localLightsRoot.transform,false);
+                lightObj.transform.SetParent(localLightsRoot.transform, false);
             }
 
         }
@@ -612,7 +614,7 @@ public class WorldLoader : Loader
         //Import dome
         GameObject domeRoot = new GameObject("Dome");
         domeRoot.transform.parent = skyRoot.transform;
-        
+
         Field domeInfo = skydomeConfig.GetField("DomeInfo");
         if (domeInfo != null)
         {
@@ -628,14 +630,14 @@ public class WorldLoader : Loader
                 string geometryName = sD.GetString("Geometry");
                 GameObject domeModelObj = new GameObject(geometryName);
 
-                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, false, true);
+                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, null, false, true);
 
                 if (SaveAssets)
                 {
                     PrefabUtility.SaveAsPrefabAssetAndConnect(domeModelObj, SaveDirectory + "/dome_model_" + geometryName + ".prefab", InteractionMode.UserAction);
                 }
 
-                domeModelObj.transform.localScale = new Vector3(-300,300,300);
+                domeModelObj.transform.localScale = new Vector3(-300, 300, 300);
                 domeModelObj.transform.parent = domeRoot.transform;
             }
         }
@@ -651,7 +653,7 @@ public class WorldLoader : Loader
             string geometryName = domeObjectField.Scope.GetString("Geometry");
             GameObject domeObject = new GameObject(geometryName);
 
-            ModelLoader.Instance.AddModelComponents(domeObject, geometryName, false);
+            ModelLoader.Instance.AddModelComponents(domeObject, geometryName, null, false);
 
             if (SaveAssets)
             {
@@ -664,7 +666,7 @@ public class WorldLoader : Loader
 
         return skyRoot;
     }
-    
+
 
 
     public GameObject ImportRegions(SWBFRegion[] regions)
@@ -714,5 +716,57 @@ public class WorldLoader : Loader
         }
 
         return regionsRoot;
+    }
+
+    public SWBFPath ImportPath(string pathName)
+    {
+        if (LoadedPaths.TryGetValue(pathName, out SWBFPath foundPath))
+        {
+            return foundPath;
+        }
+
+        Config config = container.FindConfig(ConfigType.Path, pathName);
+        if (config == null)
+        {
+            Debug.LogWarning($"Cannot find path '{pathName}'!");
+            return null;
+        }
+
+        SWBFPath path = new SWBFPath();
+
+        Field[] fields = config.GetFields(pathName);
+        for (int i = 0; i < fields.Length; ++i)
+        {
+            Debug.Log(fields[i].GetVec3().X);
+        }
+
+        LoadedPaths.Add(pathName, path);
+        return path;
+    }
+}
+
+public class SWBFPath
+{
+    public struct Node
+    {
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public float Time;
+        public float PauseTime;
+    }
+
+    public string Name { get; private set; }
+    public Node[] Nodes { get; private set; }
+
+    public Node GetRandom()
+    {
+        if (Nodes == null || Nodes.Length == 0)
+        {
+            Debug.LogError("Path '{Name}' has no nodes!");
+            return default;
+        }
+
+        int idx = UnityEngine.Random.Range(0, Nodes.Length);
+        return Nodes[idx];
     }
 }

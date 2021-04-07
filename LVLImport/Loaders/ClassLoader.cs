@@ -90,7 +90,12 @@ public class ClassLoader : Loader
 
         if (instOrClass.GetProperty("GeometryName", out string geometryName))
         {
-            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
+            if (!instOrClass.GetProperty("OverrideTexture", out string overrideTexture))
+            {
+                overrideTexture = null;
+            }
+
+            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName, overrideTexture))
             {
                 Debug.LogWarningFormat("Failed to load model {1} used by object {0}", instName, geometryName);
                 return obj;
@@ -107,6 +112,16 @@ public class ClassLoader : Loader
                 }
             }
         }
+
+        HashSet<string> ordCollNames = new HashSet<string>();
+        if (instOrClass.GetProperty("OrdnanceCollision", out string[] ordinanceColliders))
+        {
+            for (int i = 0; i < ordinanceColliders.Length; ++i)
+            {
+                ordCollNames.Add(ordinanceColliders[i]);
+            }
+        }
+        ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordCollNames);
 
         return obj;
     }

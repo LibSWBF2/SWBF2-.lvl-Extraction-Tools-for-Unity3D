@@ -196,7 +196,7 @@ public class ModelLoader : Loader {
             filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray(), model.Name + "_" + boneName);
 
             MeshRenderer renderer = boneObj.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.Material, unlit)).ToArray();
+            renderer.sharedMaterials = (from segment in mappedSegments select MaterialLoader.Instance.LoadMaterial(segment.Material, null, unlit)).ToArray();
             renderer.shadowCastingMode = shadowSensitive ? ShadowCastingMode.On : ShadowCastingMode.Off;
             renderer.receiveShadows = shadowSensitive;
         }
@@ -210,11 +210,11 @@ public class ModelLoader : Loader {
     and creates a weighted mesh from them. 
     */
 
-    private bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton)
+    private bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, string overrideTexture)
     {
         Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.BoneName.Equals("") select segment).ToArray();
         Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray(), model.Name + "_skin");
-        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.Instance.LoadMaterial(segment.Material)).ToArray();
+        UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.Instance.LoadMaterial(segment.Material, overrideTexture)).ToArray();
 
         int skinType = AddWeights(newObject, model, mesh);
         if (skinType == 0)
@@ -281,7 +281,7 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    bool AddModelComponents(GameObject newObject, Model model, bool shadowSensitive, bool unlit)
+    bool AddModelComponents(GameObject newObject, Model model, string overrideTexture, bool shadowSensitive, bool unlit)
     {   
         if (model == null || newObject == null)
         {
@@ -297,15 +297,15 @@ public class ModelLoader : Loader {
         
         if (model.IsSkinned)
         {
-            AddSkinningComponents(newObject, model, skeleton);
+            AddSkinningComponents(newObject, model, skeleton, overrideTexture);
         }
 
         return true;
     }
 
-    public bool AddModelComponents(GameObject newObject, string modelName, bool shadowSensitive=true, bool unlit = false)
+    public bool AddModelComponents(GameObject newObject, string modelName, string overrideTexture=null, bool shadowSensitive=true, bool unlit = false)
     {
-        return AddModelComponents(newObject, container.Get<Model>(modelName), shadowSensitive, unlit);
+        return AddModelComponents(newObject, container.Get<Model>(modelName), overrideTexture, shadowSensitive, unlit);
     }
 
 

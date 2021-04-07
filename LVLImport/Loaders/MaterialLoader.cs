@@ -50,10 +50,15 @@ public class MaterialLoader : Loader
 
 
 
-    public UMaterial LoadMaterial(LibMaterial mat, bool unlit = false)
+    public UMaterial LoadMaterial(LibMaterial mat, string overrideTexture, bool unlit = false)
     {
         string texName = mat.Textures[0];
         MaterialFlags matFlags = mat.MaterialFlags;
+
+        if (!string.IsNullOrEmpty(overrideTexture))
+        {
+            texName = overrideTexture;
+        }
 
         if (texName == "")
         {
