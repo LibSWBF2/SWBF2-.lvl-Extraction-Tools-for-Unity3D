@@ -1,12 +1,6 @@
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
-using UnityEngine;
-
-using LibSWBF2.Logging;
+#endif
 using LibSWBF2.Wrappers;
 
 
@@ -15,9 +9,12 @@ public abstract class Loader {
     // Used by different loader classes
     protected static Container container = null;
 
+#if !LVLIMPORT_NO_EDITOR
     protected bool SaveAssets = false;
     protected string SaveDirectory = null;
+#endif
 
+#if !LVLIMPORT_NO_EDITOR
     public bool SetSave(string prefix, string folderName)
     {
         if (folderName == null || folderName == "" || prefix == null || !prefix.StartsWith("Assets/"))
@@ -51,28 +48,24 @@ public abstract class Loader {
 
         return true;
     }
-
+#endif
 
     public static void ResetAllLoaders()
     {
+#if !LVLIMPORT_NO_EDITOR
         TextureLoader.Instance.SaveAssets = false;
-        TextureLoader.Instance.ResetDB();
-
         MaterialLoader.Instance.SaveAssets = false;
-        MaterialLoader.Instance.ResetDB();
-
         ModelLoader.Instance.SaveAssets = false;
-        ModelLoader.Instance.ResetDB();
-
         AnimationLoader.Instance.SaveAssets = false;
-        AnimationLoader.Instance.ResetDB();
-
         ClassLoader.Instance.SaveAssets = false;
-        ClassLoader.Instance.ResetDB();
-
         WorldLoader.Instance.SaveAssets = false;
+#endif
+        TextureLoader.Instance.ResetDB();
+        MaterialLoader.Instance.ResetDB();
+        ModelLoader.Instance.ResetDB();
+        AnimationLoader.Instance.ResetDB();
+        ClassLoader.Instance.ResetDB();
         WorldLoader.Instance.Reset();
-
         SoundLoader.ResetDB();
     }
 

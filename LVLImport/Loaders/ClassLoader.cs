@@ -1,14 +1,12 @@
 using System;
-using System.Globalization;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 using UnityEngine;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
-using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
-using LibSWBF2.Utils;
 
 
 public class ClassLoader : Loader
@@ -140,11 +138,13 @@ public class ClassLoader : Loader
         if (classObjectDatabase.ContainsKey(name))
         {
             GameObject duplicate = null;
+#if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)
             {
                 duplicate = PrefabUtility.InstantiatePrefab(classObjectDatabase[name]) as GameObject;
             }
-            else 
+            else
+#endif
             {
                 duplicate = UnityEngine.Object.Instantiate(classObjectDatabase[name]);     
             }
@@ -318,12 +318,14 @@ public class ClassLoader : Loader
 
         ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordinanceColliders);
 
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             // This breaks when called inside an AssetEditing block...
             classObjectDatabase[name] = PrefabUtility.SaveAsPrefabAssetAndConnect(obj, SaveDirectory + "/" + obj.name + ".prefab", InteractionMode.UserAction);
         }
         else
+#endif
         {
             classObjectDatabase[name] = obj;
         }
@@ -340,7 +342,9 @@ public class ClassLoader : Loader
         {
             try
             {
+#if !LVLIMPORT_NO_EDITOR
                 PrefabUtility.UnpackPrefabInstance(classObjectDatabase[objname], PrefabUnpackMode.Completely, InteractionMode.UserAction);
+#endif
                 UnityEngine.Object.DestroyImmediate(classObjectDatabase[objname]);
             }catch (Exception e)
             {

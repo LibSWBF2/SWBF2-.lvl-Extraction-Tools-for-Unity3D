@@ -1,13 +1,12 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 using UnityEngine;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
-using LibSWBF2.Logging;
-using LibSWBF2.Wrappers;
 
 public class TextureLoader : Loader
 {
@@ -31,8 +30,6 @@ public class TextureLoader : Loader
     public Texture2D ImportUITexture(string name) => ImportTexture(name, true);
     public Texture2D ImportTexture(string name, bool mirror=false) 
     {
-        string texPath = SaveDirectory + "/" + name + ".png";
-
         if (texDataBase.ContainsKey(name))
         {
             return texDataBase[name];
@@ -51,6 +48,8 @@ public class TextureLoader : Loader
             newTexture.LoadRawTextureData(data);
             newTexture.Apply();
 
+#if !LVLIMPORT_NO_EDITOR
+            string texPath = SaveDirectory + "/" + name + ".png";
             if (SaveAssets)
             {
                 File.WriteAllBytes(texPath, newTexture.EncodeToPNG());
@@ -59,7 +58,7 @@ public class TextureLoader : Loader
                 AssetDatabase.ImportAsset(texPath, ImportAssetOptions.Default);
                 newTexture = (Texture2D) AssetDatabase.LoadAssetAtPath(texPath, typeof(Texture2D));
             }
-
+#endif
             texDataBase[name] = newTexture;
             return newTexture;
         }

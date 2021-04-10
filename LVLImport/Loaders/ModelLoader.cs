@@ -7,9 +7,10 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Collections;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
-using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 
 using LibMaterial = LibSWBF2.Wrappers.Material;
@@ -20,6 +21,8 @@ using LibBone = LibSWBF2.Wrappers.Bone;
 public class ModelLoader : Loader {
 
     public static ModelLoader Instance { get; private set; } = null;
+
+    public PhysicMaterial PhyMat;
 
     static ModelLoader()
     {
@@ -47,11 +50,12 @@ public class ModelLoader : Loader {
     {
         Mesh mesh = new Mesh();
 
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(mesh, Path.Combine(SaveDirectory, meshName + ".mesh")); 
         }
-
+#endif
         mesh.subMeshCount = segments.Length;
 
         int totalLength = (int) segments.Sum(item => item.GetVertexBufferLength());
@@ -374,6 +378,7 @@ public class ModelLoader : Loader {
                     {
                         boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
                     }
+                    boxColl.sharedMaterial = PhyMat;
                     break;
 
                 // Instantiate cylinder asset and use in convex mesh collider
@@ -382,6 +387,7 @@ public class ModelLoader : Loader {
                     {
                         MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
                         meshColl.sharedMesh = CylinderCollision;
+                        meshColl.sharedMaterial = PhyMat;
                         meshColl.convex = true;
                         primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
                     }
@@ -393,6 +399,7 @@ public class ModelLoader : Loader {
                     {
                         sphereColl.radius = rad;
                     }
+                    sphereColl.sharedMaterial = PhyMat;
                     break;
                 
                 // This happens, not sure what to make of it, but 
@@ -460,6 +467,7 @@ public class ModelLoader : Loader {
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = collMeshUnity;
+                    meshCollider.sharedMaterial = PhyMat;
                 }
             } 
             catch

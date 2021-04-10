@@ -1,13 +1,11 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 using UnityEngine;
-using UnityEngine.Rendering;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
-using LibSWBF2.Logging;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 
@@ -149,6 +147,7 @@ public class AnimationLoader : Loader {
     	{
     		var clip = new AnimationClip();
 
+#if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)
             {
                 string bankPath = SaveDirectory + "/" + animBankName;
@@ -159,9 +158,8 @@ public class AnimationLoader : Loader {
 
                 AssetDatabase.CreateAsset(clip, bankPath + "/" + TryFindAnimationName(animationName) + ".anim"); 
             }
-
-
-    		clip.legacy = legacy;
+#endif
+            clip.legacy = legacy;
 
     		for (int i = 0; i < objectTransform.childCount; i++)
     		{

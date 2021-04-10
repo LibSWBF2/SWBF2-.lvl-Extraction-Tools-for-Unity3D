@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
@@ -15,7 +17,6 @@ using UMaterial = UnityEngine.Material;
 using LibVec3 = LibSWBF2.Types.Vector3;
 using ULight = UnityEngine.Light;
 using SWBFRegion = LibSWBF2.Wrappers.Region;
-using UnityEngine.Assertions.Must;
 
 public class WorldLoader : Loader
 {
@@ -185,11 +186,13 @@ public class WorldLoader : Loader
     private GameObject ImportTerrainAsMesh(LibTerrain terrain, string name)
     {
         Mesh terrainMesh = new Mesh();
+
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terrainMesh, Path.Combine(SaveDirectory, name + "_terrain.mesh"));
         }
-
+#endif
         terrainMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         terrainMesh.vertices = terrain.GetPositionsBuffer<Vector3>();
         terrainMesh.triangles = Array.ConvertAll(terrain.GetIndexBuffer(), s => ((int)s));
@@ -202,11 +205,13 @@ public class WorldLoader : Loader
         filter.sharedMesh = terrainMesh;
 
         UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDMaterial);
+
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terrainMat, Path.Combine(SaveDirectory, name + "_terrain.mat"));
         }
-
+#endif
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
 
@@ -254,6 +259,7 @@ public class WorldLoader : Loader
             blendTex.SetPixels(colors, 0);
             blendTex.Apply();
 
+#if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)
             {
                 string blendSlicePath = SaveDirectory + "/blendmap_slice_" + i.ToString() + ".png";
@@ -261,7 +267,7 @@ public class WorldLoader : Loader
                 AssetDatabase.ImportAsset(blendSlicePath, ImportAssetOptions.Default);
                 blendTex = (Texture2D)AssetDatabase.LoadAssetAtPath(blendSlicePath, typeof(Texture2D));
             }
-
+#endif
             renderer.sharedMaterial.SetTexture("_BlendMap" + i.ToString(), blendTex);
         }
 
@@ -270,11 +276,12 @@ public class WorldLoader : Loader
         renderer.sharedMaterial.SetFloat("_XBound", bound);
         renderer.sharedMaterial.SetFloat("_ZBound", bound);
 
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
         }
-
+#endif
         terrainObj.transform.localScale = new UnityEngine.Vector3(1.0f, 1.0f, -1.0f);
         return terrainObj;
     }
@@ -302,6 +309,7 @@ public class WorldLoader : Loader
 
         MeshCollider coll = terrainObj.AddComponent<MeshCollider>();
         coll.sharedMesh = terrainMesh;
+        coll.sharedMaterial = ModelLoader.Instance.PhyMat;
 
         string[] layerNames = new string[terrain.LayerTextures.Count];
         terrain.LayerTextures.CopyTo(layerNames, 0);
@@ -377,11 +385,12 @@ public class WorldLoader : Loader
 
         TerrainData terData = new TerrainData();
 
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             AssetDatabase.CreateAsset(terData, SaveDirectory + "/" + name + "_terrain_data.asset");
         }
-
+#endif
         terData.heightmapResolution = (int)dim + 1;
         terData.size = new Vector3(dim * dimScale, ceiling - floor, dim * dimScale);
         terData.baseMapResolution = 512;
@@ -428,9 +437,9 @@ public class WorldLoader : Loader
             terrainLayers[i] = newLayer;
         }
 
+#if !LVLIMPORT_NO_EDITOR
         terData.SetTerrainLayersRegisterUndo(terrainLayers, "Undo");
-
-
+#endif
         //Read blendmap
         float[,,] blendMap = new float[blendDim, blendDim, numLayers];
 
@@ -456,11 +465,12 @@ public class WorldLoader : Loader
         int dimOffset = -1 * ((int)(dimScale * dim)) / 2;
         terrainObj.transform.position = new Vector3(dimOffset, floor, dimOffset);
 
+#if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
         {
             PrefabUtility.SaveAsPrefabAssetAndConnect(terrainObj, SaveDirectory + "/" + name + "_terrain.prefab", InteractionMode.UserAction);
         }
-
+#endif
         return terrainObj;
     }
 
@@ -586,7 +596,9 @@ public class WorldLoader : Loader
                 }
 
                 lightComp.shadows = LightShadows.Soft;
+#if !LVLIMPORT_NO_EDITOR
                 lightComp.lightmapBakeType = LightmapBakeType.Realtime;
+#endif
             }
 
             if (IsGlobal)
@@ -632,11 +644,12 @@ public class WorldLoader : Loader
 
                 ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, null, false, true);
 
+#if !LVLIMPORT_NO_EDITOR
                 if (SaveAssets)
                 {
                     PrefabUtility.SaveAsPrefabAssetAndConnect(domeModelObj, SaveDirectory + "/dome_model_" + geometryName + ".prefab", InteractionMode.UserAction);
                 }
-
+#endif
                 domeModelObj.transform.localScale = new Vector3(-300, 300, 300);
                 domeModelObj.transform.parent = domeRoot.transform;
             }
@@ -655,11 +668,12 @@ public class WorldLoader : Loader
 
             ModelLoader.Instance.AddModelComponents(domeObject, geometryName, null, false);
 
+#if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)
             {
                 PrefabUtility.SaveAsPrefabAssetAndConnect(domeObject, SaveDirectory + "/dome_object_" + geometryName + ".prefab", InteractionMode.UserAction);
             }
-
+#endif
             domeObject.transform.parent = domeObjectsRoot.transform;
             domeObject.transform.localPosition = new Vector3(0, domeObjectField.Scope.GetVec2("Height").X, 0);
         }

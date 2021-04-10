@@ -1,3 +1,5 @@
+#if !LVLIMPORT_NO_EDITOR
+
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -235,7 +237,6 @@ public class LVLImportWindow : EditorWindow {
                 if (saveObjects) { ClassLoader.Instance.SetSave(savePathPrefix,objectsFolder); }
                 if (saveWorld) { WorldLoader.Instance.SetSave(savePathPrefix, worldFolder); }
 
-
                 UnityEngine.Vector3 offset = new UnityEngine.Vector3(0,0,0); 
 
 
@@ -309,3 +310,5 @@ public class LVLImportWindow : EditorWindow {
         }
     }
 }
+
+#endif

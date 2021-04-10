@@ -1,16 +1,11 @@
-using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Linq;
 
 using UnityEngine;
-using UnityEngine.Rendering;
-using Unity.Collections;
+#if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
+#endif
 
-using LibSWBF2.Logging;
-using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
 
 using LibMaterial = LibSWBF2.Wrappers.Material;
@@ -140,11 +135,12 @@ public class MaterialLoader : Loader
                 {
                     material = new UMaterial(DefaultMaterial);
 
+#if !LVLIMPORT_NO_EDITOR
                     if (SaveAssets)
                     {
                         AssetDatabase.CreateAsset(material, Path.Combine(SaveDirectory, materialName + ".mat"));
                     }
-
+#endif
                     material.SetFloat("_Glossiness", 0.0f);
 
                     if (matFlags.HasFlag(MaterialFlags.Hardedged))
@@ -179,8 +175,9 @@ public class MaterialLoader : Loader
                 materialDataBase[materialName] = material;
             }
 
+#if !LVLIMPORT_NO_EDITOR
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-
+#endif
             return materialDataBase[materialName];
         }
     }
