@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using LibSWBF2.Wrappers;
 
-public class SoundLoader
+public class SoundLoader : Loader
 {
     static Dictionary<string, AudioClip> SoundDB = new Dictionary<string, AudioClip>();
 
@@ -19,8 +19,7 @@ public class SoundLoader
             return foundClip;
         }
 
-        RuntimeEnvironment runtime = GameRuntime.GetEnvironment();
-        Sound sound = runtime.Find<Sound>(soundName);
+        Sound sound = container.Get<Sound>(soundName);
         if (sound == null)
         {
             return null;
