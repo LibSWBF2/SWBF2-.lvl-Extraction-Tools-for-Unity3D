@@ -204,7 +204,7 @@ public class WorldLoader : Loader
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
 
-        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainSTDMaterial);
+        UMaterial terrainMat = new UMaterial(MaterialLoader.Instance.GetDefaultTerrainMaterial());
 
 #if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
@@ -302,7 +302,7 @@ public class WorldLoader : Loader
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
 
-        UMaterial terrainMat = new UMaterial(MaterialLoader.DefaultTerrainHDRPMaterial);
+        UMaterial terrainMat = new UMaterial(MaterialLoader.Instance.GetDefaultTerrainMaterial());
 
         MeshRenderer renderer = terrainObj.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;

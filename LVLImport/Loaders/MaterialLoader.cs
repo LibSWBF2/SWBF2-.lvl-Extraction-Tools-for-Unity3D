@@ -14,17 +14,66 @@ using UMaterial = UnityEngine.Material;
 
 public class MaterialLoader : Loader
 {
-    static UMaterial DefaultSTDMaterial  = new UMaterial(Shader.Find("ConversionAssets/SWBFStandard"));
-    static UMaterial DefaultHDRPMaterial = new UMaterial(Shader.Find("HDRP/Lit"));
-    public static UMaterial DefaultTerrainSTDMaterial  = new UMaterial(Shader.Find("ConversionAssets/SWBFTerrain"));
-    public static UMaterial DefaultTerrainHDRPMaterial = new UMaterial(Shader.Find("Shader Graphs/SWBFTerrainHDRP"));
+    // NOTE: Loading shaders/materials must NOT happen in static constructor,
+    // otherwise building a project using this at runtime won't work!
 
-    // what a stupid workaround....
-    static UMaterial DefaultHDRPTransparentMaterial = Resources.Load<UMaterial>("HDRPTransparent");
-    static UMaterial DefaultHDRPUnlitMaterial = Resources.Load<UMaterial>("HDRPUnlit");
+    const string DefaultSTDShader = "ConversionAssets/SWBFStandard";
+    const string DefaultTerrainSTDShader = "ConversionAssets/SWBFTerrain";
 
-    public static UMaterial DefaultMaterial => UseHDRP ? DefaultHDRPMaterial : DefaultSTDMaterial;
+    UMaterial _DefaultMaterial = null;
+    UMaterial _DefaultTerrainMaterial = null;
+    UMaterial _DefaultHDRPTransparentMaterial = null;
+    UMaterial _DefaultHDRPUnlitMaterial = null;
 
+    UMaterial GetDefaultMaterial()
+    {
+        if (_DefaultMaterial == null)
+        {
+            if (UseHDRP)
+            {
+                _DefaultMaterial = Resources.Load<UMaterial>("HDRPLit");
+            }
+            else
+            {
+                _DefaultMaterial = new UMaterial(Shader.Find(DefaultSTDShader));
+            }
+        }
+        return _DefaultMaterial;
+    }
+
+    public UMaterial GetDefaultTerrainMaterial()
+    {
+        if (_DefaultTerrainMaterial == null)
+        {
+            if (UseHDRP)
+            {
+                _DefaultTerrainMaterial = Resources.Load<UMaterial>("HDRPTerrain");
+            }
+            else
+            {
+                _DefaultTerrainMaterial = new UMaterial(Shader.Find(DefaultTerrainSTDShader));
+            }
+        }
+        return _DefaultTerrainMaterial;
+    }
+
+    UMaterial GetDefaultTransparentMaterial()
+    {
+        if (_DefaultHDRPTransparentMaterial == null)
+        {
+            _DefaultHDRPTransparentMaterial = Resources.Load<UMaterial>("HDRPTransparent");
+        }
+        return _DefaultHDRPTransparentMaterial;
+    }
+
+    UMaterial GetDefaultUnlitMaterial()
+    {
+        if (_DefaultHDRPUnlitMaterial == null)
+        {
+            _DefaultHDRPUnlitMaterial = Resources.Load<UMaterial>("HDRPTransparent");
+        }
+        return _DefaultHDRPUnlitMaterial;
+    }
 
     public static bool UseHDRP;
 
@@ -57,7 +106,7 @@ public class MaterialLoader : Loader
 
         if (texName == "")
         {
-            return new UMaterial(DefaultMaterial);
+            return new UMaterial(GetDefaultMaterial());
         } 
         else 
         {
@@ -75,7 +124,7 @@ public class MaterialLoader : Loader
                     // glowing materials can therefore NOT be transparent
                     if (matFlags.HasFlag(MaterialFlags.Glow) && !matFlags.HasFlag(MaterialFlags.Transparent))
                     {
-                        material = new UMaterial(unlit ? DefaultHDRPUnlitMaterial : DefaultHDRPMaterial);
+                        material = new UMaterial(unlit ? GetDefaultUnlitMaterial() : GetDefaultMaterial());
                         material.EnableKeyword("_EMISSIVE_MAPPING_BASE");
                         material.EnableKeyword("_EMISSIVE_COLOR_MAP");
                         if (importedTex != null)
@@ -88,7 +137,7 @@ public class MaterialLoader : Loader
                     }
                     else if (matFlags.HasFlag(MaterialFlags.Transparent))
                     {
-                        material = new UMaterial(DefaultHDRPTransparentMaterial);
+                        material = new UMaterial(GetDefaultTransparentMaterial());
 
                         //material.SetFloat("_AlphaCutoffEnable", 1.0f);
                         //material.SetFloat("_SurfaceType", 1.0f);
@@ -113,7 +162,7 @@ public class MaterialLoader : Loader
                     }
                     else
                     {
-                        material = new UMaterial(unlit ? DefaultHDRPUnlitMaterial : DefaultHDRPMaterial);
+                        material = new UMaterial(unlit ? GetDefaultUnlitMaterial() : GetDefaultMaterial());
                     }
 
                     if (matFlags.HasFlag(MaterialFlags.Doublesided))
@@ -133,7 +182,7 @@ public class MaterialLoader : Loader
                 }
                 else
                 {
-                    material = new UMaterial(DefaultMaterial);
+                    material = new UMaterial(GetDefaultMaterial());
 
 #if !LVLIMPORT_NO_EDITOR
                     if (SaveAssets)
