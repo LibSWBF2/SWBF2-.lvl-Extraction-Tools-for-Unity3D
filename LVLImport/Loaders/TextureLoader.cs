@@ -27,8 +27,8 @@ public class TextureLoader : Loader
         texDataBase.Clear();
     }
 
-    public Texture2D ImportUITexture(string name) => ImportTexture(name, true);
-    public Texture2D ImportTexture(string name, bool mirror=false) 
+    public Texture2D ImportUITexture(string name, bool printError=true) => ImportTexture(name, true, printError);
+    public Texture2D ImportTexture(string name, bool mirror=false, bool printError=true) 
     {
         if (texDataBase.ContainsKey(name))
         {
@@ -62,11 +62,12 @@ public class TextureLoader : Loader
             texDataBase[name] = newTexture;
             return newTexture;
         }
-        else 
+        else if (printError)
         {
-            Debug.LogWarningFormat("Texture: {0} failed to load!", name);
-            return null;
+            Debug.LogWarning($"Texture '{name}' failed to load!");
         }
+
+        return null;
     }
 
     public Texture2DArray ImportTextures(string[] names, out float[] xDims, bool mirror = false)

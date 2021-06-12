@@ -80,7 +80,7 @@ public class ClassLoader : Loader
         return GetRootClass(parentClass);
     }
 
-    public GameObject Instantiate(ISWBFProperties instOrClass, string instName)
+    public GameObject Instantiate(ISWBFProperties instOrClass, string instName, bool withCollision=true)
     {
         //TODO: caching
 
@@ -111,15 +111,18 @@ public class ClassLoader : Loader
             }
         }
 
-        HashSet<string> ordCollNames = new HashSet<string>();
-        if (instOrClass.GetProperty("OrdnanceCollision", out string[] ordinanceColliders))
+        if (withCollision)
         {
-            for (int i = 0; i < ordinanceColliders.Length; ++i)
+            HashSet<string> ordCollNames = new HashSet<string>();
+            if (instOrClass.GetProperty("OrdnanceCollision", out string[] ordinanceColliders))
             {
-                ordCollNames.Add(ordinanceColliders[i]);
+                for (int i = 0; i < ordinanceColliders.Length; ++i)
+                {
+                    ordCollNames.Add(ordinanceColliders[i]);
+                }
             }
+            ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordCollNames);
         }
-        ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordCollNames);
 
         return obj;
     }
@@ -171,11 +174,7 @@ public class ClassLoader : Loader
         List<string> values;
         
         try {
-            if (!ecWrapper.GetOverriddenProperties(out uint[] p_, out string[] v_))
-            {
-                Debug.LogWarningFormat("\tFailed to load object class: {0}", name);
-                return null;
-            }
+            ecWrapper.GetOverriddenProperties(out uint[] p_, out string[] v_);
             properties = new List<uint>(p_);
             values = new List<string>(v_);
         } catch
