@@ -80,16 +80,28 @@ public class TextureLoader : Loader
         for (int i = 0; i < names.Length; ++i)
         {
             libTextures[i] = container.Get<LibSWBF2.Wrappers.Texture>(names[i]);
-            maxWidth = Mathf.Max(maxWidth, libTextures[i].Width);
-            maxHeight = Mathf.Max(maxHeight, libTextures[i].Height);
+            if (libTextures[i] != null)
+            {
+                maxWidth = Mathf.Max(maxWidth, libTextures[i].Width);
+                maxHeight = Mathf.Max(maxHeight, libTextures[i].Height);
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot find texture '{names[i]}'!");
+            }
         }
 
         byte[] buffer = new byte[maxWidth * maxHeight * 4];
 
         Texture2DArray textures = new Texture2DArray(maxWidth, maxHeight, names.Length, TextureFormat.RGBA32, false);
-        for (int i = 0; i < names.Length; ++i)
+        for (int i = 0; i < libTextures.Length; ++i)
         {
             var tex = libTextures[i];
+            if (tex == null)
+            {
+                continue;
+            }
+
             xDims[i] = tex.Width;
 
             if (tex.Width < textures.width || tex.Height < textures.height)
