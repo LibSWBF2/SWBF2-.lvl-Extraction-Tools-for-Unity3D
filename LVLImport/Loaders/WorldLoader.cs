@@ -11,6 +11,8 @@ using UnityEditor;
 
 using LibSWBF2.Wrappers;
 using LibSWBF2.Enums;
+using LibSWBF2.Utils;
+using LibSWBF2;
 
 using LibTerrain = LibSWBF2.Wrappers.Terrain;
 using UMaterial = UnityEngine.Material;
@@ -739,23 +741,64 @@ public class WorldLoader : Loader
             return foundPath;
         }
 
-        Config config = container.FindConfig(ConfigType.Path, pathName);
-        if (config == null)
+        SWBF2Handle[] handles = container.GetLoadedLevels();
+        for (int i = 0; i < handles.Length; ++i)
         {
-            Debug.LogWarning($"Cannot find path '{pathName}'!");
-            return null;
+            Level level = container.GetLevel(handles[i]);
+            SWBFPath path = ImportPath(level, pathName);
+            if (path != null)
+            {
+                return path;
+            }
         }
 
-        SWBFPath path = new SWBFPath();
+        return null;
+    }
 
-        Field[] fields = config.GetFields(pathName);
-        for (int i = 0; i < fields.Length; ++i)
+    public SWBFPath ImportPath(Level level, string pathName)
+    {
+        if (LoadedPaths.TryGetValue(pathName, out SWBFPath foundPath))
         {
-            Debug.Log(fields[i].GetVec3().X);
+            return foundPath;
         }
 
-        LoadedPaths.Add(pathName, path);
-        return path;
+        uint PathHash = HashUtils.GetFNV("Path");
+
+        Config[] configs = level.GetConfigs(ConfigType.Path);
+        for (int i = 0; i < configs.Length; ++i)
+        {
+            Field[] paths = configs[i].GetFields(PathHash);
+            for (int j = 0; j < paths.Length; ++j)
+            {
+                if (paths[j].GetString().ToLower() == pathName.ToLower())
+                {
+                    SWBFPath path = new SWBFPath();
+
+                    Field nodesParent = paths[j].Scope.GetField("Nodes");
+                    Field[] nodes = nodesParent.Scope.GetFields("Node");
+
+                    path.Nodes = new SWBFPath.Node[nodes.Length];
+                    for (int k = 0; k < nodes.Length; ++k)
+                    {
+                        Field pos = nodes[k].Scope.GetField("Position");
+                        Field rot = nodes[k].Scope.GetField("Rotation");
+                        Field knot = nodes[k].Scope.GetField("Knot");
+                        Field time = nodes[k].Scope.GetField("Time");
+                        Field pauseTime = nodes[k].Scope.GetField("PauseTime");
+                        path.Nodes[k].Position = UnityUtils.Vec3FromLib(pos.GetVec3());
+                        path.Nodes[k].Rotation = UnityUtils.QuatFromLibWorld(rot.GetVec4());
+                        path.Nodes[k].Knot = knot.GetFloat();
+                        path.Nodes[k].Time = time.GetFloat();
+                        path.Nodes[k].PauseTime = pauseTime.GetFloat();
+                    }
+
+                    LoadedPaths.Add(pathName, path);
+                    return path;
+                }
+            }
+        }
+
+        return null;
     }
 }
 
@@ -765,12 +808,13 @@ public class SWBFPath
     {
         public Vector3 Position;
         public Quaternion Rotation;
+        public float Knot;
         public float Time;
         public float PauseTime;
     }
 
     public string Name { get; private set; }
-    public Node[] Nodes { get; private set; }
+    public Node[] Nodes;
 
     public Node GetRandom()
     {
