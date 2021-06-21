@@ -70,7 +70,7 @@ public class MaterialLoader : Loader
     {
         if (_DefaultHDRPUnlitMaterial == null)
         {
-            _DefaultHDRPUnlitMaterial = Resources.Load<UMaterial>("HDRPTransparent");
+            _DefaultHDRPUnlitMaterial = Resources.Load<UMaterial>("HDRPUnlit");
         }
         return _DefaultHDRPUnlitMaterial;
     }
