@@ -415,12 +415,13 @@ public class ModelLoader : Loader {
 
 
     /*
-    Adds all collision components.  If the model has a CollisionMesh, 
-    it is loaded and attached to the root object.  This is problematic,
-    as the SWBF2 engine can use concave mesh colliders for non static objects.
-    
-    After adding the collision mesh, ordinance collision primitives are
-    attached.
+     * NOTE: 'isStatic' of the given GameObject MUST be set beforehand!
+     * Adds all collision components.  If the model has a CollisionMesh, 
+     * it is loaded and attached to the root object.  This is problematic,
+     * as the SWBF2 engine can use concave mesh colliders for non static objects.
+     * 
+     * After adding the collision mesh, ordinance collision primitives are
+     * attached.
     */
 
     public bool AddCollisionComponents(GameObject newObject, string modelName, HashSet<string> colliderNames)
@@ -468,6 +469,7 @@ public class ModelLoader : Loader {
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = collMeshUnity;
                     meshCollider.sharedMaterial = PhyMat;
+                    meshCollider.convex = !newObject.isStatic;
                 }
             } 
             catch

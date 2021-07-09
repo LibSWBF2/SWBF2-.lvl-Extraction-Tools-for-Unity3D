@@ -62,6 +62,21 @@ public class ClassLoader : Loader
         case "commandwalker":
         case "hover":
         case "flyer":
+        case "cannon":
+        case "repair":
+        case "remote":
+        case "grenade":
+        case "detonator":
+        case "mine":
+        case "launcher":
+        case "missile":
+        case "bullet":
+        case "bolt":
+        case "beam":
+        case "droid":
+        case "melee":
+        case "explosion":
+        case "cloth":
             return false;
         default:
             return true;            
