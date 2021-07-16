@@ -97,7 +97,7 @@ public class MaterialLoader : Loader
     public UMaterial LoadMaterial(LibMaterial mat, string overrideTexture, bool unlit = false)
     {
         string texName = mat.Textures[0];
-        MaterialFlags matFlags = mat.MaterialFlags;
+        EMaterialFlags matFlags = mat.MaterialFlags;
 
         if (!string.IsNullOrEmpty(overrideTexture))
         {
@@ -122,7 +122,7 @@ public class MaterialLoader : Loader
 
                     // glowing materials use the textures alpha channel as glow map
                     // glowing materials can therefore NOT be transparent
-                    if (matFlags.HasFlag(MaterialFlags.Glow) && !matFlags.HasFlag(MaterialFlags.Transparent))
+                    if (matFlags.HasFlag(EMaterialFlags.Glow) && !matFlags.HasFlag(EMaterialFlags.Transparent))
                     {
                         material = new UMaterial(unlit ? GetDefaultUnlitMaterial() : GetDefaultMaterial());
                         material.EnableKeyword("_EMISSIVE_MAPPING_BASE");
@@ -135,7 +135,7 @@ public class MaterialLoader : Loader
                         material.SetFloat("_EmissiveExposureWeight", 0.0f);
                         //material.SetFloat("_EmissiveIntensity", 7.0f);
                     }
-                    else if (matFlags.HasFlag(MaterialFlags.Transparent))
+                    else if (matFlags.HasFlag(EMaterialFlags.Transparent))
                     {
                         material = new UMaterial(GetDefaultTransparentMaterial());
 
@@ -165,7 +165,7 @@ public class MaterialLoader : Loader
                         material = new UMaterial(unlit ? GetDefaultUnlitMaterial() : GetDefaultMaterial());
                     }
 
-                    if (matFlags.HasFlag(MaterialFlags.Doublesided))
+                    if (matFlags.HasFlag(EMaterialFlags.Doublesided))
                     {
                         material.SetFloat("_DoubleSidedEnable", 1.0f);
                     }
@@ -192,16 +192,16 @@ public class MaterialLoader : Loader
 #endif
                     material.SetFloat("_Glossiness", 0.0f);
 
-                    if (matFlags.HasFlag(MaterialFlags.Hardedged))
+                    if (matFlags.HasFlag(EMaterialFlags.Hardedged))
                     {
                         SetRenderMode(ref material, 1);
                     }
-                    else if (matFlags.HasFlag(MaterialFlags.Transparent))
+                    else if (matFlags.HasFlag(EMaterialFlags.Transparent))
                     {
                         SetRenderMode(ref material, 2);
                     }
 
-                    if (matFlags.HasFlag(MaterialFlags.Doublesided))
+                    if (matFlags.HasFlag(EMaterialFlags.Doublesided))
                     {
                         material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
                     }
@@ -212,7 +212,7 @@ public class MaterialLoader : Loader
                         material.mainTexture = importedTex;
                     }
 
-                    if (matFlags.HasFlag(MaterialFlags.Glow))
+                    if (matFlags.HasFlag(EMaterialFlags.Glow))
                     {
                         material.EnableKeyword("_EMISSION");
                         material.SetTexture("_EmissionMap", importedTex);

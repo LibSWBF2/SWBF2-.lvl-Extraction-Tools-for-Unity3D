@@ -1,5 +1,5 @@
 using System;
-using System.IO;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -12,6 +12,7 @@ using UnityEditor;
 #endif
 
 using LibSWBF2.Wrappers;
+using LibSWBF2.Enums;
 
 using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
@@ -23,6 +24,25 @@ public class ModelLoader : Loader {
     public static ModelLoader Instance { get; private set; } = null;
 
     public PhysicMaterial PhyMat;
+
+    public Dictionary<ECollisionMaskFlags, int> CollFlagToUnityLayer = new Dictionary<ECollisionMaskFlags, int>
+    {
+        { ECollisionMaskFlags.All,      0},
+        { ECollisionMaskFlags.Building, 0},
+        { ECollisionMaskFlags.Flag,     0},
+        { ECollisionMaskFlags.Ordnance, 0},
+        { ECollisionMaskFlags.Soldier,  0},
+        { ECollisionMaskFlags.Terrain,  0},
+        { ECollisionMaskFlags.Vehicle,  0},
+    };
+
+    // Objects containing a substring in this map (case insensitive), will get their collision flags overriden
+    // when collision is applied. Why? Because e.g. in geo1 there are some giant vehicle collisions,
+    // that got all their flags set... Idk about other cases at this point.
+    Dictionary<string, ECollisionMaskFlags> FlagOverrides = new Dictionary<string, ECollisionMaskFlags>
+    {
+        { "vehicle", ECollisionMaskFlags.Vehicle }
+    };
 
     static ModelLoader()
     {
@@ -333,8 +353,7 @@ public class ModelLoader : Loader {
         List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
         if (colliderNames == null || colliderNames.Count == 0)
         {
-            // 1 = Ordinance
-            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(1));
+            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(ECollisionMaskFlags.Ordnance));
         }
         else 
         {
@@ -370,9 +389,11 @@ public class ModelLoader : Loader {
             primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.Rotation);
             primObj.transform.SetParent(boneTx, false);
 
+            ApplyUnityLayer(primObj, prim.MaskFlags);
+
             switch (prim.PrimitiveType)
             {
-                case 4:
+                case ECollisionPrimitiveType.Cube:
                     BoxCollider boxColl = primObj.AddComponent<BoxCollider>();
                     if (prim.GetCubeDims(out float x, out float y, out float z))
                     {
@@ -382,7 +403,7 @@ public class ModelLoader : Loader {
                     break;
 
                 // Instantiate cylinder asset and use in convex mesh collider
-                case 2:
+                case ECollisionPrimitiveType.Cylinder:
                     if (prim.GetCylinderDims(out float r, out float h))
                     {
                         MeshCollider meshColl = primObj.AddComponent<MeshCollider>();
@@ -393,7 +414,7 @@ public class ModelLoader : Loader {
                     }
                     break;
                 
-                case 1:
+                case ECollisionPrimitiveType.Sphere:
                     SphereCollider sphereColl = primObj.AddComponent<SphereCollider>();
                     if (prim.GetSphereRadius(out float rad))
                     {
@@ -475,12 +496,52 @@ public class ModelLoader : Loader {
             catch
             {
                 Debug.LogWarning(modelName + ": Error while creating mesh collider...");
-            } 
+            }
+
+            ApplyUnityLayer(newObject, collMesh.MaskFlags);
         }
 
-        AddCollisionPrimitives(newObject, model, colliderNames); 
-        
-        return true;      
+        return AddCollisionPrimitives(newObject, model, colliderNames);  
     }
 
+    void ApplyUnityLayer(GameObject obj, ECollisionMaskFlags flags)
+    {
+        foreach (var flagEntry in FlagOverrides)
+        {
+            if ((!string.IsNullOrEmpty(flagEntry.Key) && obj.name.IndexOf(flagEntry.Key, 0, StringComparison.OrdinalIgnoreCase) != -1))
+            {
+                flags = flagEntry.Value;
+            }
+        }
+
+        bool ApplyIfHasFlag(GameObject obj, ECollisionMaskFlags flags, ECollisionMaskFlags flag)
+        {
+            if (flags.HasFlag(flag))
+            {
+                if (CollFlagToUnityLayer.TryGetValue(flag, out int layer))
+                {
+                    obj.layer = layer;
+                    return true;
+                }
+                else
+                {
+                    Debug.LogWarning($"No corresponding Unity Layer defined for collision flag: {flags} ({(int)flags}), found in object '{obj.name}'");
+                }
+            }
+            return false;
+        }
+
+
+        // Since in Unity, a GameObject can only have ONE layer, but SWBF2 collisions
+        // can have multiple collision flags enabled, let's traverse the flags from
+        // least to most significant and apply a corresponding layer respectively.
+
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.All)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Flag)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Vehicle)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Soldier)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Building)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Ordnance)) return;
+        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Terrain)) return;
+    }
 }

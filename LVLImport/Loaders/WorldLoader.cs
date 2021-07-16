@@ -116,7 +116,7 @@ public class WorldLoader : Loader
 
 
         //Lighting
-        var lightingRoots = ImportLights(container.FindConfig(ConfigType.Lighting, world.Name));
+        var lightingRoots = ImportLights(container.FindConfig(EConfigType.Lighting, world.Name));
         foreach (var lightingRoot in lightingRoots)
         {
             lightingRoot.transform.parent = worldRoot.transform;
@@ -126,7 +126,7 @@ public class WorldLoader : Loader
         //Skydome, check if already loaded first
         if (!LoadedSkydomes.ContainsKey(world.SkydomeName))
         {
-            var skyRoot = ImportSkydome(container.FindConfig(ConfigType.Skydome, world.SkydomeName));
+            var skyRoot = ImportSkydome(container.FindConfig(EConfigType.Skydome, world.SkydomeName));
             if (skyRoot != null)
             {
                 skyRoot.transform.parent = worldRoot.transform;
@@ -764,7 +764,7 @@ public class WorldLoader : Loader
 
         uint PathHash = HashUtils.GetFNV("Path");
 
-        Config[] configs = level.GetConfigs(ConfigType.Path);
+        Config[] configs = level.GetConfigs(EConfigType.Path);
         for (int i = 0; i < configs.Length; ++i)
         {
             Field[] paths = configs[i].GetFields(PathHash);
