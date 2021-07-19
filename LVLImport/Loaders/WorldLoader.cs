@@ -185,7 +185,7 @@ public class WorldLoader : Loader
 
 
 
-    private GameObject ImportTerrainAsMesh(LibTerrain terrain, string name)
+    public GameObject ImportTerrainAsMesh(LibTerrain terrain, string name)
     {
         Mesh terrainMesh = new Mesh();
 
@@ -205,6 +205,10 @@ public class WorldLoader : Loader
 
         MeshFilter filter = terrainObj.AddComponent<MeshFilter>();
         filter.sharedMesh = terrainMesh;
+
+        MeshCollider coll = terrainObj.AddComponent<MeshCollider>();
+        coll.sharedMesh = terrainMesh;
+        coll.sharedMaterial = ModelLoader.Instance.PhyMat;
 
         UMaterial terrainMat = new UMaterial(MaterialLoader.Instance.GetDefaultTerrainMaterial());
 
@@ -587,7 +591,7 @@ public class WorldLoader : Loader
                 else if (ltype == 1.0f)
                 {
                     lightComp.type = UnityEngine.LightType.Directional;
-                    lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
+                    lightComp.intensity = IsGlobal ? 3.0f : 0.3f;
                     //lightComp.range = light.range;
                     //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
                 }
@@ -654,6 +658,11 @@ public class WorldLoader : Loader
 #endif
                 domeModelObj.transform.localScale = new Vector3(-300, 300, 300);
                 domeModelObj.transform.parent = domeRoot.transform;
+
+                if (!UseHDRP)
+                {
+                    MaterialLoader.Instance.PatchMaterial(domeModelObj, "skydome");
+                }
             }
         }
 
@@ -678,6 +687,11 @@ public class WorldLoader : Loader
 #endif
             domeObject.transform.parent = domeObjectsRoot.transform;
             domeObject.transform.localPosition = new Vector3(0, domeObjectField.Scope.GetVec2("Height").X, 0);
+
+            if (!UseHDRP)
+            {                              
+                MaterialLoader.Instance.PatchMaterial(domeObject, "skydome");
+            }
         }
 
         return skyRoot;
