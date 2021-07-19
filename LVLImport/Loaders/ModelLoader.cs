@@ -61,6 +61,16 @@ public class ModelLoader : Loader {
 
 
 
+    public Model GetModelWrapper(string name)
+    {
+        Model model = null;
+        try {
+            model = container.Get<Model>(name);
+        }
+        catch { }
+        return model; 
+    }
+
 
     /*
     Extracts static mesh data from array of segments
@@ -484,7 +494,6 @@ public class ModelLoader : Loader {
                     Vector3[] positions = collMesh.GetVertices<Vector3>();
                     UnityUtils.ConvertSpaceAndFillVec3(positions,positions,0);
                     collMeshUnity.vertices = positions;
-                    
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
                     MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();

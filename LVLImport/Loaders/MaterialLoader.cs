@@ -298,4 +298,33 @@ public class MaterialLoader : Loader
         grayscale.Apply();
         return grayscale;
     }
+
+
+
+    // This is for special objects needing tempfixes.  Right now,
+    // we don't have skydomes properly lit by their suns, so we just add 
+    // emission to compensate
+    public void PatchMaterial(GameObject obj, string patchType="")
+    {
+        List<Transform> transforms = UnityUtils.GetChildTransforms(obj.transform);
+        transforms.Add(obj.transform);
+
+        foreach (Transform tx in transforms)
+        {
+            var renderer = tx.gameObject.GetComponent<MeshRenderer>();
+
+            if (renderer != null)
+            {
+                foreach (UMaterial mat in renderer.sharedMaterials)
+                {
+                    if (patchType.Equals("skydome"))
+                    {
+                        mat.EnableKeyword("_EMISSION");
+                        mat.SetTexture("_EmissionMap", mat.GetTexture("_MainTex"));
+                        mat.SetColor("_EmissionColor", Color.white);
+                    }
+                }
+            }
+        }
+    }
 }

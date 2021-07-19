@@ -53,6 +53,14 @@ public class AnimationLoader : Loader {
     }
 
 
+    public AnimationBank GetRawAnimationBank(string bankName)
+    {
+        return container.Get<AnimationBank>(bankName);
+    }
+
+
+
+
     private void WalkSkeletonAndCreateCurves(ref AnimationClip clip, AnimationBank animBank,
     										Transform bone, string curPath, uint animHash, bool enableRootMotion)
     {
