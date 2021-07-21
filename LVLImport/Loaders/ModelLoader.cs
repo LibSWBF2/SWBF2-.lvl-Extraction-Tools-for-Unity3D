@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -60,7 +61,7 @@ public class ModelLoader : Loader {
     public readonly static Mesh CylinderCollision = Resources.Load<Mesh>("CylinderCollider");
 
 
-
+    // Until we get the mapping class ready
     public Model GetModelWrapper(string name)
     {
         Model model = null;
@@ -69,6 +70,23 @@ public class ModelLoader : Loader {
         }
         catch { }
         return model; 
+    }
+
+    // Used for quick fx testing
+    public List<UMaterial> GetNeededMaterials(Model model)
+    {
+        List<UMaterial> mats = new List<UMaterial>();
+        foreach (Segment seg in model.GetSegments())
+        {
+            mats.Add(MaterialLoader.Instance.LoadMaterial(seg.Material, ""));
+        }
+        return mats;
+    }
+
+    // '' 
+    public Mesh GetFirstMesh(Model model)
+    {
+        return GetMeshFromSegments(model.GetSegments());
     }
 
 
