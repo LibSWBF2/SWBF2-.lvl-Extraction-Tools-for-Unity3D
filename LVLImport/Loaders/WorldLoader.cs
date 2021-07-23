@@ -646,9 +646,14 @@ public class WorldLoader : Loader
             {
                 Scope sD = domeModelField.Scope;
                 string geometryName = sD.GetString("Geometry");
-                GameObject domeModelObj = new GameObject(geometryName);
+                
+                GameObject domeModelObj = ModelLoader.Instance.GetGameObjectFromModel(geometryName, null, false, true);
+                if (domeModelObj == null)
+                {
+                    continue;
+                }
 
-                ModelLoader.Instance.AddModelComponents(domeModelObj, geometryName, null, false, true);
+                domeModelObj.name = geometryName;
 
 #if !LVLIMPORT_NO_EDITOR
                 if (SaveAssets)
@@ -675,9 +680,14 @@ public class WorldLoader : Loader
         foreach (Field domeObjectField in domeObjectFields)
         {
             string geometryName = domeObjectField.Scope.GetString("Geometry");
-            GameObject domeObject = new GameObject(geometryName);
 
-            ModelLoader.Instance.AddModelComponents(domeObject, geometryName, null, false);
+            GameObject domeObject = ModelLoader.Instance.GetGameObjectFromModel(geometryName, null, false);
+            if (domeObject == null)
+            {
+                continue;
+            }
+
+            domeObject.name = geometryName;
 
 #if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)

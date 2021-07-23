@@ -55,6 +55,19 @@ public static class UnityUtils {
     }
 
 
+    public static Transform[] RemapTransforms(Transform[] Txs, Transform TargetRoot)
+    {
+        Transform[] TargetTransforms = new Transform[Txs.Length];
+
+        for (int i = 0; i < Txs.Length; i++)
+        {
+            TargetTransforms[i] = FindChildTransform(TargetRoot, Txs[i].name);
+        }
+        
+        return TargetTransforms;
+    }
+
+
 
     public static List<Transform> GetChildTransforms(Transform curTx)
     {
