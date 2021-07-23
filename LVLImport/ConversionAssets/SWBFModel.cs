@@ -33,6 +33,17 @@ public enum SWBFColliderType : int
 // concepts to Unity, mainly Mask -> Layer mapping
 public class SWBFCollider
 {
+    public static Dictionary<ECollisionMaskFlags, int> CollFlagToUnityLayer = new Dictionary<ECollisionMaskFlags, int>
+    {
+        { ECollisionMaskFlags.All,      0},
+        { ECollisionMaskFlags.Building, 12},
+        { ECollisionMaskFlags.Ordnance, 6},
+        { ECollisionMaskFlags.Soldier,  10},
+        { ECollisionMaskFlags.Terrain,  11},
+        { ECollisionMaskFlags.Vehicle,  7},
+    };
+
+
     public ECollisionMaskFlags Mask;
     public GameObject Node;
     public Collider UnityCollider;
@@ -62,6 +73,10 @@ public class SWBFCollider
     {
         Node = GameObject.Instantiate(Coll.Node);
         Node.transform.SetParent(Coll.Node.transform.parent);
+        Node.transform.localPosition = Coll.Node.transform.localPosition;
+        Node.transform.localRotation = Coll.Node.transform.localRotation;
+        Node.name = Coll.Node.name;
+        
         UnityCollider = Node.GetComponent<Collider>();
 
         Mask = Coll.Mask;
@@ -173,30 +188,6 @@ public class SWBFModel
             }
         }
         return TaggedSegments;
-    }
-
-
-    // Set Mask for Collider with ColliderName, but don't apply Unity Layer yet 
-    public void SetColliderMask(string ColliderName, ECollisionMaskFlags Mask)
-    {
-        bool IsMesh = ColliderName.Equals("CollisionMesh", StringComparison.OrdinalIgnoreCase);
-
-        foreach (SWBFCollider Collider in Colliders)
-        {
-            if ((IsMesh && Collider.CollisionType == SWBFColliderType.Mesh) || 
-                Collider.Node.name.Equals(ColliderName, StringComparison.OrdinalIgnoreCase))
-            {
-                if (Collider.Mask == ECollisionMaskFlags.All)
-                {
-                    Collider.Mask = Mask;
-                }
-                else 
-                {
-                    Collider.Mask &= Mask;
-                }
-                return;
-            }
-        }
     }
 
 
@@ -340,6 +331,43 @@ public class SWBFModel
     }
 
 
+    // Enable/disable collider
+    public void EnableCollider(string Name, bool Status = true)
+    {
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            if (Collider.Node.name.Equals(Name, StringComparison.OrdinalIgnoreCase))
+            {
+                Collider.UnityCollider.enabled = Status;
+            }
+        }
+    }
+
+
+    // Set Mask for Collider with ColliderName, but don't apply Unity Layer yet 
+    public void SetColliderMask(string ColliderName, ECollisionMaskFlags Mask)
+    {
+        bool IsMesh = ColliderName.Equals("CollisionMesh", StringComparison.OrdinalIgnoreCase);
+
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            if ((IsMesh && Collider.CollisionType == SWBFColliderType.Mesh) || 
+                Collider.Node.name.Equals(ColliderName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Collider.Mask == ECollisionMaskFlags.All)
+                {
+                    Collider.Mask = Mask;
+                }
+                else 
+                {
+                    Collider.Mask &= Mask;
+                }
+                return;
+            }
+        }
+    }
+
+
     // Bypass Mask -> Unity Layer mapping and set all collider nodes to a 
     // particular Unity Layer. 
     public void SetColliderLayerAll(int Layer)
@@ -350,19 +378,35 @@ public class SWBFModel
         }
     }
 
+
     // Set Unity Layer from Mask -> Layer mapping on all collider nodes
     public void SetColliderLayerFromMaskAll()
     {
         foreach (SWBFCollider Collider in Colliders)
         {
-            // Set Unity layer from Mask
+            if (!SWBFCollider.CollFlagToUnityLayer.ContainsKey(Collider.Mask))
+            {
+                Collider.UnityCollider.enabled = false;
+            }
+            else 
+            {
+                Collider.Node.layer = SWBFCollider.CollFlagToUnityLayer[Collider.Mask];
+            }
         }
     }
 
 
-    public bool ApplyUnityLayer(ECollisionMaskFlags Mask)
+    // Get a list of colliders on nodes with given mask
+    public List<Collider> GetCollidersByLayer(ECollisionMaskFlags Mask)
     {
-        // Dk yet;
-        return false;
+        List<Collider> FoundColliders = new List<Collider>();
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            if (Collider.Mask.HasFlag(Mask))
+            {
+                FoundColliders.Add(Collider.UnityCollider);
+            }
+        }
+        return FoundColliders;
     }
 }
