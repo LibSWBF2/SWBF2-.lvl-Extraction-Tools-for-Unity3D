@@ -24,6 +24,13 @@ public class ModelLoader : Loader {
 
     public static ModelLoader Instance { get; private set; } = null;
 
+
+    Dictionary<string, SWBFModel> ModelMappingDB = new Dictionary<string, SWBFModel>();
+    Dictionary<string, GameObject> ModelDB = new Dictionary<string, GameObject>();
+
+    GameObject ModelDBRoot = new GameObject("ModelDBRoot");
+
+
     public PhysicMaterial PhyMat;
 
     public Dictionary<ECollisionMaskFlags, int> CollFlagToUnityLayer = new Dictionary<ECollisionMaskFlags, int>
@@ -52,13 +59,29 @@ public class ModelLoader : Loader {
 
     public void ResetDB()
     {
-        //todox
+        ModelDB.Clear();
+        GameObject.Destroy(ModelDBRoot);
+        ModelDBRoot = new GameObject("ModelDBRoot");
+
+        ModelMappingDB.Clear();
     }
 
     // Cylinder collision mesh as substitute for cylinder primitive.
     // Perhaps a gameobject with three children, each having a box collider, rotated to 
     // form a 6 sided cylinder would be more performant?  
     public readonly static Mesh CylinderCollision = Resources.Load<Mesh>("CylinderCollider");
+
+
+
+    public SWBFModel GetSWBFModelMapping(GameObject Root, string ModelName)
+    {
+        if (ModelMappingDB.ContainsKey(ModelName))
+        {
+            return new SWBFModel(ModelMappingDB[ModelName], Root);
+        }
+
+        return null;
+    }
 
 
     // Until we get the mapping class ready
@@ -220,7 +243,7 @@ public class ModelLoader : Loader {
     node with attached segments.
     */
 
-    bool AddStaticMeshes(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, bool shadowSensitive, bool unlit)
+    private List<SWBFSegment> AddStaticMeshes(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, bool shadowSensitive, bool unlit)
     {
         List<Segment> segments = (from segment in model.GetSegments() where !segment.BoneName.Equals("") select segment).ToList();
         Dictionary<string, List<Segment>> segmentMap = new Dictionary<string, List<Segment>>();
@@ -234,15 +257,21 @@ public class ModelLoader : Loader {
             {
                 segmentMap[boneName] = new List<Segment>();
             }
-            
+
             segmentMap[boneName].Add(segment);
         }
 
+        List<SWBFSegment> SWBFSegments = new List<SWBFSegment>(); 
 
         foreach (string boneName in segmentMap.Keys)
         {
             GameObject boneObj = skeleton[boneName].gameObject;
             List<Segment> mappedSegments = segmentMap[boneName];
+
+            for (int i = 0; i < mappedSegments.Count; i++)
+            {
+                SWBFSegments.Add(new SWBFSegment(i, boneObj, mappedSegments[i].Tag));
+            }
 
             MeshFilter filter = boneObj.AddComponent<MeshFilter>();
             filter.sharedMesh = GetMeshFromSegments(mappedSegments.ToArray(), model.Name + "_" + boneName);
@@ -253,7 +282,7 @@ public class ModelLoader : Loader {
             renderer.receiveShadows = shadowSensitive;
         }
 
-        return true;
+        return SWBFSegments;
     }
 
 
@@ -262,9 +291,17 @@ public class ModelLoader : Loader {
     and creates a weighted mesh from them. 
     */
 
-    private bool AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, string overrideTexture)
+    private List<SWBFSegment> AddSkinningComponents(GameObject newObject, Model model, Dictionary<string, Transform> skeleton, string overrideTexture)
     {
         Segment[] skinnedSegments = (from segment in model.GetSegments() where segment.BoneName.Equals("") select segment).ToArray();
+        
+        List<SWBFSegment> SkinnedSWBFSegments = new List<SWBFSegment>();
+        for (int i = 0; i < skinnedSegments.Length; i++)
+        {
+            SkinnedSWBFSegments.Add(new SWBFSegment(i, newObject, skinnedSegments[i].Tag, true));
+        }
+
+
         Mesh mesh = GetMeshFromSegments(skinnedSegments.ToArray(), model.Name + "_skin");
         UMaterial[] mats = (from segment in skinnedSegments select MaterialLoader.Instance.LoadMaterial(segment.Material, overrideTexture)).ToArray();
 
@@ -322,7 +359,7 @@ public class ModelLoader : Loader {
             skeleton[curBoneSWBF.Name].localPosition = UnityUtils.Vec3FromLibSkel(curBoneSWBF.Location);
         }
 
-        return true;
+        return SkinnedSWBFSegments;
     }
 
 
@@ -333,33 +370,159 @@ public class ModelLoader : Loader {
     object if present.
     */
 
-    bool AddModelComponents(GameObject newObject, Model model, string overrideTexture, bool shadowSensitive, bool unlit)
+    /*
+    public bool AttachModelComponents(GameObject ModelObj, string modelName, string overrideTexture, bool shadowSensitive=true, bool unlit=false)
     {   
-        if (model == null || newObject == null)
+        Model model = container.Get<LibSWBF2.Wrappers.Model>(modelName);
+
+        if (model == null)
         {
-            return false;
+            return null;
         }
 
-        if (!AddSkeleton(newObject, model, out Dictionary<string, Transform> skeleton))
+        if (!ModelDB.ContainsKey(model.Name))
         {
-            return false;
+            SWBFModel ModelMapping = new SWBFModel(ModelObj);
+
+            if (!AddSkeleton(ModelObj, model, out Dictionary<string, Transform> skeleton))
+            {
+                return null;
+            }
+
+            List<SWBFSegment> Segments = AddStaticMeshes(ModelObj, model, skeleton, shadowSensitive, unlit);
+            ModelMapping.AddSegments(Segments);
+
+            if (model.IsSkinned)
+            {
+                List<SWBFSegment> SkinnedSegments = AddSkinningComponents(ModelObj, model, skeleton, overrideTexture);
+                ModelMapping.AddSegments(SkinnedSegments);
+            }
+
+            List<SWBFCollider> Colliders = AddCollision(ModelObj, model);
+            ModelMapping.AddColliders(Colliders);
+
+            ModelDB[model.Name] = ModelObj;
+            ModelObj.transform.SetParent(ModelDBRoot.transform);
+            ModelObj.SetActive(false);
+
+            ModelMappingDB[model.Name] = ModelMapping;
         }
 
-        AddStaticMeshes(newObject, model, skeleton, shadowSensitive, unlit);
-        
-        if (model.IsSkinned)
+        GameObject Copy = GameObject.Instantiate(ModelDB[model.Name]);
+        Copy.SetActive(true);
+
+
+        SkinnedMeshRenderer CopySMR = Copy.GetComponent<SkinnedMeshRenderer>();
+        if (CopySMR != null)
         {
-            AddSkinningComponents(newObject, model, skeleton, overrideTexture);
+            SkinnedMeshRenderer ObjSMR = ModelObj.GetComponent<SkinnedMeshRenderer>();
+            if (ObjSMR == null)
+            {
+                ObjSMR = ModelObj.AddComponent<SkinnedMeshRenderer>();
+            }
+
+            ObjSMR.bones = UnityUtils.RemapTransforms(CopySMR.bones, ModelObj);
+            ObjSMR.sharedMesh = CopySMR.sharedMesh;
+            ObjSMR.sharedMaterials = CopySMR.sharedMaterials;
         }
 
-        return true;
+        MeshRenderer CopyMR = Copy.GetComponent<MeshRenderer>();
+        MeshFilter CopyFilter = Copy.GetComponent<MeshFilter>();
+        if (CopyMR != null && CopyFilter != null)
+        {
+            MeshRenderer ObjMR = ModelObj.GetComponent<MeshRenderer>();
+            if (ObjMR == null)
+            {
+                ObjMR = ModelObj.AddComponent<MeshRenderer>();
+            }
+
+            MeshFilter ObjFilter = ModelObj.GetComponent<MeshFilter>();
+            if (ObjFilter == null)
+            {
+                ObjFilter = ModelObj.AddComponent<MeshFilter>();
+            }
+
+            ObjFilter.sharedMesh = CopyFilter.sharedMesh;
+
+            ObjMR.sharedMaterials = CopyMR.sharedMaterials;
+            ObjMR.shadowCastingMode = CopyMR.shadowCastingMode;
+            ObjMR.receiveShadows = CopyMR.shadowSensitive;
+        }
+
+        return Copy;
+    }
+    */
+
+
+    public GameObject GetGameObjectFromModel(string modelName, string overrideTexture, bool shadowSensitive=true, bool unlit=false)
+    {   
+        Model model = container.Get<LibSWBF2.Wrappers.Model>(modelName);
+
+        if (model == null)
+        {
+            return null;
+        }
+
+        if (!ModelDB.ContainsKey(model.Name))
+        {
+            GameObject ModelObj = new GameObject(model.Name);
+            SWBFModel ModelMapping = new SWBFModel(ModelObj);
+
+            if (!AddSkeleton(ModelObj, model, out Dictionary<string, Transform> skeleton))
+            {
+                return null;
+            }
+
+            List<SWBFSegment> Segments = AddStaticMeshes(ModelObj, model, skeleton, shadowSensitive, unlit);
+            ModelMapping.AddSegments(Segments);
+
+            if (model.IsSkinned)
+            {
+                List<SWBFSegment> SkinnedSegments = AddSkinningComponents(ModelObj, model, skeleton, overrideTexture);
+                ModelMapping.AddSegments(SkinnedSegments);
+            }
+
+            List<SWBFCollider> Colliders = AddCollision(ModelObj, model);
+            ModelMapping.AddColliders(Colliders);
+
+            ModelDB[model.Name] = ModelObj;
+            ModelObj.transform.SetParent(ModelDBRoot.transform);
+            ModelObj.SetActive(false);
+
+            ModelMappingDB[model.Name] = ModelMapping;
+        }
+
+        GameObject Copy = GameObject.Instantiate(ModelDB[model.Name]);
+        Copy.SetActive(true);
+
+        return Copy;
     }
 
-    public bool AddModelComponents(GameObject newObject, string modelName, string overrideTexture=null, bool shadowSensitive=true, bool unlit = false)
+
+    public SWBFModel GetModelMapping(GameObject Root, string ModelName)
     {
-        return AddModelComponents(newObject, container.Get<Model>(modelName), overrideTexture, shadowSensitive, unlit);
+        if (ModelMappingDB.ContainsKey(ModelName))
+        {
+            return new SWBFModel(ModelMappingDB[ModelName], Root);
+        }
+
+        return null;
     }
 
+
+    /*
+    public SWBFModel AttachModelToGameObject(GameObject Root, string ModelName)
+    {
+        GameObject DupObj = GetGameObjectFromModel(ModelName);
+
+        if (DupObj.)
+        {
+
+        }   
+
+        SWBFModel ModelMapping = GetModelMapping(Root, ModelName);
+    }
+    */
 
 
 
@@ -375,28 +538,16 @@ public class ModelLoader : Loader {
     collision primitives will be used. 
     */ 
 
-    public bool AddCollisionPrimitives(GameObject newObject, Model model, HashSet<string> colliderNames = null)
+    public List<SWBFCollider> AddCollision(GameObject newObject, Model model)
     {
+        // Contains all primitives and collision mesh
+        List<SWBFCollider> SWBFColliders = new List<SWBFCollider>();
+
         //Get list of primitives, requested or found.
-        List<CollisionPrimitive> prims = new List<CollisionPrimitive>();
-        if (colliderNames == null || colliderNames.Count == 0)
-        {
-            prims = new List<CollisionPrimitive>(model.GetPrimitivesMasked(ECollisionMaskFlags.Ordnance));
-        }
-        else 
-        {
-            CollisionPrimitive[] allColliderNames = model.GetPrimitivesMasked();
-            foreach (var prim in allColliderNames)
-            {
-                if (colliderNames.Contains(prim.Name))
-                {
-                    prims.Add(prim);
-                }
-            }
-        }
+        CollisionPrimitive[] prims = model.GetPrimitivesMasked();
        
         // Instantiate and attach converted primitives
-        foreach (var prim in prims) 
+        foreach (CollisionPrimitive prim in prims) 
         {
             string parentBone = prim.ParentName;
             Transform boneTx = null;
@@ -428,6 +579,9 @@ public class ModelLoader : Loader {
                         boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
                     }
                     boxColl.sharedMaterial = PhyMat;
+
+                    SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Cube, primObj));
+
                     break;
 
                 // Instantiate cylinder asset and use in convex mesh collider
@@ -439,6 +593,8 @@ public class ModelLoader : Loader {
                         meshColl.sharedMaterial = PhyMat;
                         meshColl.convex = true;
                         primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
+                    
+                        SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Cylinder, primObj));
                     }
                     break;
                 
@@ -449,6 +605,9 @@ public class ModelLoader : Loader {
                         sphereColl.radius = rad;
                     }
                     sphereColl.sharedMaterial = PhyMat;
+
+                    SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Sphere, primObj));
+
                     break;
                 
                 // This happens, not sure what to make of it, but 
@@ -459,45 +618,14 @@ public class ModelLoader : Loader {
             }
         }
 
-        return true;
-    }
-
-
-    /*
-     * NOTE: 'isStatic' of the given GameObject MUST be set beforehand!
-     * Adds all collision components.  If the model has a CollisionMesh, 
-     * it is loaded and attached to the root object.  This is problematic,
-     * as the SWBF2 engine can use concave mesh colliders for non static objects.
-     * 
-     * After adding the collision mesh, ordinance collision primitives are
-     * attached.
-    */
-
-    public bool AddCollisionComponents(GameObject newObject, string modelName, HashSet<string> colliderNames)
-    {
-        if (modelName.Equals("")) return false;
-
-        Model model = null;
-        try {
-            model = container.Get<Model>(modelName);
-        }
-        catch { 
-            return false;
-        }
-
-        if (model == null) 
-        {
-            return false;
-        }
-
+        // Get CollisionMesh if present, add to root and collider list
         CollisionMesh collMesh = null;
         try {
             collMesh = model.GetCollisionMesh();
         }
         catch 
         {
-            Debug.LogWarning(modelName + ": Error in process of CollisionMesh fetch...");
-            return false;
+            Debug.LogWarning(model.Name + ": Error in process of CollisionMesh fetch...");
         }
 
         if (collMesh != null)
@@ -514,25 +642,33 @@ public class ModelLoader : Loader {
                     collMeshUnity.vertices = positions;
                     collMeshUnity.SetTriangles(indBuffer, 0);
 
-                    MeshCollider meshCollider = newObject.AddComponent<MeshCollider>();
+                    GameObject MeshColliderObj = new GameObject("collisionmesh");
+
+                    MeshCollider meshCollider = MeshColliderObj.AddComponent<MeshCollider>();
                     meshCollider.sharedMesh = collMeshUnity;
                     meshCollider.sharedMaterial = PhyMat;
-                    meshCollider.convex = !newObject.isStatic;
+                    MeshColliderObj.transform.SetParent(newObject.transform);
+
+                    SWBFColliders.Add(new SWBFCollider(collMesh.MaskFlags, SWBFColliderType.Mesh, MeshColliderObj));
+
+                    ApplyUnityLayer(MeshColliderObj, collMesh.MaskFlags);
                 }
             } 
             catch
             {
-                Debug.LogWarning(modelName + ": Error while creating mesh collider...");
+                Debug.LogWarning(model.Name + ": Error while creating mesh collider...");
             }
-
-            ApplyUnityLayer(newObject, collMesh.MaskFlags);
         }
 
-        return AddCollisionPrimitives(newObject, model, colliderNames);  
+        return SWBFColliders;
     }
+
+
+  
 
     void ApplyUnityLayer(GameObject obj, ECollisionMaskFlags flags)
     {
+        // If the object's name has a keyword in it, change flags to the keyword's layer
         foreach (var flagEntry in FlagOverrides)
         {
             if ((!string.IsNullOrEmpty(flagEntry.Key) && obj.name.IndexOf(flagEntry.Key, 0, StringComparison.OrdinalIgnoreCase) != -1))

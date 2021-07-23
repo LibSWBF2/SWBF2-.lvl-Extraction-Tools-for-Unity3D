@@ -99,7 +99,8 @@ public class ClassLoader : Loader
     {
         //TODO: caching
 
-        GameObject obj = new GameObject(instName);
+        GameObject obj = null;
+        SWBFModel ModelMapping = null;
 
         if (instOrClass.GetProperty("GeometryName", out string geometryName))
         {
@@ -108,11 +109,19 @@ public class ClassLoader : Loader
                 overrideTexture = null;
             }
 
-            if (!ModelLoader.Instance.AddModelComponents(obj, geometryName, overrideTexture))
+            obj = ModelLoader.Instance.GetGameObjectFromModel(geometryName, overrideTexture);
+
+            if (obj == null)
             {
                 Debug.LogWarningFormat("Failed to load model {1} used by object {0}", instName, geometryName);
-                return obj;
+                return new GameObject(instName);
             }
+            else 
+            {
+                obj.name = instName;
+            }
+
+            ModelMapping = ModelLoader.Instance.GetModelMapping(obj, geometryName);
 
             EntityClass odf = instOrClass.GetType() == typeof(Instance) ? ((Instance)instOrClass).EntityClass : ((EntityClass)instOrClass);
             EntityClass root = GetRootClass(odf);
@@ -124,10 +133,19 @@ public class ClassLoader : Loader
                     tx.gameObject.isStatic = true;
                 }
             }
+            else 
+            {
+                ModelMapping.ConvexifyMeshColliders();
+            }
+        }
+        else 
+        {
+            obj = new GameObject(instName);
         }
 
         if (withCollision)
         {
+            /*
             HashSet<string> ordCollNames = new HashSet<string>();
             if (instOrClass.GetProperty("OrdnanceCollision", out string[] ordinanceColliders))
             {
@@ -137,6 +155,7 @@ public class ClassLoader : Loader
                 }
             }
             ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordCollNames);
+            */
         }
 
         return obj;
@@ -150,6 +169,7 @@ public class ClassLoader : Loader
 
     public GameObject LoadGeneralClass(string name, bool tryMakeStatic = false)
     {
+        /*
         if (name == null || name == "") return null;
 
         //Check if ODF already loaded
@@ -273,7 +293,7 @@ public class ClassLoader : Loader
                 // Refers to specific animations for specific purposes (see animatedprop)
                 case ANIMATION:
                     break;
-
+        */
                 /*
                 case GEOMETRYNAME:
 
@@ -292,7 +312,7 @@ public class ClassLoader : Loader
                     }
                     break;
                 */
-
+        /*
                 case ATTACHODF:
                     lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
                     break;
@@ -344,7 +364,10 @@ public class ClassLoader : Loader
             classObjectDatabase[name] = obj;
         }
 
+
         return obj;
+        */
+        return null;
     }
 
 
