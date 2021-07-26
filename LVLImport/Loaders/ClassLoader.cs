@@ -95,7 +95,7 @@ public class ClassLoader : Loader
         return GetRootClass(parentClass);
     }
 
-    public GameObject Instantiate(ISWBFProperties instOrClass, string instName, bool withCollision=true)
+    public GameObject Instantiate(ISWBFProperties instOrClass, string instName)
     {
         //TODO: caching
 
@@ -132,6 +132,14 @@ public class ClassLoader : Loader
                 {
                     tx.gameObject.isStatic = true;
                 }
+
+                // If class is not static, colliders will be wrangled in MonoBehaviour.
+                // Though some props/other statics may have collisions set in ODF
+                if (ModelMapping != null)
+                {
+                    ModelMapping.ExpandMultiLayerColliders();
+                    ModelMapping.SetColliderLayerFromMaskAll();                    
+                }
             }
             else 
             {
@@ -141,21 +149,6 @@ public class ClassLoader : Loader
         else 
         {
             obj = new GameObject(instName);
-        }
-
-        if (withCollision)
-        {
-            /*
-            HashSet<string> ordCollNames = new HashSet<string>();
-            if (instOrClass.GetProperty("OrdnanceCollision", out string[] ordinanceColliders))
-            {
-                for (int i = 0; i < ordinanceColliders.Length; ++i)
-                {
-                    ordCollNames.Add(ordinanceColliders[i]);
-                }
-            }
-            ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordCollNames);
-            */
         }
 
         return obj;

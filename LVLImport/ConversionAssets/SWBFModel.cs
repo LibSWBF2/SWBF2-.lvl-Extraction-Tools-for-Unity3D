@@ -19,6 +19,26 @@ using LibMaterial = LibSWBF2.Wrappers.Material;
 using UMaterial = UnityEngine.Material;
 using LibBone = LibSWBF2.Wrappers.Bone;
 
+/*
+I think the proper names here would be Rigid, Static, Soft,
+Ordnance, and Terrain respecitvely, not sure that covers it all.
+*/
+
+public enum SWBFGameRole : int
+{
+    Vehicle = 0,
+    Building = 1,
+    Soldier = 2,
+    Ordnance = 3,
+    Terrain = 4,
+};
+
+
+/*
+CollisionMeshes and Primitives are masked/layered
+in the same manner, so they should be united under one
+enum.
+*/
 
 public enum SWBFColliderType : int 
 {
@@ -33,18 +53,94 @@ public enum SWBFColliderType : int
 // concepts to Unity, mainly Mask -> Layer mapping
 public class SWBFCollider
 {
-    public static Dictionary<ECollisionMaskFlags, int> CollFlagToUnityLayer = new Dictionary<ECollisionMaskFlags, int>
+    public static Dictionary<char, ECollisionMaskFlags> CollCharToMask = new Dictionary<char, ECollisionMaskFlags>
     {
-        { ECollisionMaskFlags.All,      0},
-        { ECollisionMaskFlags.Building, 12},
-        { ECollisionMaskFlags.Ordnance, 6},
-        { ECollisionMaskFlags.Soldier,  10},
-        { ECollisionMaskFlags.Terrain,  11},
-        { ECollisionMaskFlags.Vehicle,  7},
+        { 'b', ECollisionMaskFlags.Building},
+        { 'o', ECollisionMaskFlags.Ordnance},
+        { 's', ECollisionMaskFlags.Soldier},
+        { 't', ECollisionMaskFlags.Terrain},
+        { 'v', ECollisionMaskFlags.Vehicle},
     };
 
 
-    public ECollisionMaskFlags Mask;
+    public static int MapRoleAndMaskToLayer(SWBFGameRole GameRole, ECollisionMaskFlags Mask)
+    {
+        bool Print = (GameRole == SWBFGameRole.Building && Mask.HasFlag(ECollisionMaskFlags.Soldier));
+        
+        int Layer = -1;
+        
+        if (GameRole == SWBFGameRole.Vehicle)
+        {
+            if (Mask.HasFlag(ECollisionMaskFlags.All))
+            {
+                Layer = LayerMask.NameToLayer("VehicleAll");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Ordnance))
+            {
+                Layer = LayerMask.NameToLayer("VehicleOrdnance");
+            }                   
+            else if (Mask.HasFlag(ECollisionMaskFlags.Building))
+            {
+                Layer = LayerMask.NameToLayer("VehicleBuilding");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Soldier))
+            {           
+                Layer = LayerMask.NameToLayer("VehicleSoldier");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Terrain))
+            {           
+                Layer = LayerMask.NameToLayer("VehicleTerrain");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Vehicle))
+            {
+                Layer = LayerMask.NameToLayer("VehicleVehicle");                    
+            }    
+            else 
+            {
+                Layer = LayerMask.NameToLayer("VehicleAll");                
+            }            
+        }
+        else if (GameRole == SWBFGameRole.Building)
+        {
+            if (Mask.HasFlag(ECollisionMaskFlags.All))
+            {
+                Layer = LayerMask.NameToLayer("BuildingAll");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Ordnance))
+            {
+                Layer = LayerMask.NameToLayer("BuildingOrdnance");
+            }                
+            else if (Mask.HasFlag(ECollisionMaskFlags.Soldier))
+            {               
+                Layer = LayerMask.NameToLayer("BuildingSoldier");
+            }
+            else if (Mask.HasFlag(ECollisionMaskFlags.Vehicle))
+            {
+                Layer = LayerMask.NameToLayer("BuildingVehicle");                    
+            } 
+            else 
+            {
+                Layer = LayerMask.NameToLayer("BuildingAll");                
+            }
+        }
+        else if (GameRole == SWBFGameRole.Soldier)
+        {
+            Layer = LayerMask.NameToLayer("SoldierAll");
+        }
+        else if (GameRole == SWBFGameRole.Terrain)
+        {
+            Layer = LayerMask.NameToLayer("TerrainAll");
+        }
+        else if (GameRole == SWBFGameRole.Ordnance)
+        {
+            Layer = LayerMask.NameToLayer("OrdnanceAll");
+        }
+
+        return Layer;
+    }
+
+
+    public ECollisionMaskFlags Mask = ECollisionMaskFlags.All;
     public GameObject Node;
     public Collider UnityCollider;
     public SWBFColliderType CollisionType;
@@ -131,6 +227,8 @@ public class SWBFModel
 
     List<SWBFSegment> Segments;
     List<SWBFCollider> Colliders;
+
+    public SWBFGameRole GameRole = SWBFGameRole.Building;
 
 
     public SWBFModel(GameObject root)
@@ -299,13 +397,18 @@ public class SWBFModel
 
     // In case we decide to duplicate colliders to cover multilayering,
     // this will create new colliders for each layer covered.
-    public void ExpandMultiLayerColliders()
+    public void ExpandMultiLayerColliders(bool Print = false)
     {
         int EndIndex = Colliders.Count;
 
         for (int i = 0; i < EndIndex; i++)
         {
             SWBFCollider CurrentCollider = Colliders[i];
+
+            if (Print)
+            {
+                Debug.LogFormat("EMLC: Collision node: {0} has flags: {1}", CurrentCollider.Node.name, CurrentCollider.Mask.ToString());
+            }            
 
             if (CurrentCollider.Mask == ECollisionMaskFlags.All) continue;
 
@@ -325,6 +428,11 @@ public class SWBFModel
 
                     CurrentCollider.Mask = CurrentMask;
                     CreateNew = true;
+
+                    if (Print)
+                    {
+                        Debug.LogFormat("\tCreating new collider with mask: {0}", CurrentMask.ToString());
+                    }
                 }
             }
         }
@@ -360,7 +468,7 @@ public class SWBFModel
                 }
                 else 
                 {
-                    Collider.Mask &= Mask;
+                    Collider.Mask |= Mask;
                 }
                 return;
             }
@@ -378,19 +486,33 @@ public class SWBFModel
         }
     }
 
-
-    // Set Unity Layer from Mask -> Layer mapping on all collider nodes
-    public void SetColliderLayerFromMaskAll()
+    // Set same mask for all colliders
+    public void SetColliderMaskAll(ECollisionMaskFlags Mask, bool Print = false)
     {
         foreach (SWBFCollider Collider in Colliders)
         {
-            if (!SWBFCollider.CollFlagToUnityLayer.ContainsKey(Collider.Mask))
+            if (Print)
+                Debug.LogFormat("Setting collider: {0} to mask: {1}", Collider.Node.name, Mask.ToString());
+            
+            Collider.Mask = Mask;
+        }
+    }
+
+
+    // Set Unity Layer from Mask -> Layer mapping on all collider nodes
+    public void SetColliderLayerFromMaskAll(bool Print = false)
+    {
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            int Layer = SWBFCollider.MapRoleAndMaskToLayer(GameRole, Collider.Mask);
+
+            if (Layer == -1)
             {
-                Collider.UnityCollider.enabled = false;
+                Debug.LogErrorFormat("Model: {2} Failed to map collision Role {0} and Layer {1}", GameRole.ToString(), (int) Collider.Mask, Collider.Node.name);
             }
             else 
             {
-                Collider.Node.layer = SWBFCollider.CollFlagToUnityLayer[Collider.Mask];
+                Collider.Node.layer = Layer;
             }
         }
     }
@@ -402,11 +524,87 @@ public class SWBFModel
         List<Collider> FoundColliders = new List<Collider>();
         foreach (SWBFCollider Collider in Colliders)
         {
-            if (Collider.Mask.HasFlag(Mask))
+            if (Collider.Mask.HasFlag(Mask) || ((int) Mask) == 0)
             {
-                FoundColliders.Add(Collider.UnityCollider);
+                if (Collider.UnityCollider == null)
+                {
+                    Debug.LogErrorFormat("Unity collider is null!: {0}", Collider.Node.name);
+                }
+                else 
+                {
+                    FoundColliders.Add(Collider.UnityCollider);
+                }
             }
         }
         return FoundColliders;
     }
+
+
+    public List<GameObject> GetAllCollisionNodes()
+    {
+        List<GameObject> Nodes = new List<GameObject>();
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            Nodes.Add(Collider.Node);
+        }
+        return Nodes;   
+    } 
+
+
+    // Set Mask from node name
+    // Probably not necessary, could be useful
+    /*
+    public void SetColliderLayersFromName(bool Print = false)
+    {
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            if (Collider.Node.name.StartsWith("p_"))
+            {
+                if (Print)
+                {
+                    Debug.LogFormat("Collision node: {0} has flags: {1}", Collider.Node.name, Collider.Mask.ToString());
+                }
+
+                int FirstDashIndex = Collider.Node.name.IndexOf("-", 0, StringComparison.OrdinalIgnoreCase); 
+                if (FirstDashIndex == -1)
+                {
+                    Collider.Mask = ECollisionMaskFlags.All; 
+                    
+                    continue;   
+                }
+
+                int SecondDashIndex = Collider.Node.name.IndexOf("-", FirstDashIndex+1, StringComparison.OrdinalIgnoreCase);
+
+                if (SecondDashIndex == -1)
+                {                    
+                    Collider.Mask = ECollisionMaskFlags.All;
+                }
+                else 
+                {
+                    string CollisionChars = Collider.Node.name.Substring(FirstDashIndex+1, SecondDashIndex - FirstDashIndex - 1);
+                    
+                    foreach (char CollisionChar in CollisionChars)
+                    {
+                        if (Print)
+                        {
+                            Debug.LogFormat("\tOn char: {0}", CollisionChar);
+                        }
+
+                        if (SWBFCollider.CollCharToMask.TryGetValue(CollisionChar, out ECollisionMaskFlags FoundMask))
+                        {
+                            if (Collider.Mask == ECollisionMaskFlags.All)
+                            {
+                                Collider.Mask = FoundMask;
+                            }
+                            else 
+                            {
+                                Collider.Mask &= FoundMask;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    */
 }
