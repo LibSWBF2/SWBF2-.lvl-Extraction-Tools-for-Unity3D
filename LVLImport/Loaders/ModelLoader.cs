@@ -28,29 +28,13 @@ public class ModelLoader : Loader {
     Dictionary<string, SWBFModel> ModelMappingDB = new Dictionary<string, SWBFModel>();
     Dictionary<string, GameObject> ModelDB = new Dictionary<string, GameObject>();
 
+
     GameObject ModelDBRoot = new GameObject("ModelDBRoot");
 
 
     public PhysicMaterial PhyMat;
 
-    public Dictionary<ECollisionMaskFlags, int> CollFlagToUnityLayer = new Dictionary<ECollisionMaskFlags, int>
-    {
-        { ECollisionMaskFlags.All,      0},
-        { ECollisionMaskFlags.Building, 0},
-        { ECollisionMaskFlags.Flag,     0},
-        { ECollisionMaskFlags.Ordnance, 0},
-        { ECollisionMaskFlags.Soldier,  0},
-        { ECollisionMaskFlags.Terrain,  0},
-        { ECollisionMaskFlags.Vehicle,  0},
-    };
 
-    // Objects containing a substring in this map (case insensitive), will get their collision flags overriden
-    // when collision is applied. Why? Because e.g. in geo1 there are some giant vehicle collisions,
-    // that got all their flags set... Idk about other cases at this point.
-    Dictionary<string, ECollisionMaskFlags> FlagOverrides = new Dictionary<string, ECollisionMaskFlags>
-    {
-        { "vehicle", ECollisionMaskFlags.Vehicle }
-    };
 
     static ModelLoader()
     {
@@ -73,18 +57,11 @@ public class ModelLoader : Loader {
 
 
 
-    public SWBFModel GetSWBFModelMapping(GameObject Root, string ModelName)
-    {
-        if (ModelMappingDB.ContainsKey(ModelName))
-        {
-            return new SWBFModel(ModelMappingDB[ModelName], Root);
-        }
+    
+    /*
+    Next three methods are needed for testing EffectsLoader
+    */
 
-        return null;
-    }
-
-
-    // Until we get the mapping class ready
     public Model GetModelWrapper(string name)
     {
         Model model = null;
@@ -95,7 +72,6 @@ public class ModelLoader : Loader {
         return model; 
     }
 
-    // Used for quick fx testing
     public List<UMaterial> GetNeededMaterials(Model model)
     {
         List<UMaterial> mats = new List<UMaterial>();
@@ -106,7 +82,6 @@ public class ModelLoader : Loader {
         return mats;
     }
 
-    // '' 
     public Mesh GetFirstMesh(Model model)
     {
         return GetMeshFromSegments(model.GetSegments());
@@ -364,96 +339,6 @@ public class ModelLoader : Loader {
 
 
 
-
-    /*
-    Adds skeleton, attaches static meshes/renderers to skeleton bones, and a skinned mesh/renderer to the root
-    object if present.
-    */
-
-    /*
-    public bool AttachModelComponents(GameObject ModelObj, string modelName, string overrideTexture, bool shadowSensitive=true, bool unlit=false)
-    {   
-        Model model = container.Get<LibSWBF2.Wrappers.Model>(modelName);
-
-        if (model == null)
-        {
-            return null;
-        }
-
-        if (!ModelDB.ContainsKey(model.Name))
-        {
-            SWBFModel ModelMapping = new SWBFModel(ModelObj);
-
-            if (!AddSkeleton(ModelObj, model, out Dictionary<string, Transform> skeleton))
-            {
-                return null;
-            }
-
-            List<SWBFSegment> Segments = AddStaticMeshes(ModelObj, model, skeleton, shadowSensitive, unlit);
-            ModelMapping.AddSegments(Segments);
-
-            if (model.IsSkinned)
-            {
-                List<SWBFSegment> SkinnedSegments = AddSkinningComponents(ModelObj, model, skeleton, overrideTexture);
-                ModelMapping.AddSegments(SkinnedSegments);
-            }
-
-            List<SWBFCollider> Colliders = AddCollision(ModelObj, model);
-            ModelMapping.AddColliders(Colliders);
-
-            ModelDB[model.Name] = ModelObj;
-            ModelObj.transform.SetParent(ModelDBRoot.transform);
-            ModelObj.SetActive(false);
-
-            ModelMappingDB[model.Name] = ModelMapping;
-        }
-
-        GameObject Copy = GameObject.Instantiate(ModelDB[model.Name]);
-        Copy.SetActive(true);
-
-
-        SkinnedMeshRenderer CopySMR = Copy.GetComponent<SkinnedMeshRenderer>();
-        if (CopySMR != null)
-        {
-            SkinnedMeshRenderer ObjSMR = ModelObj.GetComponent<SkinnedMeshRenderer>();
-            if (ObjSMR == null)
-            {
-                ObjSMR = ModelObj.AddComponent<SkinnedMeshRenderer>();
-            }
-
-            ObjSMR.bones = UnityUtils.RemapTransforms(CopySMR.bones, ModelObj);
-            ObjSMR.sharedMesh = CopySMR.sharedMesh;
-            ObjSMR.sharedMaterials = CopySMR.sharedMaterials;
-        }
-
-        MeshRenderer CopyMR = Copy.GetComponent<MeshRenderer>();
-        MeshFilter CopyFilter = Copy.GetComponent<MeshFilter>();
-        if (CopyMR != null && CopyFilter != null)
-        {
-            MeshRenderer ObjMR = ModelObj.GetComponent<MeshRenderer>();
-            if (ObjMR == null)
-            {
-                ObjMR = ModelObj.AddComponent<MeshRenderer>();
-            }
-
-            MeshFilter ObjFilter = ModelObj.GetComponent<MeshFilter>();
-            if (ObjFilter == null)
-            {
-                ObjFilter = ModelObj.AddComponent<MeshFilter>();
-            }
-
-            ObjFilter.sharedMesh = CopyFilter.sharedMesh;
-
-            ObjMR.sharedMaterials = CopyMR.sharedMaterials;
-            ObjMR.shadowCastingMode = CopyMR.shadowCastingMode;
-            ObjMR.receiveShadows = CopyMR.shadowSensitive;
-        }
-
-        return Copy;
-    }
-    */
-
-
     public GameObject GetGameObjectFromModel(string modelName, string overrideTexture, bool shadowSensitive=true, bool unlit=false)
     {   
         Model model = container.Get<LibSWBF2.Wrappers.Model>(modelName);
@@ -501,9 +386,9 @@ public class ModelLoader : Loader {
 
     public SWBFModel GetModelMapping(GameObject Root, string ModelName)
     {
-        if (ModelMappingDB.ContainsKey(ModelName))
+        if (ModelMappingDB.ContainsKey(ModelName.ToLower()))
         {
-            return new SWBFModel(ModelMappingDB[ModelName], Root);
+            return new SWBFModel(ModelMappingDB[ModelName.ToLower()], Root);
         }
 
         return null;
@@ -511,6 +396,8 @@ public class ModelLoader : Loader {
 
 
     /*
+    // Will be needed when/if the geometry is changed from Lua/or 
+    // attached as part of some state change e.g. destructable buildings, pooled missiles 
     public SWBFModel AttachModelToGameObject(GameObject Root, string ModelName)
     {
         GameObject DupObj = GetGameObjectFromModel(ModelName);
@@ -568,8 +455,6 @@ public class ModelLoader : Loader {
             primObj.transform.localRotation = UnityUtils.QuatFromLibSkel(prim.Rotation);
             primObj.transform.SetParent(boneTx, false);
 
-            ApplyUnityLayer(primObj, prim.MaskFlags);
-
             switch (prim.PrimitiveType)
             {
                 case ECollisionPrimitiveType.Cube:
@@ -579,6 +464,7 @@ public class ModelLoader : Loader {
                         boxColl.size = new Vector3(2.0f*x,2.0f*y,2.0f*z);
                     }
                     boxColl.sharedMaterial = PhyMat;
+                    boxColl.name = prim.Name;
 
                     SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Cube, primObj));
 
@@ -592,6 +478,7 @@ public class ModelLoader : Loader {
                         meshColl.sharedMesh = CylinderCollision;
                         meshColl.sharedMaterial = PhyMat;
                         meshColl.convex = true;
+                        meshColl.name = prim.Name;
                         primObj.transform.localScale = new UnityEngine.Vector3(r,h,r);
                     
                         SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Cylinder, primObj));
@@ -605,6 +492,7 @@ public class ModelLoader : Loader {
                         sphereColl.radius = rad;
                     }
                     sphereColl.sharedMaterial = PhyMat;
+                    sphereColl.name = prim.Name;
 
                     SWBFColliders.Add(new SWBFCollider(prim.MaskFlags, SWBFColliderType.Sphere, primObj));
 
@@ -645,13 +533,12 @@ public class ModelLoader : Loader {
                     GameObject MeshColliderObj = new GameObject("collisionmesh");
 
                     MeshCollider meshCollider = MeshColliderObj.AddComponent<MeshCollider>();
+                    meshCollider.name = "collisionmesh";
                     meshCollider.sharedMesh = collMeshUnity;
                     meshCollider.sharedMaterial = PhyMat;
                     MeshColliderObj.transform.SetParent(newObject.transform);
 
                     SWBFColliders.Add(new SWBFCollider(collMesh.MaskFlags, SWBFColliderType.Mesh, MeshColliderObj));
-
-                    ApplyUnityLayer(MeshColliderObj, collMesh.MaskFlags);
                 }
             } 
             catch
@@ -661,50 +548,5 @@ public class ModelLoader : Loader {
         }
 
         return SWBFColliders;
-    }
-
-
-  
-
-    void ApplyUnityLayer(GameObject obj, ECollisionMaskFlags flags)
-    {
-        // If the object's name has a keyword in it, change flags to the keyword's layer
-        foreach (var flagEntry in FlagOverrides)
-        {
-            if ((!string.IsNullOrEmpty(flagEntry.Key) && obj.name.IndexOf(flagEntry.Key, 0, StringComparison.OrdinalIgnoreCase) != -1))
-            {
-                flags = flagEntry.Value;
-            }
-        }
-
-        bool ApplyIfHasFlag(GameObject obj, ECollisionMaskFlags flags, ECollisionMaskFlags flag)
-        {
-            if (flags.HasFlag(flag))
-            {
-                if (CollFlagToUnityLayer.TryGetValue(flag, out int layer))
-                {
-                    obj.layer = layer;
-                    return true;
-                }
-                else
-                {
-                    Debug.LogWarning($"No corresponding Unity Layer defined for collision flag: {flags} ({(int)flags}), found in object '{obj.name}'");
-                }
-            }
-            return false;
-        }
-
-
-        // Since in Unity, a GameObject can only have ONE layer, but SWBF2 collisions
-        // can have multiple collision flags enabled, let's traverse the flags from
-        // least to most significant and apply a corresponding layer respectively.
-
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.All)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Flag)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Vehicle)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Soldier)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Building)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Ordnance)) return;
-        if (ApplyIfHasFlag(obj, flags, ECollisionMaskFlags.Terrain)) return;
     }
 }
