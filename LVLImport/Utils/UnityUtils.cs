@@ -23,7 +23,6 @@ public static class UnityUtils {
         foreach (Renderer r in renderers) {
            b.Encapsulate(r.bounds);
         }
-        
         return b;
     }
 
