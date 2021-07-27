@@ -110,9 +110,8 @@ public class EffectsLoader : Loader {
         GameObject fxObject = new GameObject(emitter.GetString());
 
         ParticleSystem uEmitter = fxObject.AddComponent<ParticleSystem>();
+        uEmitter.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ParticleSystemRenderer psR = fxObject.GetComponent<ParticleSystemRenderer>();
-
-        uEmitter.Stop(true, ParticleSystemStopBehavior.StopEmitting);
 
         Scope scEmitter = emitter.Scope;
         
@@ -121,6 +120,8 @@ public class EffectsLoader : Loader {
         Scope scGeometry = scEmitter.GetField("Geometry").Scope;
 
         var mainModule = uEmitter.main;
+        mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
+        mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
 
         /*
         Handle bursts
@@ -151,11 +152,10 @@ public class EffectsLoader : Loader {
             mainModule.maxParticles = (int) maxParticles;
 
             burst.cycleCount = (int) (maxParticles / numRange.Y);
-            //Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
+            Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
         }
         else 
         {
-            mainModule.maxParticles = 100;
             burst.cycleCount = 0;
         }
 
@@ -165,27 +165,23 @@ public class EffectsLoader : Loader {
 
         // Set starting position distribution
         var shapeModule = uEmitter.shape;
-        shapeModule.enabled = false;
-
+        
         // This is hard because circles are weighted spawners which saturate their resulting values
         if (scSpawner.GetField("Circle") != null)
         {
-            //shapeModule.shapeType = ParticleSystemShapeType.Sphere;
+            shapeModule.shapeType = ParticleSystemShapeType.Sphere;
             //shapeModule.
-            //shapeModule.radius = GetCircleRadius(scSpawner);
-            mainModule.startSpeed = GetCircleRadius(scSpawner);
+            shapeModule.radius = GetCircleRadius(scSpawner);
+            //mainModule.startSpeed = GetCircleRadius(scSpawner);
         }
         // This is pretty easy to emulate
         else if (scSpawner.GetField("Spread") != null)
         {
             // Set position distribution from the Offset field
-            /*
             SpreadToPositionAndScale(scSpawner, out UVector3 spreadScale, out UVector3 spreadPos);
-            shapeModule.shapeType = ParticleSystemShapeType.Sphere;
+            shapeModule.shapeType = ParticleSystemShapeType.Box;
             shapeModule.scale = spreadScale;
             shapeModule.position = spreadPos;
-            shapeModule.randomPositionAmount = 1f;
-            */
 
             // Set starting velocity distribution
             var curves = SpreadToVelocityIntervals(scSpawner, out ParticleSystem.MinMaxCurve scaleCurveOut);
@@ -195,7 +191,6 @@ public class EffectsLoader : Loader {
             velModule.y = curves[1];
             velModule.z = curves[2];
             velModule.speedModifier = scaleCurveOut;
-            velModule.space = ParticleSystemSimulationSpace.World;
         }
         else 
         {
@@ -239,7 +234,6 @@ public class EffectsLoader : Loader {
 
         Texture2D tex = null;
         UMaterial mat = null;
-        // Config uses this to mean child effect i.e. subEmitter in Unity
         if (geomType == "EMITTER")
         {
             var subEmitterModule = uEmitter.subEmitters;
@@ -256,7 +250,7 @@ public class EffectsLoader : Loader {
                     var emPsVelModule = emPs.velocityOverLifetime;
                     emPsVelModule.enabled = false;
                     var emPsMainModule = emPs.main;
-                    //shapeModule.radius = 0.0f;
+                    shapeModule.radius = 0.0f;
                     mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
 
                     subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
@@ -264,7 +258,6 @@ public class EffectsLoader : Loader {
             }
             tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
-        // Still very confused on this...
         else if (geomType == "GEOMETRY")
         {
             Model model = container.Get<Model>(scGeometry.GetString("Model"));
@@ -288,9 +281,9 @@ public class EffectsLoader : Loader {
                 mat = mats[0];
             }
         }
-        // SPARK, PARTICLE, and BILLBOARD for now 
         else
         {
+            // For now we handle billboards, sparks, and particles equivalently 
             tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
 
@@ -360,7 +353,7 @@ public class EffectsLoader : Loader {
     }
 
 
-    // No idea how to do this cleanly...
+
     private bool HandleCircle(ParticleSystem ps, Scope scSpawner)
     {
         return false;
@@ -380,19 +373,28 @@ public class EffectsLoader : Loader {
         velLimitModule.enabled = true;
 
         velLimitModule.limit = CurveFromVec(velScale);
+
+        
+
+
+
     }
 
 
 
 
 
-    private ParticleSystem.MinMaxCurve GetCircleRadius(Scope spawner)
+    private float GetCircleRadius(Scope spawner)
     {
-        var vScale = spawner.GetVec2("VelocityScale");
-        return new ParticleSystem.MinMaxCurve(vScale.X, vScale.Y);
-
+        //var vScale = spawner.GetVec2("VelocityScale");
+        //return new ParticleSystem.MinMaxCurve(vScale.X, vScale.Y);
         //var range = spawner.GetField("Circle").Scope.GetVec2("PositionX");
         //return range.Y;
+
+        var Offset = spawner.GetField("Offset");
+        var XRange = Offset.Scope.GetVec2("PositionX");
+
+        return (XRange.Y - XRange.X) / 2f;
     }
 
 
@@ -448,24 +450,15 @@ public class EffectsLoader : Loader {
         var vZ = spreadScope.GetVec2("PositionZ");
 
         var velScale = spawner.GetVec2("VelocityScale");
+        scaleCurve = new ParticleSystem.MinMaxCurve(velScale.X, velScale.Y);
 
-        
-        scaleCurve = new ParticleSystem.MinMaxCurve(velScale.X, velScale.Y);        
         var curveX = new ParticleSystem.MinMaxCurve(vX.X,vX.Y);
         var curveY = new ParticleSystem.MinMaxCurve(vY.X,vY.Y);
-        var curveZ = new ParticleSystem.MinMaxCurve(vZ.X,vZ.Y);
-        
-
-        /*
-        scaleCurve = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(velScale.X, .1f)), new AnimationCurve(new Keyframe(velScale.Y, .1f)));
-        var curveX = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(vX.X, .1f)), new AnimationCurve(new Keyframe(vX.Y, .1f)));
-        var curveY = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(vY.X, .1f)), new AnimationCurve(new Keyframe(vY.Y, .1f)));
         if (isCircle)
         {
-            curveY = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(vX.X, .1f)), new AnimationCurve(new Keyframe(vX.Y, .1f)));
+            curveY = new ParticleSystem.MinMaxCurve(vX.X,vX.Y);
         }
-        var curveZ = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(vZ.X, .1f)), new AnimationCurve(new Keyframe(vZ.Y, .1f)));
-        */
+        var curveZ = new ParticleSystem.MinMaxCurve(vZ.X,vZ.Y);
 
         return new List<ParticleSystem.MinMaxCurve>(){curveX, curveY, curveZ};
     }
@@ -629,10 +622,6 @@ public class EffectsLoader : Loader {
             return true;
         }
     }
-
-
-    //bool AddVelocityCurve(Scope transformerScope, )
-
 
 
     /*

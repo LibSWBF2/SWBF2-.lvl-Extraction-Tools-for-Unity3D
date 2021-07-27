@@ -44,7 +44,8 @@ public class ModelLoader : Loader {
     public void ResetDB()
     {
         ModelDB.Clear();
-        GameObject.Destroy(ModelDBRoot);
+
+        GameObject.DestroyImmediate(ModelDBRoot);
         ModelDBRoot = new GameObject("ModelDBRoot");
 
         ModelMappingDB.Clear();
