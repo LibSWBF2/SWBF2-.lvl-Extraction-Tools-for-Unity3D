@@ -8,10 +8,12 @@ using UnityEditor;
 
 using LibSWBF2.Wrappers;
 
+using UVector3 = UnityEngine.Vector3;
 
 public class ClassLoader : Loader
 {
     public static ClassLoader Instance { get; private set; } = null;
+
 
     static ClassLoader()
     {
@@ -34,7 +36,54 @@ public class ClassLoader : Loader
         classObjectDatabase.Clear();
     }
 
-    public static string GetBaseClassName(string name)
+
+
+    public IEnumerator<LoadStatus> ImportClassBatch(Level[] levels)
+    {
+        float ZOffset = 0.0f;
+        
+        foreach (Level lvl in levels)
+        {
+            Transform LevelRoot = new GameObject(lvl.Name).transform;
+            EntityClass[] Classes = lvl.Get<EntityClass>();
+            UVector3 SpawnOffset = Vector3.zero;
+            float RootZOffset = 0.0f;
+
+            for (int i = 0; i < Classes.Length; i++)
+            {
+                GameObject ecObj = LoadGeneralClass(Classes[i].Name);
+
+                if (ecObj != null)
+                {
+                    yield return new LoadStatus(i/(float) Classes.Length, lvl.Name + ": " + ecObj.name);
+
+                    ecObj.transform.parent = LevelRoot;
+                    
+                    var extents = UnityUtils.GetMaxBounds(ecObj).extents;
+                    
+                    RootZOffset = Math.Max(RootZOffset, extents.z);
+
+                    SpawnOffset += new Vector3(extents.x,0,0);
+                    ecObj.transform.localPosition = SpawnOffset;
+                    SpawnOffset += new Vector3(extents.x,0,0);
+                }
+            }
+
+            LevelRoot.localPosition = new Vector3(0.0f, 0.0f, RootZOffset + ZOffset);
+            ZOffset += RootZOffset * 2.0f;
+        }
+    }
+
+
+
+    public void DeleteAll()
+    {
+    }
+
+
+
+
+    public string GetBaseClassName(string name)
     {
         var ecWrapper = container.Get<EntityClass>(name);
 
@@ -253,7 +302,6 @@ public class ClassLoader : Loader
 
 
 
-
         for (int i = 0; i < properties.Count; i++)
         {
             uint property = properties[i];
@@ -365,7 +413,6 @@ public class ClassLoader : Loader
 
 
     
-
     public void DeleteAndClearDB()
     {
         foreach (string objname in classObjectDatabase.Keys)
@@ -383,6 +430,4 @@ public class ClassLoader : Loader
         }
         classObjectDatabase.Clear();
     }
-
-
 }

@@ -44,7 +44,8 @@ public class ModelLoader : Loader {
     public void ResetDB()
     {
         ModelDB.Clear();
-        GameObject.Destroy(ModelDBRoot);
+
+        GameObject.DestroyImmediate(ModelDBRoot);
         ModelDBRoot = new GameObject("ModelDBRoot");
 
         ModelMappingDB.Clear();
@@ -386,7 +387,8 @@ public class ModelLoader : Loader {
 
     public SWBFModel GetModelMapping(GameObject Root, string ModelName)
     {
-        if (ModelMappingDB.ContainsKey(ModelName.ToLower()))
+        if (ModelName != null && Root != null && 
+            ModelMappingDB.ContainsKey(ModelName.ToLower()))
         {
             return new SWBFModel(ModelMappingDB[ModelName.ToLower()], Root);
         }
