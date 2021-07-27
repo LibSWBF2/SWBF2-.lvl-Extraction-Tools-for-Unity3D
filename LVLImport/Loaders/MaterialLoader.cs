@@ -79,6 +79,7 @@ public class MaterialLoader : Loader
 
 
     public static MaterialLoader Instance { get; private set; } = null;
+
     static MaterialLoader()
     {
         Instance = new MaterialLoader();

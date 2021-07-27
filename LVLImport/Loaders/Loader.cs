@@ -4,6 +4,21 @@ using UnityEditor;
 using LibSWBF2.Wrappers;
 
 
+public struct LoadStatus {
+
+    public float Progress;
+    public string CurrentTask;
+
+    public LoadStatus(float p, string ct)
+    {
+        CurrentTask = ct;
+        Progress = p;
+    }
+}
+
+
+
+
 public abstract class Loader {
 
     // Used by different loader classes
@@ -13,6 +28,7 @@ public abstract class Loader {
     protected bool SaveAssets = false;
     protected string SaveDirectory = null;
 #endif
+
 
 #if !LVLIMPORT_NO_EDITOR
     public bool SetSave(string prefix, string folderName)
@@ -67,6 +83,23 @@ public abstract class Loader {
         ClassLoader.Instance.ResetDB();
         WorldLoader.Instance.Reset();
         SoundLoader.ResetDB();
+    }
+
+
+    public virtual float GetProgress(out string desc)
+    {
+        desc = "";
+        return 1.0f;
+    }
+
+    public virtual bool IterateBatch()
+    {
+        return false;
+    }
+
+    public virtual void SetBatch(Level[] levels)
+    {
+        return;
     }
 
 
