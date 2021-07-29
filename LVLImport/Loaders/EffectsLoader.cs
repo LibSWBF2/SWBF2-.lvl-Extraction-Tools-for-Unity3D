@@ -39,7 +39,7 @@ public class EffectsLoader : Loader {
     }
 
 
-    public static bool UseHDRP = true;
+    public static bool UseHDRP = false;
 
 
 
@@ -335,28 +335,17 @@ public class EffectsLoader : Loader {
 
         /*
         GEOMETRY + TEXTURE + MATERIAL
+
+        TODO: EMITTER almost working perfectly, velocity inheritance is still slightly off
         */
 
-
-        /*
-        TODO: Very lost on emitters. Critical for explosions
+        Texture2D tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        psR.enabled = tex != null;
         
-        - What I know: 
-            - size is not inherited
-            - velocity is inherited via inheritvelocityfactor
-            - position is directly inherited (no option for that or velocity in Unity)
-        
-        - Don't know:
-            - Is the vel inheritance updated or set once at spawn?
+        UMaterial mat = null;
 
-        It will probably be worth it to just completely 
-
-        */
 
         string geomType = scGeometry.GetString("Type");
-
-        Texture2D tex = null;
-        UMaterial mat = null;
 
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
@@ -374,12 +363,6 @@ public class EffectsLoader : Loader {
                     ParticleSystem emPs = emObj.GetComponent<ParticleSystem>();
                     subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritEverything);
                 }
-            }
-            
-            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
-            if (tex == null)
-            {
-                psR.enabled = false;
             }
         }
         // Works in all cases I've seen
@@ -411,7 +394,6 @@ public class EffectsLoader : Loader {
         {
             psR.renderMode = ParticleSystemRenderMode.Stretch;
             psR.velocityScale = scGeometry.GetFloat("SparkLength");
-            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
         // Haven't seen an example yet.  Strangely, com_sfx_ord_exp has an texture sheet anim
         // ("Sparks"), but in the munged file it is missing and replaced by a duplicate of the 
@@ -425,38 +407,49 @@ public class EffectsLoader : Loader {
             tsam.timeMode = ParticleSystemAnimationTimeMode.FPS;
             tsam.fps = 1f / scGeometry.GetFloat("TimePerFrame");
             
-            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
             float frameSize = scGeometry.GetFloat("FrameSize");
 
             tsam.numTilesX = (int) (tex.width / frameSize);
             tsam.numTilesY = (int) (tex.height / frameSize);
         }
-        // TODO: Differentiate between Billboards and Particles 
+        else if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase))
+        {
+            psR.alignment = ParticleSystemRenderSpace.World;
+
+            var angleCurve = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
+
+            mainModule.startRotation3D = true;
+            //mainModule.startRotationX  = angleCurve;
+            //mainModule.startRotationY  = angleCurve;
+            mainModule.startRotationZ  = angleCurve;
+
+        }    
+        // PARTICLE    
         else
         {
-            // For now we handle billboards, and particles equivalently 
-            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+            // Nothing needed her AFAIK
         }
 
 
         if (mat == null && !geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
-            if (!UseHDRP)
+            if (tex == null)
             {
-                mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
-                if (tex != null)
-                {
-                    mat.mainTexture = tex;
-                }
-                else 
-                {
-                    mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
-                }                
+                psR.enabled = false;
             }
             else 
             {
                 // TODO: Blendmode BLUR
-                if (tex != null)
+                if (!UseHDRP)
+                {
+                    mat = new UMaterial(
+                        scGeometry.GetString("BlendMode").Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase) ? 
+                            Resources.Load<UMaterial>("effects/ParticleAdditive") :
+                            Resources.Load<UMaterial>("effects/ParticleNormal")
+                    );
+                    mat.mainTexture = tex;               
+                }
+                else 
                 {
                     mat = new UMaterial(
                         scGeometry.GetString("BlendMode").Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase) ? 
@@ -465,37 +458,11 @@ public class EffectsLoader : Loader {
                     );
                     var mainTexID = Shader.PropertyToID("Texture2D_23DD87FD");
                     mat.SetTexture(mainTexID, tex);                    
-                }  
-                else 
-                {
-                    psR.enabled = false;
-                } 
+                }
+
+                psR.sharedMaterial = mat;
             }
         }
-
-
-        if (mat != null)
-        {
-            if (!UseHDRP)
-            {
-                // TODO: Blend mode BLUR
-
-                // Need to find a way of doing this without triggering the annoying GUI reset!
-                // Ideally without editing out the shader's GUI ref...
-                string mode = scGeometry.GetString("BlendMode");
-                if (mode.Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase))
-                {
-                    SetMaterialBlendMode(mat, BlendMode.Additive);
-                }
-                else 
-                {
-                    SetMaterialBlendMode(mat, BlendMode.Fade);
-                }
-            }
-        }
-
-        psR.sharedMaterial = mat;
-
     
         return fxObject;
     }
@@ -626,12 +593,12 @@ public class EffectsLoader : Loader {
     // The out param scaleCurve is the "VelocityScale" property 
     private List<ParticleSystem.MinMaxCurve> SpreadToVelocityIntervals(Scope spawner, out ParticleSystem.MinMaxCurve scaleCurve) 
     {
-        bool isCircle = false;
+        //bool isCircle = false;
         Field velDis = spawner.GetField("Spread");
         if (velDis == null)
         {
             velDis = spawner.GetField("Circle");
-            isCircle = true;
+            //isCircle = true;
         }
 
         Scope spreadScope;
@@ -845,7 +812,6 @@ public class EffectsLoader : Loader {
     private bool ScaleTransformationToCurve(Scope transformerScope, float initialScale, out ParticleSystem.MinMaxCurve curveOut)
     {
         float lifeTime = transformerScope.GetFloat("LifeTime");
-        float timeIndex = 0.0f;
 
         AnimationCurve curve = new AnimationCurve();
         curve.AddKey(0.0f, initialScale);
