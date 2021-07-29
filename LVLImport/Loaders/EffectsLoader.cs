@@ -122,6 +122,7 @@ public class EffectsLoader : Loader {
         var mainModule = uEmitter.main;
         mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
         mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
+        mainModule.loop = false;
 
         /*
         Handle bursts
@@ -162,6 +163,15 @@ public class EffectsLoader : Loader {
         em.SetBursts(new ParticleSystem.Burst[]{burst});
 
 
+        ParticleSystem.MinMaxCurve[] VelCurves = ExtractVelocityOverLifetimeCurves(scEmitter, out ParticleSystem.MinMaxCurve scaleCurveOut);
+        var velModule = uEmitter.velocityOverLifetime;
+        velModule.enabled = true;
+        velModule.x = VelCurves[0];
+        velModule.y = VelCurves[1];
+        velModule.z = VelCurves[2];
+        velModule.speedModifier = scaleCurveOut; 
+        //velModule.space = ParticleSystemSimulationSpace.World;    
+
 
         // Set starting position distribution
         var shapeModule = uEmitter.shape;
@@ -170,9 +180,17 @@ public class EffectsLoader : Loader {
         if (scSpawner.GetField("Circle") != null)
         {
             shapeModule.shapeType = ParticleSystemShapeType.Sphere;
-            //shapeModule.
             shapeModule.radius = GetCircleRadius(scSpawner);
-            //mainModule.startSpeed = GetCircleRadius(scSpawner);
+
+            /*
+            var curves = SpreadToVelocityIntervals(scSpawner, out ParticleSystem.MinMaxCurve scaleCurveOut);
+            var velModule = uEmitter.velocityOverLifetime;
+            velModule.enabled = true;
+            velModule.x = curves[0];
+            velModule.y = curves[1];
+            velModule.z = curves[2];
+            velModule.speedModifier = scaleCurveOut;
+            */
         }
         // This is pretty easy to emulate
         else if (scSpawner.GetField("Spread") != null)
@@ -184,6 +202,7 @@ public class EffectsLoader : Loader {
             shapeModule.position = spreadPos;
 
             // Set starting velocity distribution
+            /*
             var curves = SpreadToVelocityIntervals(scSpawner, out ParticleSystem.MinMaxCurve scaleCurveOut);
             var velModule = uEmitter.velocityOverLifetime;
             velModule.enabled = true;
@@ -191,6 +210,7 @@ public class EffectsLoader : Loader {
             velModule.y = curves[1];
             velModule.z = curves[2];
             velModule.speedModifier = scaleCurveOut;
+            */
         }
         else 
         {
@@ -281,9 +301,15 @@ public class EffectsLoader : Loader {
                 mat = mats[0];
             }
         }
+        else if (geomType == "SPARK")
+        {
+            psR.renderMode = ParticleSystemRenderMode.Stretch;
+            psR.velocityScale = scGeometry.GetFloat("SparkLength");
+            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        }
         else
         {
-            // For now we handle billboards, sparks, and particles equivalently 
+            // For now we handle billboards, and particles equivalently 
             tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
 
@@ -454,10 +480,10 @@ public class EffectsLoader : Loader {
 
         var curveX = new ParticleSystem.MinMaxCurve(vX.X,vX.Y);
         var curveY = new ParticleSystem.MinMaxCurve(vY.X,vY.Y);
-        if (isCircle)
-        {
-            curveY = new ParticleSystem.MinMaxCurve(vX.X,vX.Y);
-        }
+        //if (isCircle)
+        //{
+        //    curveY = new ParticleSystem.MinMaxCurve(vX.X,vX.Y);
+        //}
         var curveZ = new ParticleSystem.MinMaxCurve(vZ.X,vZ.Y);
 
         return new List<ParticleSystem.MinMaxCurve>(){curveX, curveY, curveZ};
@@ -625,8 +651,11 @@ public class EffectsLoader : Loader {
 
 
     /*
-    private bool PositionTransformationToCurve(Scope transformerScope, List<ParticleSystem.MinMaxCurve> initCurves)
+    private ParticleSystem.MinMaxCurve[] PositionTransformationToCurve(Scope transformerScope)
     {
+        ParticleSystem.MinMaxCurve[] Curves = new ParticleSystem.MinMaxCurve[3];
+
+
         float lifeTime = transformerScope.GetFloat("LifeTime");
         float timeIndex = 0.0f;
 
@@ -637,9 +666,7 @@ public class EffectsLoader : Loader {
         
         while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
         {
-
-
-            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetFloat("Accelerate"));
+            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetVec3("Accelerate").);
             curScaleKey = curScaleKey.Scope.GetField("Next");
         }
 
@@ -655,6 +682,96 @@ public class EffectsLoader : Loader {
         }        
     }
     */
+
+
+
+
+    public ParticleSystem.MinMaxCurve[] ExtractVelocityOverLifetimeCurves(Scope Emitter, out ParticleSystem.MinMaxCurve scaleCurve)
+    {
+        Scope spawner = Emitter.GetField("Spawner").Scope;
+
+        Field velDis = spawner.GetField("Spread");
+        if (velDis == null)
+        {
+            velDis = spawner.GetField("Circle");
+        }
+
+        Scope spreadScope;
+        if (velDis != null)
+        {
+            spreadScope = velDis.Scope;
+        }
+        else
+        {
+            scaleCurve = new ParticleSystem.MinMaxCurve(0.0f);
+            return null;
+        }
+
+        var velScale = spawner.GetVec2("VelocityScale");
+        scaleCurve = new ParticleSystem.MinMaxCurve(velScale.X, velScale.Y);
+
+
+        var animCurveMinX = new AnimationCurve();
+        var animCurveMinY = new AnimationCurve();
+        var animCurveMinZ = new AnimationCurve();
+
+
+        var animCurveMaxX = new AnimationCurve();
+        var animCurveMaxY = new AnimationCurve();
+        var animCurveMaxZ = new AnimationCurve();
+
+
+        var vX = spreadScope.GetVec2("PositionX");
+        var vY = spreadScope.GetVec2("PositionY");
+        var vZ = spreadScope.GetVec2("PositionZ");
+
+        animCurveMinX.AddKey(0f, vX.X);
+        animCurveMaxX.AddKey(0f, vX.Y);
+
+        animCurveMinY.AddKey(0f, vY.X);
+        animCurveMaxY.AddKey(0f, vY.Y);
+
+        animCurveMinZ.AddKey(0f, vZ.X);
+        animCurveMaxZ.AddKey(0f, vZ.Y);
+
+
+        Scope transformerScope = Emitter.GetField("Transformer").Scope;
+        Field curScaleKey = transformerScope.GetField("Position"); 
+        
+        while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
+        {
+            var Accel = curScaleKey.Scope.GetVec3("Accelerate");
+            float TimeStamp = curScaleKey.Scope.GetFloat("LifeTime");
+            if (Mathf.Abs(Accel.X) > .001f)
+            {
+                animCurveMinX.AddKey(TimeStamp, vX.X + Accel.X);
+                animCurveMaxY.AddKey(TimeStamp, vX.Y + Accel.X);
+            }
+
+            if (Mathf.Abs(Accel.Y) > .001f)
+            {
+                animCurveMinX.AddKey(TimeStamp, vY.X + Accel.Y);
+                animCurveMaxY.AddKey(TimeStamp, vY.Y + Accel.Y);      
+            }
+
+            if (Mathf.Abs(Accel.Z) > .001f)
+            {
+                animCurveMinZ.AddKey(TimeStamp, vZ.X + Accel.Z);
+                animCurveMaxZ.AddKey(TimeStamp, vZ.Y + Accel.Z);   
+            }
+            
+            curScaleKey = curScaleKey.Scope.GetField("Next");
+        }
+
+        var curveX = new ParticleSystem.MinMaxCurve(1f, animCurveMinX, animCurveMaxX);
+        var curveY = new ParticleSystem.MinMaxCurve(1f, animCurveMinY, animCurveMaxY);
+        var curveZ = new ParticleSystem.MinMaxCurve(1f, animCurveMinZ, animCurveMaxZ);
+
+        return new ParticleSystem.MinMaxCurve[3] {curveX, curveY, curveZ};
+    }
+
+
+    
 
 
 
