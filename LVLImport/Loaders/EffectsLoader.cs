@@ -39,6 +39,9 @@ public class EffectsLoader : Loader {
     }
 
 
+    public static bool UseHDRP = true;
+
+
 
     public static EffectsLoader Instance { get; private set; } = null;
     static EffectsLoader()
@@ -209,13 +212,28 @@ public class EffectsLoader : Loader {
             velModule.y = VelCurves[1];
             velModule.z = VelCurves[2];
             velModule.speedModifier = scaleCurveOut; 
-            velModule.space = ParticleSystemSimulationSpace.World; 
+
+            velModule.space = HasVelTransformation ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local; 
         }
 
         if (!HasVelTransformation)
         {
             mainModule.simulationSpace = ParticleSystemSimulationSpace.Local;
         }
+
+        // Need to add a magnitude func to libvec classes
+        var inheritVelRange = scSpawner.GetVec2("InheritVelocityFactor");
+        if (inheritVelRange.X * inheritVelRange.X + 
+            inheritVelRange.Y * inheritVelRange.Y > .01)
+        {
+            // This does work in toy examples, but in converted fx it doesn't play 
+            // well with velocityOverLifetime...
+            var inheritVelModule = uEmitter.inheritVelocity;
+            inheritVelModule.enabled = true;
+            inheritVelModule.mode = ParticleSystemInheritVelocityMode.Initial;
+            inheritVelModule.curve = new ParticleSystem.MinMaxCurve(inheritVelRange.X, inheritVelRange.Y);
+        }
+
 
         /*
         SHAPE
@@ -354,31 +372,15 @@ public class EffectsLoader : Loader {
                     emObj.transform.parent = fxObject.transform;
                     
                     ParticleSystem emPs = emObj.GetComponent<ParticleSystem>();
-                    var inheritVel = emPs.inheritVelocity;
-                    inheritVel.enabled = true;
-                    inheritVel.mode = ParticleSystemInheritVelocityMode.Initial;
-                    inheritVel.curve = .25f;
-
-                    /*
-                    var emPsMain = emPs.main;
-                    emPsMain.simulationSpace = ParticleSystemSimulationSpace.World;
-
-                    mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
-                    */
-
-
-                    //var emPsVelModule = emPs.velocityOverLifetime;
-                    //emPsVelModule.enabled = false;
-                    
-                    //var emPsMainModule = emPs.main;
-                    //shapeModule.enabled = true;
-                    //shapeModule.radius = 0.0f;
-                    //mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
-
                     subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritEverything);
                 }
             }
-            //tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+            
+            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+            if (tex == null)
+            {
+                psR.enabled = false;
+            }
         }
         // Works in all cases I've seen
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
@@ -437,33 +439,63 @@ public class EffectsLoader : Loader {
         }
 
 
-        if (mat == null)
+        if (mat == null && !geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
-            mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
-            if (tex != null)
+            if (!UseHDRP)
             {
-                mat.mainTexture = tex;
+                mat = new UMaterial(Shader.Find("Particles/Standard Unlit"));
+                if (tex != null)
+                {
+                    mat.mainTexture = tex;
+                }
+                else 
+                {
+                    mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
+                }                
             }
             else 
             {
-                mat.color = new Color(0.0f,0.0f,0.0f,0.0f);
+                // TODO: Blendmode BLUR
+                if (tex != null)
+                {
+                    mat = new UMaterial(
+                        scGeometry.GetString("BlendMode").Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase) ? 
+                            Resources.Load<UMaterial>("effects/HDRPParticleAdditive") :
+                            Resources.Load<UMaterial>("effects/HDRPParticleNormal")
+                    );
+                    var mainTexID = Shader.PropertyToID("Texture2D_23DD87FD");
+                    mat.SetTexture(mainTexID, tex);                    
+                }  
+                else 
+                {
+                    psR.enabled = false;
+                } 
             }
         }
 
 
-        // Need to find a way of doing this without triggering the annoying GUI reset!
-        // Ideally without editing out the shader's GUI ref...
-        string mode = scGeometry.GetString("BlendMode");
-        if (mode.Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase))
+        if (mat != null)
         {
-            SetMaterialBlendMode(mat, BlendMode.Additive);
-        }
-        else 
-        {
-            SetMaterialBlendMode(mat, BlendMode.Fade);
+            if (!UseHDRP)
+            {
+                // TODO: Blend mode BLUR
+
+                // Need to find a way of doing this without triggering the annoying GUI reset!
+                // Ideally without editing out the shader's GUI ref...
+                string mode = scGeometry.GetString("BlendMode");
+                if (mode.Equals("ADDITIVE", StringComparison.OrdinalIgnoreCase))
+                {
+                    SetMaterialBlendMode(mat, BlendMode.Additive);
+                }
+                else 
+                {
+                    SetMaterialBlendMode(mat, BlendMode.Fade);
+                }
+            }
         }
 
         psR.sharedMaterial = mat;
+
     
         return fxObject;
     }
@@ -987,8 +1019,6 @@ public class EffectsLoader : Loader {
 
     
 
-
-
     // From standard particle shader GUI source...
     private void SetMaterialBlendMode(UMaterial material, BlendMode blendMode)
     {           
@@ -1083,4 +1113,22 @@ public class EffectsLoader : Loader {
 
 
 
+    private void SetMaterialBlendModeHDRP(UMaterial material, BlendMode blendMode)
+    {
+        switch (blendMode)
+        {
+            case BlendMode.Additive:
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_ZWrite", 0);
+                material.DisableKeyword("_ALPHATEST_ON");
+                material.EnableKeyword("_ALPHABLEND_ON");
+                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                material.DisableKeyword("_ALPHAMODULATE_ON");
+                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                break;
+        }
+    }
 }
