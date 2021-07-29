@@ -136,32 +136,45 @@ public class EffectsLoader : Loader {
         var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
 
         float repeatInterval = scEmitter.GetVec2("BurstDelay").Y;
-        if (repeatInterval < 0.00001f)
-        {
-            repeatInterval = scTransformer.GetFloat("LifeTime");
-        }
 
         var numRange = scEmitter.GetVec2("BurstCount");
         short minCount = (short) numRange.X;
         short maxCount = (short) numRange.Y;
 
-        int cycleCount;
-
-        // Needs to be used to avoid thousands of particles in some cases
-        if (maxParticles > 0.0f)
+        if (repeatInterval > 0f && repeatInterval < .01f)
         {
-            mainModule.maxParticles = (int) maxParticles;
-
-            cycleCount = (int) (maxParticles / numRange.Y);
-            //Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
+            // Unity doesn't seem to allow burst repeat intervals i < .01 seconds,
+            // but it does let you emit 1/i particles every second.  At this rate
+            // it's not likely a player could even tell the emission was constant
+            // instead of in bursts. 
+            em.rateOverTime = minCount * (1f / repeatInterval);
         }
         else 
         {
-            cycleCount = 0;
-        }
+            if (repeatInterval < 0.00001f)
+            {
+                // TODO: Probably not right, will get this one sooner or later
+                repeatInterval = scTransformer.GetFloat("LifeTime");
+            }
 
-        var burst = new ParticleSystem.Burst(0f, minCount, maxCount, cycleCount, repeatInterval);
-        em.SetBursts(new ParticleSystem.Burst[]{burst});
+            int cycleCount;
+
+            // Needs to be used to avoid thousands of particles in some cases
+            if (maxParticles > 0.0f)
+            {
+                mainModule.maxParticles = (int) maxParticles;
+
+                cycleCount = (int) (maxParticles / numRange.Y);
+                //Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
+            }
+            else 
+            {
+                cycleCount = 0;
+            }
+
+            var burst = new ParticleSystem.Burst(0f, minCount, maxCount, cycleCount, repeatInterval);
+            em.SetBursts(new ParticleSystem.Burst[]{burst});
+        }
 
 
 
@@ -172,7 +185,7 @@ public class EffectsLoader : Loader {
         VELOCITY
         */
 
-        Debug.LogFormat("Is spawner empty? {0}", HasEmptySpawner);
+        //Debug.LogFormat("Is spawner empty? {0}", HasEmptySpawner);
 
         if (!HasEmptySpawner || HasVelTransformation)
         {
@@ -183,7 +196,7 @@ public class EffectsLoader : Loader {
             velModule.y = VelCurves[1];
             velModule.z = VelCurves[2];
             velModule.speedModifier = scaleCurveOut; 
-            velModule.space = ParticleSystemSimulationSpace.World; 
+            //velModule.space = ParticleSystemSimulationSpace.World; 
         }
 
         /*
@@ -285,10 +298,12 @@ public class EffectsLoader : Loader {
 
         string geomType = scGeometry.GetString("Type");
 
-        Debug.LogFormat("On geomtype: {0}", geomType);
+        //Debug.LogFormat("On geomtype: {0}", geomType);
 
         Texture2D tex = null;
         UMaterial mat = null;
+
+        // TODO: Very lost here.  Needs finished Circle spawners.  Critical for explosions
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
             var subEmitterModule = uEmitter.subEmitters;
@@ -314,6 +329,7 @@ public class EffectsLoader : Loader {
             }
             tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
+        // TODO: get unity to render something
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
         {
             Model model = container.Get<Model>(scGeometry.GetString("Model"));
@@ -337,12 +353,16 @@ public class EffectsLoader : Loader {
                 mat = mats[0];
             }
         }
+        // Gets the job done
         else if (geomType.Equals("SPARK", StringComparison.OrdinalIgnoreCase))
         {
             psR.renderMode = ParticleSystemRenderMode.Stretch;
             psR.velocityScale = scGeometry.GetFloat("SparkLength");
             tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
+        // Haven't seen an example yet.  Strangely, com_sfx_ord_exp has an texture sheet anim
+        // ("Sparks"), but in the munged file it is missing and replaced by a duplicate of the 
+        // next emitter ("ASparks")
         else if (geomType.Equals("ANIMATED", StringComparison.OrdinalIgnoreCase))
         {
             var tsam = uEmitter.textureSheetAnimation;
@@ -358,6 +378,7 @@ public class EffectsLoader : Loader {
             tsam.numTilesX = (int) (tex.width / frameSize);
             tsam.numTilesY = (int) (tex.height / frameSize);
         }
+        // TODO: Differentiate between Billboards and Particles 
         else
         {
             // For now we handle billboards, and particles equivalently 
