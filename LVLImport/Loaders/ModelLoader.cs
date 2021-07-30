@@ -34,7 +34,7 @@ public class ModelLoader : Loader {
 
     public PhysicMaterial PhyMat;
 
-
+    public bool KeepDB = false;
 
     static ModelLoader()
     {
@@ -44,11 +44,22 @@ public class ModelLoader : Loader {
     public void ResetDB()
     {
         ModelDB.Clear();
-
-        GameObject.DestroyImmediate(ModelDBRoot);
-        ModelDBRoot = new GameObject("ModelDBRoot");
-
         ModelMappingDB.Clear();
+
+        if (ModelDBRoot != null)
+        {
+            GameObject.DestroyImmediate(ModelDBRoot);
+            ModelDBRoot = new GameObject("ModelDBRoot");
+        }
+    }
+
+
+    public void DeleteGODB()
+    {
+        if (ModelDBRoot != null)
+        {
+            GameObject.DestroyImmediate(ModelDBRoot);
+        }
     }
 
     // Cylinder collision mesh as substitute for cylinder primitive.
@@ -346,7 +357,13 @@ public class ModelLoader : Loader {
 
         if (model == null)
         {
+            Debug.LogWarningFormat("Model {0} not found among loaded levels..", modelName);
             return null;
+        }
+
+        if (ModelDBRoot == null)
+        {
+            ModelDBRoot = new GameObject("ModelDBRoot");
         }
 
         if (!ModelDB.ContainsKey(model.Name))
@@ -503,7 +520,7 @@ public class ModelLoader : Loader {
                 // This happens, not sure what to make of it, but 
                 // all prims of this type have zeroed fields.
                 default:
-                    Debug.LogWarning(model.Name + ": Unknown collision type encountered");
+                    // Debug.LogWarning(model.Name + ": Unknown collision type encountered");
                     break;
             }
         }
@@ -526,7 +543,15 @@ public class ModelLoader : Loader {
                 if (indBuffer.Length > 2)
                 {
                     Mesh collMeshUnity = new Mesh();
-                    
+
+#if !LVLIMPORT_NO_EDITOR
+                    if (SaveAssets)
+                    {
+                        AssetDatabase.CreateAsset(collMeshUnity, Path.Combine(SaveDirectory, model.Name + "_collision_mesh" + ".mesh"));
+                    }
+#endif
+
+
                     Vector3[] positions = collMesh.GetVertices<Vector3>();
                     UnityUtils.ConvertSpaceAndFillVec3(positions,positions,0);
                     collMeshUnity.vertices = positions;

@@ -191,7 +191,7 @@ public class LVLImportWindow : EditorWindow {
         AddSaveOption("Objects", ref saveObjects, ref objectsFolder);
         AddSaveOption("World", ref saveWorld, ref worldFolder);
         
-        AddSaveOption("Effects", ref saveEffects, ref effectsFolder);
+        // AddSaveOption("Effects", ref saveEffects, ref effectsFolder);
 
 
         saveTextures = saveMaterials ? true : saveTextures;
@@ -385,6 +385,7 @@ public class LVLImportWindow : EditorWindow {
         {
             if (ExecStateImporting())
             {
+                //ModelLoader.Instance.DeleteGODB();
                 TransitionToConfiguration();
             }
         }
