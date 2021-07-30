@@ -110,7 +110,9 @@ public class ClassLoader : Loader
         case "walker":
         case "commandwalker":
         case "hover":
+        case "commandhover":
         case "flyer":
+        case "commandflyer":
         case "cannon":
         case "repair":
         case "remote":

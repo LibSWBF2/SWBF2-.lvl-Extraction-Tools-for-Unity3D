@@ -414,7 +414,7 @@ public class EffectsLoader : Loader {
         }
         else if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase))
         {
-            psR.alignment = ParticleSystemRenderSpace.World;
+            //psR.alignment = ParticleSystemRenderSpace.World;
 
             var angleCurve = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
 
@@ -427,18 +427,18 @@ public class EffectsLoader : Loader {
         // PARTICLE    
         else
         {
-            // Nothing needed her AFAIK
+            // Nothing needed here AFAIK
         }
 
-
-        if (mat == null && !geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
+        if (tex == null || geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
-            if (tex == null)
-            {
-                psR.enabled = false;
-            }
-            else 
-            {
+            psR.enabled = false;
+        }
+        else 
+        {
+            // Mat will already be set if geometry type is GEOMETRY
+            if (mat == null)
+            {                
                 // TODO: Blendmode BLUR
                 if (!UseHDRP)
                 {

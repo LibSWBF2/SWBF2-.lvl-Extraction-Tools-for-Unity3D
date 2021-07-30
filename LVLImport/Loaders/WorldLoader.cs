@@ -729,7 +729,7 @@ public class WorldLoader : Loader
                 else if (ltype == 1.0f)
                 {
                     lightComp.type = UnityEngine.LightType.Directional;
-                    lightComp.intensity = IsGlobal ? 3.0f : 0.3f;
+                    lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
                     //lightComp.range = light.range;
                     //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
                 }
