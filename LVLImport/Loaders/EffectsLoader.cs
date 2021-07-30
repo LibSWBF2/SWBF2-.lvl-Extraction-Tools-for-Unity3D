@@ -132,8 +132,21 @@ public class EffectsLoader : Loader {
         em.enabled = true;
         em.rateOverTime = 0;
 
+        /*
+        EMISSION
+
+        - Need to determine the max particles when MaxParticles is set to -1.  Combine this
+        with ringBufferMode to avoid the default 1000 particle setup.
+
+        - com_sfx_exhaust_xwing / JetExhaust still needs work.  Emission seems slightly offset
+        */
+
 
         var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
+        if (maxParticles > 0.0f)
+        {
+            mainModule.maxParticles = (int) maxParticles;
+        }
 
         float repeatInterval = scEmitter.GetVec2("BurstDelay").Y;
 
@@ -227,6 +240,7 @@ public class EffectsLoader : Loader {
             }
             else 
             {
+                // TODO: Vortex, Rotator
                 //Debug.LogWarningFormat("Effect {0} has unhandled spawner type!", emitter.GetString());
                 return null;
             }
@@ -303,7 +317,7 @@ public class EffectsLoader : Loader {
         Texture2D tex = null;
         UMaterial mat = null;
 
-        // TODO: Very lost here.  Needs finished Circle spawners.  Critical for explosions
+        // TODO: Very lost here. Critical for explosions
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
             var subEmitterModule = uEmitter.subEmitters;
