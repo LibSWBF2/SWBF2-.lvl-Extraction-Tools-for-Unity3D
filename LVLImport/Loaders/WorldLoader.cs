@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
+// using UnityEngine.Rendering.HighDefinition;
 #if !LVLIMPORT_NO_EDITOR
 using UnityEditor;
 #endif
@@ -681,6 +681,7 @@ public class WorldLoader : Loader
 
             if (UseHDRP)
             {
+                /*
                 HDAdditionalLightData lightComp = null;
 
                 if (ltype == 2.0f)
@@ -707,6 +708,7 @@ public class WorldLoader : Loader
                     lightComp.shadowUpdateMode = ShadowUpdateMode.EveryFrame;
                     sunFound = true;
                 }
+                */
             }
             else
             {

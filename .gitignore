@@ -3,6 +3,8 @@
 Flail.cs
 Grab.cs
 
+[Ss]cenes
+
 # ignore build asset bundles
 /AssetBundles
 

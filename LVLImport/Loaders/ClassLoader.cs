@@ -41,7 +41,7 @@ public class ClassLoader : Loader
     public IEnumerator<LoadStatus> ImportClassBatch(Level[] levels)
     {
         float ZOffset = 0.0f;
-        
+
         foreach (Level lvl in levels)
         {
             Transform LevelRoot = new GameObject(lvl.Name).transform;
@@ -55,17 +55,17 @@ public class ClassLoader : Loader
 
                 if (ecObj != null)
                 {
-                    yield return new LoadStatus(i/(float) Classes.Length, lvl.Name + ": " + ecObj.name);
+                    yield return new LoadStatus(i / (float)Classes.Length, lvl.Name + ": " + ecObj.name);
 
                     ecObj.transform.parent = LevelRoot;
-                    
+
                     var extents = UnityUtils.GetMaxBounds(ecObj).extents;
-                    
+
                     RootZOffset = Math.Max(RootZOffset, extents.z);
 
-                    SpawnOffset += new Vector3(extents.x,0,0);
+                    SpawnOffset += new Vector3(extents.x, 0, 0);
                     ecObj.transform.localPosition = SpawnOffset;
-                    SpawnOffset += new Vector3(extents.x,0,0);
+                    SpawnOffset += new Vector3(extents.x, 0, 0);
                 }
             }
 
@@ -100,35 +100,35 @@ public class ClassLoader : Loader
     {
         switch (ec.BaseClassName)
         {
-        case "door":
-        case "animatedprop":                  
-        case "animatedbuilding":
-        case "powerupstation":
-        case "soldier":
-        case "walkerdroid":
-        case "vehicle":
-        case "walker":
-        case "commandwalker":
-        case "hover":
-        case "flyer":
-        case "cannon":
-        case "repair":
-        case "remote":
-        case "grenade":
-        case "detonator":
-        case "mine":
-        case "launcher":
-        case "missile":
-        case "bullet":
-        case "bolt":
-        case "beam":
-        case "droid":
-        case "melee":
-        case "explosion":
-        case "cloth":
-            return false;
-        default:
-            return true;            
+            case "door":
+            case "animatedprop":
+            case "animatedbuilding":
+            case "powerupstation":
+            case "soldier":
+            case "walkerdroid":
+            case "vehicle":
+            case "walker":
+            case "commandwalker":
+            case "hover":
+            case "flyer":
+            case "cannon":
+            case "repair":
+            case "remote":
+            case "grenade":
+            case "detonator":
+            case "mine":
+            case "launcher":
+            case "missile":
+            case "bullet":
+            case "bolt":
+            case "beam":
+            case "droid":
+            case "melee":
+            case "explosion":
+            case "cloth":
+                return false;
+            default:
+                return true;
         }
     }
 
@@ -165,7 +165,7 @@ public class ClassLoader : Loader
                 Debug.LogWarningFormat("Failed to load model {1} used by object {0}", instName, geometryName);
                 return new GameObject(instName);
             }
-            else 
+            else
             {
                 obj.name = instName;
             }
@@ -187,15 +187,15 @@ public class ClassLoader : Loader
                 if (ModelMapping != null)
                 {
                     ModelMapping.ExpandMultiLayerColliders();
-                    ModelMapping.SetColliderLayerFromMaskAll();                    
+                    ModelMapping.SetColliderLayerFromMaskAll();
                 }
             }
-            else 
+            else
             {
                 ModelMapping.ConvexifyMeshColliders();
             }
         }
-        else 
+        else
         {
             obj = new GameObject(instName);
         }
@@ -211,22 +211,26 @@ public class ClassLoader : Loader
 
     public GameObject LoadGeneralClass(string name, bool tryMakeStatic = false)
     {
-        /*
         if (name == null || name == "") return null;
 
         //Check if ODF already loaded
         if (classObjectDatabase.ContainsKey(name))
         {
             GameObject duplicate = null;
+
+            GameObject original = classObjectDatabase[name];
+
+            if (original == null) return null;
+
 #if !LVLIMPORT_NO_EDITOR
             if (SaveAssets)
             {
-                duplicate = PrefabUtility.InstantiatePrefab(classObjectDatabase[name]) as GameObject;
+                duplicate = PrefabUtility.InstantiatePrefab(original) as GameObject;
             }
             else
 #endif
             {
-                duplicate = UnityEngine.Object.Instantiate(classObjectDatabase[name]);     
+                duplicate = UnityEngine.Object.Instantiate(original);
             }
 
             if (duplicate == null)
@@ -236,32 +240,35 @@ public class ClassLoader : Loader
 
             duplicate.transform.localPosition = Vector3.zero;
             duplicate.transform.localRotation = Quaternion.identity;
-            duplicate.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
+            duplicate.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
             return duplicate;
         }
 
         var ecWrapper = container.Get<EntityClass>(name);
         if (ecWrapper == null)
         {
-            Debug.LogWarningFormat("\tObject class: {0} not defined in loaded levels...", name);
+            Debug.LogWarningFormat("Object class: {0} not defined in loaded levels...", name);
             return null;
         }
 
-        List<uint> properties;
-        List<string> values;
-        
+        uint[] properties;
+        string[] values;
+
         try {
-            ecWrapper.GetOverriddenProperties(out uint[] p_, out string[] v_);
-            properties = new List<uint>(p_);
-            values = new List<string>(v_);
+            ecWrapper.GetAllProperties(out properties, out values);
         } catch
         {
-            Debug.LogWarningFormat("\tFailed to load object class: {0}", name);
+            Debug.LogWarningFormat("Failed to load object class: {0}", name);
+            return null;
+        }
+
+        if (properties == null || values == null)
+        {
             return null;
         }
 
 
-        GameObject obj = new GameObject(name);
+        GameObject obj = null;
 
         GameObject lastAttached = null;
         string lastAttachedName = "";
@@ -272,15 +279,22 @@ public class ClassLoader : Loader
 
         int geomNameIndex;
         string geometryName = "";
-        if ((geomNameIndex = properties.FindIndex(a => a == GEOMETRYNAME)) != -1)
+
+        geomNameIndex = Array.IndexOf<uint>(properties, GEOMETRYNAME);
+
+        if (geomNameIndex != -1)
         {
             geometryName = values[geomNameIndex];
+
+            int overrideTexIndex = Array.IndexOf<uint>(properties, LibSWBF2.Utils.HashUtils.GetFNV("OverrideTexture"));
+
             try {
-                if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
+                obj = ModelLoader.Instance.GetGameObjectFromModel(geometryName, overrideTexIndex != -1 ? values[overrideTexIndex] : null);
+                if (obj == null)
                 {
-                    Debug.LogWarningFormat("Failed to load model {1} used by object {0}", name, geometryName);
-                    return obj;
+                    obj = new GameObject();
                 }
+                obj.name = name;
 
                 if (tryMakeStatic && IsStaticObjectClass(ecWrapper))
                 {
@@ -297,12 +311,13 @@ public class ClassLoader : Loader
                 return obj;
             }
         }
+        else
+        {
+            obj = new GameObject(name);
+        }
 
 
-
-
-
-        for (int i = 0; i < properties.Count; i++)
+        for (int i = 0; i < properties.Length; i++)
         {
             uint property = properties[i];
             string propertyValue = values[i];
@@ -316,6 +331,11 @@ public class ClassLoader : Loader
                     currentAnimationSet = propertyValue;
 
                     var clips = AnimationLoader.Instance.LoadAnimationBank(propertyValue, obj.transform);
+                    if (clips == null)
+                    {
+                        break;
+                    }
+
                     Animation animComponent = obj.GetComponent<Animation>();
 
                     if (animComponent == null)
@@ -334,26 +354,7 @@ public class ClassLoader : Loader
                 // Refers to specific animations for specific purposes (see animatedprop)
                 case ANIMATION:
                     break;
-        */
-                /*
-                case GEOMETRYNAME:
-
-                    geometryName = propertyValue;
-
-                    try {
-                        if (!ModelLoader.Instance.AddModelComponents(obj, geometryName))
-                        {
-                            Debug.LogError(String.Format("\tFailed to load model used by: {0}", name));
-                            return obj;
-                        }
-                    }
-                    catch 
-                    {
-                        return obj;
-                    }
-                    break;
-                */
-        /*
+     
                 case ATTACHODF:
                     lastAttachedName = propertyValue; //LoadGeneralClass(propertyValue);
                     break;
@@ -369,7 +370,7 @@ public class ClassLoader : Loader
 
                     if (childTx == null)
                     {
-                        Debug.LogWarningFormat("\t{0}: Couldn't find hardpoint {1}", name, propertyValue);
+                        Debug.LogWarningFormat("{0}: Couldn't find hardpoint {1}", name, propertyValue);
                         lastAttached.transform.SetParent(obj.transform, false);
                     }
                     else 
@@ -382,16 +383,14 @@ public class ClassLoader : Loader
                 // Some collider primitives don't have proper masks, so their purpose is
                 // listed here.  I think this was a BF1 holdover.  I chose ordinance masking
                 // as it is most accurate.
-                case ORDNANCECOLLISION:
-                    ordinanceColliders.Add(propertyValue);
-                    break;
+                // case ORDNANCECOLLISION:
+                //    ordinanceColliders.Add(propertyValue);
+                //    break;
 
                 default:
                     break;
             }
         }
-
-        ModelLoader.Instance.AddCollisionComponents(obj, geometryName, ordinanceColliders);
 
 #if !LVLIMPORT_NO_EDITOR
         if (SaveAssets)
@@ -407,8 +406,7 @@ public class ClassLoader : Loader
 
 
         return obj;
-        */
-        return null;
+
     }
 
 
