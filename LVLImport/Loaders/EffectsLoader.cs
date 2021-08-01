@@ -124,7 +124,7 @@ public class EffectsLoader : Loader {
         var mainModule = uEmitter.main;
         mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
         mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
-        mainModule.loop = false;
+        mainModule.loop = true;
 
 
 
@@ -209,7 +209,12 @@ public class EffectsLoader : Loader {
             velModule.y = VelCurves[1];
             velModule.z = VelCurves[2];
             velModule.speedModifier = scaleCurveOut; 
-            //velModule.space = ParticleSystemSimulationSpace.World; 
+            velModule.space = ParticleSystemSimulationSpace.World; 
+        }
+
+        if (!HasVelTransformation)
+        {
+            mainModule.simulationSpace = ParticleSystemSimulationSpace.Local;
         }
 
         /*
@@ -240,8 +245,8 @@ public class EffectsLoader : Loader {
             }
             else 
             {
-                // TODO: Vortex, Rotator
-                //Debug.LogWarningFormat("Effect {0} has unhandled spawner type!", emitter.GetString());
+                // TODO: Vortex, Rotator, None?
+                // Debug.LogWarningFormat("Effect {0} has unhandled spawner type!", emitter.GetString());
                 return null;
             }
         }
@@ -258,6 +263,10 @@ public class EffectsLoader : Loader {
                 scaleModule.enabled = true;
                 scaleModule.size = curveOut;
             }            
+        }
+        else 
+        {
+            mainModule.startSize = scSpawner.GetVec3("Size").Z; 
         }
 
 
@@ -310,14 +319,27 @@ public class EffectsLoader : Loader {
         GEOMETRY + TEXTURE + MATERIAL
         */
 
-        string geomType = scGeometry.GetString("Type");
 
-        //Debug.LogFormat("On geomtype: {0}", geomType);
+        /*
+        TODO: Very lost on emitters. Critical for explosions
+        
+        - What I know: 
+            - size is not inherited
+            - velocity is inherited via inheritvelocityfactor
+            - position is directly inherited (no option for that or velocity in Unity)
+        
+        - Don't know:
+            - Is the vel inheritance updated or set once at spawn?
+
+        It will probably be worth it to just completely 
+
+        */
+
+        string geomType = scGeometry.GetString("Type");
 
         Texture2D tex = null;
         UMaterial mat = null;
 
-        // TODO: Very lost here. Critical for explosions
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
             var subEmitterModule = uEmitter.subEmitters;
@@ -330,20 +352,35 @@ public class EffectsLoader : Loader {
                 if (emObj != null)
                 {
                     emObj.transform.parent = fxObject.transform;
+                    
                     ParticleSystem emPs = emObj.GetComponent<ParticleSystem>();
-                    var emPsVelModule = emPs.velocityOverLifetime;
-                    emPsVelModule.enabled = false;
-                    var emPsMainModule = emPs.main;
-                    shapeModule.enabled = true;
-                    shapeModule.radius = 0.0f;
-                    mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
+                    var inheritVel = emPs.inheritVelocity;
+                    inheritVel.enabled = true;
+                    inheritVel.mode = ParticleSystemInheritVelocityMode.Initial;
+                    inheritVel.curve = .25f;
 
-                    subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+                    /*
+                    var emPsMain = emPs.main;
+                    emPsMain.simulationSpace = ParticleSystemSimulationSpace.World;
+
+                    mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
+                    */
+
+
+                    //var emPsVelModule = emPs.velocityOverLifetime;
+                    //emPsVelModule.enabled = false;
+                    
+                    //var emPsMainModule = emPs.main;
+                    //shapeModule.enabled = true;
+                    //shapeModule.radius = 0.0f;
+                    //mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
+
+                    subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritEverything);
                 }
             }
-            tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+            //tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
         }
-        // TODO: get unity to render something
+        // Works in all cases I've seen
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
         {
             Model model = container.Get<Model>(scGeometry.GetString("Model"));
@@ -367,7 +404,7 @@ public class EffectsLoader : Loader {
                 mat = mats[0];
             }
         }
-        // Gets the job done
+        // Decent, sometimes fails to display
         else if (geomType.Equals("SPARK", StringComparison.OrdinalIgnoreCase))
         {
             psR.renderMode = ParticleSystemRenderMode.Stretch;
@@ -427,9 +464,10 @@ public class EffectsLoader : Loader {
         }
 
         psR.sharedMaterial = mat;
-
+    
         return fxObject;
     }
+    
 
 
     // Get spawner's starting color interval
@@ -784,7 +822,7 @@ public class EffectsLoader : Loader {
         
         while (curScaleKey != null && curScaleKey.Scope.GetField("Scale") != null)
         {
-            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetFloat("Scale"));
+            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, initialScale * curScaleKey.Scope.GetFloat("Scale"));
             curScaleKey = curScaleKey.Scope.GetField("Next");
         }
 
@@ -899,23 +937,25 @@ public class EffectsLoader : Loader {
         var vY = spreadScope.GetVec2("PositionY");
         var vZ = spreadScope.GetVec2("PositionZ");
 
-        animCurveMinX.AddKey(0f, vX.X);
-        animCurveMaxX.AddKey(0f, vX.Y);
+        animCurveMinX.AddKey(0.01f, vX.X);
+        animCurveMaxX.AddKey(0.01f, vX.Y);
 
-        animCurveMinY.AddKey(0f, vY.X);
-        animCurveMaxY.AddKey(0f, vY.Y);
+        animCurveMinY.AddKey(0.01f, vY.X);
+        animCurveMaxY.AddKey(0.01f, vY.Y);
 
-        animCurveMinZ.AddKey(0f, vZ.X);
-        animCurveMaxZ.AddKey(0f, vZ.Y);
+        animCurveMinZ.AddKey(0.01f, vZ.X);
+        animCurveMaxZ.AddKey(0.01f, vZ.Y);
 
 
         Scope transformerScope = Emitter.GetField("Transformer").Scope;
         Field curScaleKey = transformerScope.GetField("Position"); 
+
+        float EmitterLifetime = transformerScope.GetFloat("LifeTime");
         
         while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
         {
             var Accel = curScaleKey.Scope.GetVec3("Accelerate");
-            float TimeStamp = curScaleKey.Scope.GetFloat("LifeTime");
+            float TimeStamp = curScaleKey.Scope.GetFloat("LifeTime") / EmitterLifetime;
             if (Mathf.Abs(Accel.X) > .001f)
             {
                 animCurveMinX.AddKey(TimeStamp, vX.X + Accel.X);
