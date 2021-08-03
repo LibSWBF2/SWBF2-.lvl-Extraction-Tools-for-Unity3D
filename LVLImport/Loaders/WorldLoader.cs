@@ -593,7 +593,7 @@ public class WorldLoader : Loader
                 }
                 else
                 {
-                    Debug.LogWarning("Cant handle light type for " + light.Name + " yet");
+                    Debug.LogWarning("Cant handle light type for " + light.GetName() + " yet");
                     continue;
                 }
 
