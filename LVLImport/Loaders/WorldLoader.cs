@@ -697,6 +697,12 @@ public class WorldLoader : Loader
                 {
                     lightComp = lightObj.AddHDLight(HDLightTypeAndShape.Directional);
                     lightComp.intensity = 400000.0f;
+
+                    if (!String.IsNullOrEmpty(sl.GetString("Region")))
+                    {
+                        Debug.LogWarningFormat("Directional light {0} is linked to region {1}, deactivating it by default...", lightObj.name, sl.GetString("Region"));
+                        lightObj.SetActive(false);
+                    }
                 }
 
                 lightComp.EnableColorTemperature(false);
@@ -730,6 +736,12 @@ public class WorldLoader : Loader
                 {
                     lightComp.type = UnityEngine.LightType.Directional;
                     lightComp.intensity = IsGlobal ? 1.0f : 0.3f;
+
+                    if (!String.IsNullOrEmpty(sl.GetString("Region")))
+                    {
+                        Debug.LogWarningFormat("Directional light {0} is linked to region {1}, deactivating it by default...", lightObj.name, sl.GetString("Region"));
+                        lightObj.SetActive(false);
+                    }
                     //lightComp.range = light.range;
                     //lightComp.spotAngle = light.spotAngles.X * Mathf.Rad2Deg;   
                 }
