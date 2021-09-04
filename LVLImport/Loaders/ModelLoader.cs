@@ -58,6 +58,33 @@ public class ModelLoader : Loader {
 
 
 
+    // Really only needed by EffectsLoader when an effect uses geometry.   
+    public bool GetMeshesAndMaterialsFromSegments(string name, out List<Mesh> Meshes, out List<UMaterial> Mats)
+    {
+        Meshes = null;
+        Mats = null;
+
+        Model model = null;
+        try {
+            model = container.Get<Model>(name);
+        }
+        catch 
+        { 
+            return false; 
+        }
+
+        Mats = new List<UMaterial>();
+        Meshes = new List<Mesh>();
+        foreach (Segment seg in model.GetSegments())
+        {
+            Mats.Add(MaterialLoader.Instance.LoadMaterial(seg.Material, ""));
+            Meshes.Add(GetMeshFromSegments(new Segment[]{seg}));
+        }   
+
+        return true;     
+    }
+
+
     
     /*
     Next three methods are needed for testing EffectsLoader
@@ -98,7 +125,7 @@ public class ModelLoader : Loader {
         Mesh mesh = new Mesh();
 
 #if !LVLIMPORT_NO_EDITOR
-        if (SaveAssets)
+        if (SaveAssets && !String.IsNullOrEmpty(meshName))
         {
             AssetDatabase.CreateAsset(mesh, Path.Combine(SaveDirectory, meshName + ".mesh")); 
         }
