@@ -24,6 +24,76 @@ using UMaterial = UnityEngine.Material;
 
 
 
+
+/*
+
+SWBF2 EFFECTS CONUNDRA
+
+- My best guess of Circle spawner behavior:
+	- Starting velocity components are set to VelocityScale
+		- VelocityScale variance is a misnomer, e.g. (1,1) does not yield interval (0, 2), but rather (1,2).
+	- The fields of Circle indicate PROBABILITIES that the starting components have
+	  negative or positive multipliers
+		- e.g. -1,1 yields equal probability of neg or pos multiplier, but -1000,1 yields far higher probability of neg multiplier
+		- TODO: are 0 multipliers possible e.g. (0,1)? ANSWER: NO
+	- This is easily tested by setting the Spawner type to Circle in PE and extremifying the Spread (i.e. Circle in .fx files) values 
+	- If all Circle values are zeroed, it seems the PositionY value is still interpreted as (0,1)... see above TODO	
+
+
+- Does VelocityScale only apply to the spawned velocity or does it persist across transformation?
+
+- Inheritance of velocity
+	- VelocityScale in Spawner does not affect InheritedVelocity
+
+- Billboards and Rotation
+	- StartRotation: How does one field affect multiple axes?
+		- [0,1) faces Y, rotates around X
+		- [1,2) faces X, rotates around Y
+		- [2,3) faces Y, rotates around Z
+		- [3,4) faces Z, rotates around Z
+		- [4,5) faces Y, rotates around Y
+		- [5,6) faces X, rotates around X
+	- StartRotation = (min,max) adhering to above schema
+	- RotationVelocity also adheres to above schema
+
+
+
+UNITY MAPPING ISSUES (BUILT-IN PARTICLE SYSTEM, VFX GRAPH IS YET UNEXPLORED)
+
+- Circle spawners
+	- No clear way to emulate probablistic nature of Circle spawner velocities
+		- On way could be setting starting speeds to extreme values and 
+		using velocityLimitOverLifetime to limit those values to VelocityScale ranges
+		- There is probably some way to set the starting speeds (one time) manually via script, 
+		if it exists and is efficient then one could easily emulate this
+			- Particle Systems have jobs/Burst integration, perhaps that would be good enough
+		
+- Velocity Inheritance
+	- velocityOverLifetime (vOL) and inheritVelocity (iV) modules conflict?
+		- Does vOL overwrite iV? ANSWER: 
+			- 
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 public class EffectsLoader : Loader {
 
     // From standard particle shader GUI source...
@@ -90,11 +160,15 @@ public class EffectsLoader : Loader {
 
     // Creates a root empty for the effect and attaches top-level emitters (see UnpackNestedEmitters)
     // to child gameobjects.
-    public GameObject ImportEffect(Config fxConfig)
+    GameObject ImportEffect(Config fxConfig)
     {
         GameObject fxObject = new GameObject(String.Format("0x{0:x}", fxConfig.Name));
 
-        foreach (Field emitter in UnpackNestedEmitters(fxConfig))
+        List<Field> emitters = UnpackNestedEmitters(fxConfig);
+
+        if (emitters == null) return fxObject;
+
+        foreach (Field emitter in emitters)
         {
             //Debug.LogFormat("Getting emitter: {0}", emitter.GetString());
             GameObject emitterObj = GetEmitter(emitter);
@@ -125,9 +199,9 @@ public class EffectsLoader : Loader {
         Scope scGeometry = scEmitter.GetField("Geometry").Scope;
 
         var mainModule = uEmitter.main;
-        mainModule.startSpeed = new ParticleSystem.MinMaxCurve(0.0f);
+        mainModule.startSpeed = 0f;
         mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
-        mainModule.loop = true;
+        mainModule.loop = false;
 
 
 
@@ -140,15 +214,17 @@ public class EffectsLoader : Loader {
 
         - Need to determine the max particles when MaxParticles is set to -1.  Combine this
         with ringBufferMode to avoid the default 1000 particle setup.
-
-        - com_sfx_exhaust_xwing / JetExhaust still needs work.  Emission seems slightly offset
         */
 
 
         var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
-        if (maxParticles > 0.0f)
+        if (maxParticles > 0.0001f)
         {
             mainModule.maxParticles = (int) maxParticles;
+        }
+        else if (maxParticles < .0001f && maxParticles > -.0001f)
+        {
+            mainModule.maxParticles = 1;
         }
 
         float repeatInterval = scEmitter.GetVec2("BurstDelay").Y;
@@ -193,12 +269,19 @@ public class EffectsLoader : Loader {
         }
 
 
-
         bool HasEmptySpawner = SpawnerIsEmpty(scSpawner);
         bool HasVelTransformation = HasVelocityTransformation(scTransformer);
 
         /*
         VELOCITY
+
+        Initial Unity particle vel? = velOverLifetime.speedMod * (inherited vel * inherited vel mult + velOverLifetimeCurve)
+
+        Initial SWBF2 particle vel? = parentVel * InheritedVelMult +  (velocityScale * spawnerstuff)
+
+        In SWBF2, VelocityScale does not affect inherited velocity, but in Unity the scale of the velocity over lifetime curve
+        does.
+
         */
 
         //Debug.LogFormat("Is spawner empty? {0}", HasEmptySpawner);
@@ -223,14 +306,14 @@ public class EffectsLoader : Loader {
 
         // Need to add a magnitude func to libvec classes
         var inheritVelRange = scSpawner.GetVec2("InheritVelocityFactor");
-        if (inheritVelRange.X * inheritVelRange.X + 
-            inheritVelRange.Y * inheritVelRange.Y > .01)
+        if (inheritVelRange.Magnitude() > .001f)
         {
             // This does work in toy examples, but in converted fx it doesn't play 
             // well with velocityOverLifetime...
             var inheritVelModule = uEmitter.inheritVelocity;
             inheritVelModule.enabled = true;
             inheritVelModule.mode = ParticleSystemInheritVelocityMode.Initial;
+
             inheritVelModule.curve = new ParticleSystem.MinMaxCurve(inheritVelRange.X, inheritVelRange.Y);
         }
 
@@ -361,32 +444,20 @@ public class EffectsLoader : Loader {
                     emObj.transform.parent = fxObject.transform;
                     
                     ParticleSystem emPs = emObj.GetComponent<ParticleSystem>();
-                    subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritEverything);
+                    subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
                 }
             }
         }
         // Works in all cases I've seen
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
         {
-            Model model = container.Get<Model>(scGeometry.GetString("Model"));
-            if (model == null)
-            {
-                Debug.LogWarningFormat("Failed to load model {0} used by emitter {1}", model.Name, emitter.GetString());
-                return fxObject;
-            }
+            // Debug.LogFormat("EffectsLoader needs model: {0}", scGeometry.GetString("Model"));
 
-            Mesh geomMesh = ModelLoader.Instance.GetFirstMesh(model);
-            if (geomMesh != null)
+            if (ModelLoader.Instance.GetMeshesAndMaterialsFromSegments(scGeometry.GetString("Model"), out List<Mesh> Meshes, out List<UMaterial> Mats))
             {
-                geomMesh.name = model.Name;
-
                 psR.renderMode = ParticleSystemRenderMode.Mesh;
-                psR.SetMeshes(new Mesh[]{ geomMesh });
-            }
-            var mats = ModelLoader.Instance.GetNeededMaterials(model);
-            if (mats.Count > 0)
-            {
-                mat = mats[0];
+                psR.SetMeshes(Meshes.ToArray()); 
+                psR.sharedMaterials = Mats.ToArray();               
             }
         }
         // Decent, sometimes fails to display
@@ -414,16 +485,74 @@ public class EffectsLoader : Loader {
         }
         else if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase))
         {
-            //psR.alignment = ParticleSystemRenderSpace.World;
-
-            var angleCurve = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
+            psR.alignment = ParticleSystemRenderSpace.World;
 
             mainModule.startRotation3D = true;
-            //mainModule.startRotationX  = angleCurve;
-            //mainModule.startRotationY  = angleCurve;
-            mainModule.startRotationZ  = angleCurve;
+            mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0f,0f);
 
-        }    
+            var startRotField = scSpawner.GetVec3("StartRotation");
+            float curveMin = startRotField.Y;
+            float curveMax = startRotField.Z;
+
+            float angleMin, angleMax;
+
+            bool InBetween(float val, float min, float max)
+            {
+            	return val >= min && val < max;
+            }
+
+            if (InBetween(curveMin, 0f, 1f))
+            {
+            	angleMin = 90f + curveMin * 360f;
+            	angleMax = 90f + curveMax * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 1f, 2f))
+            {
+            	angleMin = 90f + (curveMin - 1f) * 360f;
+            	angleMax = 90f + (curveMax - 1f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 2f, 3f))
+            {
+            	angleMin = 90f + (curveMin - 2f) * 360f;
+            	angleMax = 90f + (curveMin - 2f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            }
+            else if (InBetween(curveMin, 3f, 4f))
+            {
+            	angleMin = (curveMin - 3f) * 360f;
+            	angleMax = (curveMin - 3f) * 360f;
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 4f, 5f))
+            {
+            	angleMin = (curveMin - 4f) * 360f;
+            	angleMax = (curveMin - 4f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else 
+            {
+            	angleMin = (curveMin - 5f) * 360f;
+            	angleMax = (curveMin - 5f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+
+
+            // We can probably do this safely, since rotational velocity would be weird for billboards in SWBF2
+            var rotModuleBillboard = uEmitter.rotationOverLifetime;
+            rotModuleBillboard.enabled = false;
+
+        }  
+        else if (geomType.Equals("STREAK", StringComparison.OrdinalIgnoreCase))
+        {
+        	// Haven't seen these yet
+        }     
         // PARTICLE    
         else
         {
@@ -436,8 +565,7 @@ public class EffectsLoader : Loader {
         }
         else 
         {
-            // Mat will already be set if geometry type is GEOMETRY
-            if (mat == null)
+            if (mat == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
             {                
                 // TODO: Blendmode BLUR
                 if (!UseHDRP)
@@ -837,41 +965,6 @@ public class EffectsLoader : Loader {
     }
 
 
-    /*
-    private ParticleSystem.MinMaxCurve[] PositionTransformationToCurve(Scope transformerScope)
-    {
-        ParticleSystem.MinMaxCurve[] Curves = new ParticleSystem.MinMaxCurve[3];
-
-
-        float lifeTime = transformerScope.GetFloat("LifeTime");
-        float timeIndex = 0.0f;
-
-        AnimationCurve curve = new AnimationCurve();
-        curve.AddKey(0.0f, initialVel);
-
-        Field curScaleKey = transformerScope.GetField("Position"); 
-        
-        while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
-        {
-            curve.AddKey(curScaleKey.Scope.GetFloat("LifeTime") / lifeTime, curScaleKey.Scope.GetVec3("Accelerate").);
-            curScaleKey = curScaleKey.Scope.GetField("Next");
-        }
-
-        if (curve == null)
-        {
-            curveOut = new ParticleSystem.MinMaxCurve(1.0f);
-            return false;
-        }
-        else
-        {
-            curveOut = new ParticleSystem.MinMaxCurve(1.0f, curve);
-            return true;
-        }        
-    }
-    */
-
-
-
 
     /*
     VELOCITY
@@ -885,7 +978,8 @@ public class EffectsLoader : Loader {
         var CurrStageTime = CurrStage.Scope.GetFloat("LifeTime");
 
         if (CurrStage.Scope.GetField("Accelerate") == null && 
-            CurrStage.Scope.GetField("Reach") == null)
+            CurrStage.Scope.GetField("Reach") == null &&
+            CurrStage.Scope.GetField("Scale") == null)
         {
             return false;
         }
@@ -901,9 +995,13 @@ public class EffectsLoader : Loader {
         Scope spawner = Emitter.GetField("Spawner").Scope;
 
         Field velDis = spawner.GetField("Spread");
+
+        bool isCircle = false;
+
         if (velDis == null)
         {
             velDis = spawner.GetField("Circle");
+            isCircle = (velDis != null);
         }
 
         Scope spreadScope;
@@ -918,9 +1016,14 @@ public class EffectsLoader : Loader {
         }
 
         var velScale = spawner.GetVec2("VelocityScale");
-        scaleCurve = new ParticleSystem.MinMaxCurve(velScale.X, velScale.Y);
+        //scaleCurve = new ParticleSystem.MinMaxCurve(1f);
+        var scaleAnimCurve = new AnimationCurve();
+        scaleAnimCurve.AddKey(0f,1f);
+
+        // scaleCurve = new ParticleSystem.MinMaxCurve(velScale.X, velScale.Y);
 
 
+        // This will eventually be optimized.  
         var animCurveMinX = new AnimationCurve();
         var animCurveMinY = new AnimationCurve();
         var animCurveMinZ = new AnimationCurve();
@@ -935,50 +1038,244 @@ public class EffectsLoader : Loader {
         var vY = spreadScope.GetVec2("PositionY");
         var vZ = spreadScope.GetVec2("PositionZ");
 
-        animCurveMinX.AddKey(0.01f, vX.X);
-        animCurveMaxX.AddKey(0.01f, vX.Y);
 
-        animCurveMinY.AddKey(0.01f, vY.X);
-        animCurveMaxY.AddKey(0.01f, vY.Y);
+        // Setting the timestamps to 0 doesn't seem to work, but a tiny epsilon gets the 
+        // job done
+        float prevXMin = 0f, prevXMax = 0f, prevYMin = 0f, prevYMax = 0f, prevZMin = 0f, prevZMax = 0f;
 
-        animCurveMinZ.AddKey(0.01f, vZ.X);
-        animCurveMaxZ.AddKey(0.01f, vZ.Y);
+        float velScaleAvg = (velScale.X + velScale.Y) / 2f;
+
+        if (isCircle)
+        {
+        	if (vX.Magnitude() < 0.0001f &&
+        		vY.Magnitude() < 0.0001f &&
+        		vZ.Magnitude() < 0.0001f)
+			{
+				prevYMin = velScale.X;
+				prevYMax = velScale.Y;
+			}
+			else 
+			{
+				UVector3 spawnMults = new UVector3(MaxAbsoluteValue(vX), MaxAbsoluteValue(vY), MaxAbsoluteValue(vZ));
+				spawnMults = spawnMults.normalized;
+
+				float xMult = spawnMults.x; 
+				float yMult = spawnMults.y; 
+				float zMult = spawnMults.z;
+
+	        	// X
+	        	if (vX.X < -0.001f && vX.Y > .001f)
+	        	{
+	        		prevXMin = -velScaleAvg;
+	        		prevXMax = velScaleAvg;
+	        	}
+	        	else if (vX.Y < -0.001f)
+	        	{
+	        		prevXMin = -velScale.X;
+	        		prevXMax = -velScale.Y;
+	        	}
+	        	else if (vX.X > 0.001f)
+	        	{
+	        		prevXMin = velScale.X;
+	        		prevXMax = velScale.Y;
+	        	}
+
+	        	// Y
+	        	// If Y values are both zero, it actually seems to be interpreted as (0,1)...
+	        	prevYMin = velScale.X;
+	        	prevYMax = velScale.Y;
+
+	        	if (vY.X < -0.001f && vY.Y > .001f)
+	        	{
+	        		prevYMin = -velScaleAvg;
+	        		prevYMax = velScaleAvg;
+	        	}
+	        	else if (vY.Y < -0.001f)
+	        	{
+	        		prevYMin = -velScale.X;
+	        		prevYMax = -velScale.Y;
+	        	}
+	        	else if (vY.X > 0.001f)
+	        	{
+	        		prevYMin = velScale.X;
+	        		prevYMax = velScale.Y;
+	        	}
+
+	        	// Z
+	        	if (vZ.X < -0.001f && vZ.Y > .001f)
+	        	{
+	        		prevZMin = -velScaleAvg;
+	        		prevZMax = velScaleAvg;
+	        	}
+	        	else if (vZ.Y < -0.001f)
+	        	{
+	        		prevZMin = -velScale.X;
+	        		prevZMax = -velScale.Y;
+	        	}
+	        	else if (vZ.X > 0.001f)
+	        	{
+	        		prevZMin = velScale.X;
+	        		prevZMax = velScale.Y;
+	        	}
+
+	        	prevXMin *= xMult;				 
+	        	prevXMax *= xMult;				 
+	        	prevYMin *= yMult;				 
+	        	prevYMax *= yMult;		        	
+	        	prevZMin *= zMult;				 
+	        	prevZMax *= zMult;	
+			}
+        }
+        else 
+        {
+        	// X
+        	if (vX.X < -0.001f && vX.Y > .001f)
+        	{
+        		prevXMin = vX.X * velScale.Y;
+        		prevXMax = vX.Y * velScale.Y;
+        	}
+        	else 
+        	{
+        	    prevXMin = vX.X * velScale.X;
+        		prevXMax = vX.Y * velScale.Y;	
+        	}
+
+        	// Y
+        	if (vY.X < -0.001f && vY.Y > .001f)
+        	{
+        		prevYMin = vY.X * velScale.Y;
+        		prevYMax = vY.Y * velScale.Y;
+        	}
+        	else 
+        	{
+        	    prevYMin = vY.X * velScale.X;
+        		prevYMax = vY.Y * velScale.Y;	        		
+        	}
+
+        	// Z
+        	if (vZ.X < -0.001f && vZ.Y > .001f)
+        	{
+        		prevZMin = vZ.X * velScale.Y;
+        		prevZMax = vZ.Y * velScale.Y;
+        	}
+        	else
+        	{
+        		prevZMin = vZ.X * velScale.X;
+        		prevZMax = vZ.Y * velScale.Y;
+        	}
+
+         	prevXMin = vX.X * velScale.X;
+         	prevXMax = vX.Y * velScale.Y;
+         	prevYMin = vY.X * velScale.X;
+         	prevYMax = vY.Y * velScale.Y;
+         	prevZMin = vZ.X * velScale.X;
+         	prevZMax = vZ.Y * velScale.Y;
+        }
+
+	    animCurveMinX.AddKey(0.00001f, prevXMin);
+	    animCurveMaxX.AddKey(0.00001f, prevXMax);
+	    animCurveMinY.AddKey(0.00001f, prevYMin);
+	    animCurveMaxY.AddKey(0.00001f, prevYMax);
+	    animCurveMinZ.AddKey(0.00001f, prevZMin);
+	    animCurveMaxZ.AddKey(0.00001f, prevZMax);
 
 
         Scope transformerScope = Emitter.GetField("Transformer").Scope;
-        Field curScaleKey = transformerScope.GetField("Position"); 
+        Field curVelKey = transformerScope.GetField("Position"); 
+
 
         float EmitterLifetime = transformerScope.GetFloat("LifeTime");
-        
-        while (curScaleKey != null && curScaleKey.Scope.GetField("Accelerate") != null)
+        float currXMin = 0f, currXMax = 0f, currYMin = 0f, currYMax = 0f, currZMin = 0f, currZMax = 0f;
+
+        while (curVelKey != null)
         {
-            var Accel = curScaleKey.Scope.GetVec3("Accelerate");
-            float TimeStamp = curScaleKey.Scope.GetFloat("LifeTime") / EmitterLifetime;
-            if (Mathf.Abs(Accel.X) > .001f)
+            var CurrScope = curVelKey.Scope;
+
+            float TimeStamp = CurrScope.GetFloat("LifeTime") / EmitterLifetime;
+
+
+            if (CurrScope.GetVec3("Accelerate", out LibVector3 Accel))
             {
-                animCurveMinX.AddKey(TimeStamp, vX.X + Accel.X);
-                animCurveMaxY.AddKey(TimeStamp, vX.Y + Accel.X);
+	            if (Mathf.Abs(Accel.X) > .001f)
+	            {
+	            	currXMin = prevXMin + Accel.X;
+	            	currXMax = prevXMax + Accel.X;
+	                animCurveMinX.AddKey(TimeStamp, currXMin);
+	                animCurveMaxX.AddKey(TimeStamp, currXMax);
+	            }
+
+	            if (Mathf.Abs(Accel.Y) > .001f)
+	            {
+	            	currYMin = prevYMin + Accel.Y;
+	            	currYMax = prevYMax + Accel.Y;
+	                animCurveMinY.AddKey(TimeStamp, currYMin);
+	                animCurveMaxY.AddKey(TimeStamp, currYMax);      
+	            }
+
+	            if (Mathf.Abs(Accel.Z) > .001f)
+	            {
+	            	currZMin = prevZMin + Accel.Z;
+	            	currZMax = prevZMax + Accel.Z;
+	                animCurveMinZ.AddKey(TimeStamp, currZMin);
+	                animCurveMaxZ.AddKey(TimeStamp, currZMax);   
+	            }            	
+            }
+            else if (CurrScope.GetFloat("Scale", out float VelScale))
+            {
+            	scaleAnimCurve.AddKey(TimeStamp, VelScale);
+            	/*
+            	currXMin = prevXMin * VelScale;
+            	currXMax = prevXMax * VelScale;
+            	currYMin = prevYMin * VelScale;
+            	currYMax = prevYMax * VelScale;
+            	currZMin = prevZMin * VelScale;
+            	currZMax = prevZMax * VelScale;
+	            
+	            animCurveMinX.AddKey(TimeStamp, currXMin);
+	            animCurveMaxX.AddKey(TimeStamp, currXMax);
+                animCurveMinY.AddKey(TimeStamp, currYMin);
+                animCurveMaxY.AddKey(TimeStamp, currYMax);      
+                animCurveMinZ.AddKey(TimeStamp, currZMin);
+                animCurveMaxZ.AddKey(TimeStamp, currZMax); 
+                */  
+            }
+            else if (CurrScope.GetVec3("Reach", out LibVector3 ReachVel))
+            {
+            	currXMin = ReachVel.X;
+            	currXMax = ReachVel.X;
+            	currYMin = ReachVel.Y;
+            	currYMax = ReachVel.Y;
+            	currZMin = ReachVel.Z;
+            	currZMax = ReachVel.Z;
+	            
+	            animCurveMinX.AddKey(TimeStamp, currXMin);
+	            animCurveMaxX.AddKey(TimeStamp, currXMax);
+                animCurveMinY.AddKey(TimeStamp, currYMin);
+                animCurveMaxY.AddKey(TimeStamp, currYMax);      
+                animCurveMinZ.AddKey(TimeStamp, currZMin);
+                animCurveMaxZ.AddKey(TimeStamp, currZMax);   
+            }
+            else 
+            {
+            	// TODO: Are there other types?
             }
 
-            if (Mathf.Abs(Accel.Y) > .001f)
-            {
-                animCurveMinX.AddKey(TimeStamp, vY.X + Accel.Y);
-                animCurveMaxY.AddKey(TimeStamp, vY.Y + Accel.Y);      
-            }
-
-            if (Mathf.Abs(Accel.Z) > .001f)
-            {
-                animCurveMinZ.AddKey(TimeStamp, vZ.X + Accel.Z);
-                animCurveMaxZ.AddKey(TimeStamp, vZ.Y + Accel.Z);   
-            }
+            prevXMin = currXMin;
+            prevXMax = currXMax;
+            prevYMin = currYMin;
+            prevYMax = currYMax;
+            prevZMin = currZMin;
+            prevZMax = currZMax;
             
-            curScaleKey = curScaleKey.Scope.GetField("Next");
+            curVelKey = curVelKey.Scope.GetField("Next");
         }
 
         var curveX = new ParticleSystem.MinMaxCurve(1f, animCurveMinX, animCurveMaxX);
         var curveY = new ParticleSystem.MinMaxCurve(1f, animCurveMinY, animCurveMaxY);
         var curveZ = new ParticleSystem.MinMaxCurve(1f, animCurveMinZ, animCurveMaxZ);
 
+
+        scaleCurve = new ParticleSystem.MinMaxCurve(1f, scaleAnimCurve);
         return new ParticleSystem.MinMaxCurve[3] {curveX, curveY, curveZ};
     }
 
@@ -1075,6 +1372,13 @@ public class EffectsLoader : Loader {
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 break;
         }
+    }
+
+
+
+    float MaxAbsoluteValue(LibVector2 Vec)
+    {
+    	return Mathf.Max(Mathf.Abs(Vec.X), Mathf.Abs(Vec.Y));
     }
 
 
