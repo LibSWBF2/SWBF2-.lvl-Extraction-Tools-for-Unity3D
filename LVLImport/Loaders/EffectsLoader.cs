@@ -111,6 +111,8 @@ public class EffectsLoader : Loader {
 
     public static bool UseHDRP = false;
 
+    static bool DBG = false;
+
 
 
     public static EffectsLoader Instance { get; private set; } = null;
@@ -205,16 +207,16 @@ public class EffectsLoader : Loader {
 
 
 
-        var em = uEmitter.emission;
-        em.enabled = true;
-        em.rateOverTime = 0;
-
         /*
         EMISSION
 
         - Need to determine the max particles when MaxParticles is set to -1.  Combine this
         with ringBufferMode to avoid the default 1000 particle setup.
         */
+
+        var em = uEmitter.emission;
+        em.enabled = true;
+        em.rateOverTime = 0;
 
 
         var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
@@ -226,6 +228,15 @@ public class EffectsLoader : Loader {
         {
             mainModule.maxParticles = 1;
         }
+
+        if (scEmitter.GetVec2("StartDelay", out LibVector2 StartDelay))
+        {
+        	if (StartDelay.Magnitude() > .0001f)
+        	{
+        		mainModule.startDelay = new ParticleSystem.MinMaxCurve(StartDelay.X, StartDelay.Y);
+        	}
+        }
+
 
         float repeatInterval = scEmitter.GetVec2("BurstDelay").Y;
 
@@ -269,22 +280,19 @@ public class EffectsLoader : Loader {
         }
 
 
-        bool HasEmptySpawner = SpawnerIsEmpty(scSpawner);
-        bool HasVelTransformation = HasVelocityTransformation(scTransformer);
+        // Calculate MaxParticles for Unity
+
+
+
+
+
 
         /*
         VELOCITY
-
-        Initial Unity particle vel? = velOverLifetime.speedMod * (inherited vel * inherited vel mult + velOverLifetimeCurve)
-
-        Initial SWBF2 particle vel? = parentVel * InheritedVelMult +  (velocityScale * spawnerstuff)
-
-        In SWBF2, VelocityScale does not affect inherited velocity, but in Unity the scale of the velocity over lifetime curve
-        does.
-
         */
 
-        //Debug.LogFormat("Is spawner empty? {0}", HasEmptySpawner);
+        bool HasEmptySpawner = SpawnerIsEmpty(scSpawner);
+        bool HasVelTransformation = HasVelocityTransformation(scTransformer);
 
         if (!HasEmptySpawner || HasVelTransformation)
         {
@@ -385,12 +393,12 @@ public class EffectsLoader : Loader {
         Spawner color settings + color transformation if needed.
         */
 
-        var startingColorGradient = GetSpawnerColorInterval(scSpawner);
+        var startingColorGradient = GetSpawnerColorInterval(scSpawner, out bool IsRGB);
         if (HasColorTransformation(scTransformer))
         {
             var colModule = uEmitter.colorOverLifetime;
             colModule.enabled = true;
-            colModule.color = ColorTransformationToGradient(scTransformer, startingColorGradient);            
+            colModule.color = ColorTransformationToGradient(scTransformer, startingColorGradient, IsRGB);            
         }
         else 
         {
@@ -435,6 +443,13 @@ public class EffectsLoader : Loader {
             var subEmitterModule = uEmitter.subEmitters;
             subEmitterModule.enabled = true;
 
+            string subEmitterName = scGeometry.GetString("ParticleEmitter");
+
+            if (subEmitterName == "BlackSmoke" && emitter.GetString() == "Explosion_Slow")
+            {
+            	DBG = true;
+            }
+
             //Get subemitters...
             foreach (var subEmitter in UnpackNestedEmitters(scGeometry.GetField("ParticleEmitter")))
             {
@@ -447,6 +462,8 @@ public class EffectsLoader : Loader {
                     subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
                 }
             }
+
+            DBG = false;
         }
         // Works in all cases I've seen
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
@@ -559,7 +576,7 @@ public class EffectsLoader : Loader {
             // Nothing needed here AFAIK
         }
 
-        if (tex == null || geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
+        if (tex == null)// || geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
             psR.enabled = false;
         }
@@ -598,7 +615,7 @@ public class EffectsLoader : Loader {
 
 
     // Get spawner's starting color interval
-    private ParticleSystem.MinMaxGradient GetSpawnerColorInterval(Scope spawner)
+    private ParticleSystem.MinMaxGradient GetSpawnerColorInterval(Scope spawner, out bool IsRGB)
     {
         Color minCol, maxCol;
 
@@ -611,6 +628,8 @@ public class EffectsLoader : Loader {
 
             minCol = Color.HSVToRGB(hRange.Y/255.0f, sRange.Y/255.0f, vRange.Y/255.0f);
             maxCol = Color.HSVToRGB(hRange.Z/255.0f, sRange.Z/255.0f, vRange.Z/255.0f);
+
+            IsRGB = false;
         }
         else
         {
@@ -620,6 +639,8 @@ public class EffectsLoader : Loader {
 
             minCol = new Color(rRange.Y/255.0f, gRange.Y/255.0f, bRange.Y/255.0f);
             maxCol = new Color(rRange.Z/255.0f, gRange.Z/255.0f, bRange.Z/255.0f);
+
+            IsRGB = true;
         }
 
         var aRange = spawner.GetVec3("Alpha");
@@ -835,15 +856,15 @@ public class EffectsLoader : Loader {
     }
 
 
-    public ParticleSystem.MinMaxGradient ColorTransformationToGradient(Scope transformerScope, ParticleSystem.MinMaxGradient initialGrad)
+    public ParticleSystem.MinMaxGradient ColorTransformationToGradient(Scope transformerScope, ParticleSystem.MinMaxGradient initialGrad, bool IsRGB = true)
     {
         Gradient gradMin = new Gradient();
         Gradient gradMax = new Gradient();
 
         List<GradientColorKey> gradMinColKeys = new List<GradientColorKey>();
-        List<GradientAlphaKey> gradMinAlphaKeys = new List<GradientAlphaKey>();
-
         List<GradientColorKey> gradMaxColKeys = new List<GradientColorKey>();
+
+        List<GradientAlphaKey> gradMinAlphaKeys = new List<GradientAlphaKey>();
         List<GradientAlphaKey> gradMaxAlphaKeys = new List<GradientAlphaKey>();
 
         Color minColLast = initialGrad.colorMin;
@@ -852,9 +873,12 @@ public class EffectsLoader : Loader {
         float minAlphaLast = minColLast.a;
         float maxAlphaLast = maxColLast.a;
 
+        minColLast.a = 0f;
+        maxColLast.a = 0f;
+
 
         float lifeTime = transformerScope.GetFloat("LifeTime");
-        float timeIndex = 0.0f;
+        float timeIndex = 0.00001f;
 
         gradMinColKeys.Add(new GradientColorKey(minColLast, timeIndex));
         gradMaxColKeys.Add(new GradientColorKey(maxColLast, timeIndex));
@@ -869,22 +893,32 @@ public class EffectsLoader : Loader {
 
             timeIndex = scKey.GetFloat("LifeTime") / lifeTime;
 
-            Field keyMove, keyReach;
-            if ((keyMove = scKey.GetField("Move")) != null)
+            if (scKey.GetField("Move", out Field keyMove))
             {
                 var c = keyMove.GetVec4();
-                Color col = new Color(c.X / 255.0f, c.Y / 255.0f, c.Z / 255.0f, 1.0f);
 
-                minColLast += col;
-                maxColLast += col;
+	            Color col = new Color(c.X / 255.0f, c.Y / 255.0f, c.Z / 255.0f, 0.0f);
+	            if (!IsRGB)
+	            {
+	            	col = Color.HSVToRGB(col.r, col.g, col.b);
+	            }
+	            col.a = 0f;
+
+	            minColLast += col;
+	            maxColLast += col; 
 
                 minAlphaLast = Mathf.Clamp(minAlphaLast + c.W / 255.0f, 0.0f, 1.0f);
                 maxAlphaLast = Mathf.Clamp(maxAlphaLast + c.W / 255.0f, 0.0f, 1.0f);
             }
-            else if ((keyReach = scKey.GetField("Reach")) != null)
+            else if (scKey.GetField("Reach", out Field keyReach))
             {
                 var c = keyReach.GetVec4(); 
                 Color col = new Color(c.X / 255.0f, c.Y / 255.0f, c.Z / 255.0f, 1.0f);
+                if (!IsRGB)
+	            {
+	            	col = Color.HSVToRGB(col.r, col.g, col.b);
+	            }
+	            col.a = 0f;
 
                 minColLast = col;
                 maxColLast = col;
@@ -892,13 +926,31 @@ public class EffectsLoader : Loader {
                 minAlphaLast = Mathf.Clamp(c.W / 255.0f, 0.0f, 1.0f);
                 maxAlphaLast = Mathf.Clamp(c.W / 255.0f, 0.0f, 1.0f);
             }
-            else 
+            else if (scKey.GetField("Scale", out Field keyScale))
             {
-                return new ParticleSystem.MinMaxGradient(gradMin, gradMax);
+                var scale = keyScale.GetFloat(); 
+
+                minColLast *= scale;
+                maxColLast *= scale;
+
+                minAlphaLast = Mathf.Clamp(minAlphaLast *= scale, 0.0f, 1.0f);
+                maxAlphaLast = Mathf.Clamp(maxAlphaLast *= scale, 0.0f, 1.0f);
+            }
+            else 
+            {	
+                break;
             }
 
-            gradMinColKeys.Add(new GradientColorKey(minColLast, timeIndex));
-            gradMaxColKeys.Add(new GradientColorKey(maxColLast, timeIndex));
+            //if (IsRGB)
+            //{
+	            gradMinColKeys.Add(new GradientColorKey(minColLast, timeIndex));
+	            gradMaxColKeys.Add(new GradientColorKey(maxColLast, timeIndex));
+            //}
+            //else 
+            //{
+	        //    gradMinColKeys.Add(new GradientColorKey(Color.HSVToRGB(minColLast.r, minColLast.g, minColLast.b), timeIndex));
+	        //    gradMaxColKeys.Add(new GradientColorKey(Color.HSVToRGB(maxColLast.r, maxColLast.g, maxColLast.b), timeIndex));            	
+            //}
 
             gradMinAlphaKeys.Add(new GradientAlphaKey(minAlphaLast, timeIndex));
             gradMaxAlphaKeys.Add(new GradientAlphaKey(maxAlphaLast, timeIndex));
@@ -1172,6 +1224,7 @@ public class EffectsLoader : Loader {
          	prevZMax = vZ.Y * velScale.Y;
         }
 
+        // Setting the time to 0 seemed not work iirc
 	    animCurveMinX.AddKey(0.00001f, prevXMin);
 	    animCurveMaxX.AddKey(0.00001f, prevXMax);
 	    animCurveMinY.AddKey(0.00001f, prevYMin);
@@ -1196,6 +1249,8 @@ public class EffectsLoader : Loader {
 
             if (CurrScope.GetVec3("Accelerate", out LibVector3 Accel))
             {
+                scaleAnimCurve.AddKey(TimeStamp, 1f);
+
 	            if (Mathf.Abs(Accel.X) > .001f)
 	            {
 	            	currXMin = prevXMin + Accel.X;
@@ -1223,7 +1278,7 @@ public class EffectsLoader : Loader {
             else if (CurrScope.GetFloat("Scale", out float VelScale))
             {
             	scaleAnimCurve.AddKey(TimeStamp, VelScale);
-            	/*
+            	
             	currXMin = prevXMin * VelScale;
             	currXMax = prevXMax * VelScale;
             	currYMin = prevYMin * VelScale;
@@ -1231,6 +1286,7 @@ public class EffectsLoader : Loader {
             	currZMin = prevZMin * VelScale;
             	currZMax = prevZMax * VelScale;
 	            
+	            /*
 	            animCurveMinX.AddKey(TimeStamp, currXMin);
 	            animCurveMaxX.AddKey(TimeStamp, currXMax);
                 animCurveMinY.AddKey(TimeStamp, currYMin);
@@ -1254,6 +1310,8 @@ public class EffectsLoader : Loader {
                 animCurveMaxY.AddKey(TimeStamp, currYMax);      
                 animCurveMinZ.AddKey(TimeStamp, currZMin);
                 animCurveMaxZ.AddKey(TimeStamp, currZMax);   
+
+                scaleAnimCurve.AddKey(TimeStamp, 1f);
             }
             else 
             {
