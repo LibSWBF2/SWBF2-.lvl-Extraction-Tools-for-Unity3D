@@ -78,51 +78,23 @@ public class ModelLoader : Loader {
         foreach (Segment seg in model.GetSegments())
         {
             Mats.Add(MaterialLoader.Instance.LoadMaterial(seg.Material, ""));
-            Meshes.Add(GetMeshFromSegments(new Segment[]{seg}));
-        }   
+            Meshes.Add(GetMeshFromSegments(new Segment[]{seg}, name, false));
+        }  
 
         return true;     
     }
 
 
     
-    /*
-    Next three methods are needed for testing EffectsLoader
-    */
-
-    public Model GetModelWrapper(string name)
-    {
-        Model model = null;
-        try {
-            model = container.Get<Model>(name);
-        }
-        catch { }
-        return model; 
-    }
-
-    public List<UMaterial> GetNeededMaterials(Model model)
-    {
-        List<UMaterial> mats = new List<UMaterial>();
-        foreach (Segment seg in model.GetSegments())
-        {
-            mats.Add(MaterialLoader.Instance.LoadMaterial(seg.Material, ""));
-        }
-        return mats;
-    }
-
-    public Mesh GetFirstMesh(Model model)
-    {
-        return GetMeshFromSegments(model.GetSegments());
-    }
-
 
     /*
     Extracts static mesh data from array of segments
     */
 
-    private Mesh GetMeshFromSegments(Segment[] segments, string meshName = "")
+    private Mesh GetMeshFromSegments(Segment[] segments, string meshName = "", bool flipXCoords = true)
     {
         Mesh mesh = new Mesh();
+        mesh.name = meshName;
 
 #if !LVLIMPORT_NO_EDITOR
         if (SaveAssets && !String.IsNullOrEmpty(meshName))
@@ -144,8 +116,8 @@ public class ModelLoader : Loader {
         {
             int vBufLength = (int) seg.GetVertexBufferLength();
 
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset);
-            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetVertexBuffer<Vector3>(), positions, dataOffset, flipXCoords);
+            UnityUtils.ConvertSpaceAndFillVec3(seg.GetNormalsBuffer<Vector3>(), normals, dataOffset, flipXCoords);
             Array.Copy(seg.GetUVBuffer<Vector2>(), 0, texcoords, dataOffset, vBufLength);
 
             offsets[i++] = dataOffset;
