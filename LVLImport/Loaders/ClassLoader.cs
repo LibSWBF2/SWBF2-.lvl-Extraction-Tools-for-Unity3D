@@ -134,6 +134,31 @@ public class ClassLoader : Loader
         }
     }
 
+
+    static bool IsGeometryManuallyInitialized(ISWBFProperties props)
+    {
+        if (props == null) return false;
+
+        EntityClass ec = props as EntityClass;
+
+        if (ec == null)
+        {
+            ec = (props as Instance).EntityClass;
+        }
+
+        if (ec == null) return false;
+
+        switch (ec.BaseClassName)
+        {
+        case "destructablebuilding":
+            return true;
+        default:
+            break;
+        }
+        
+        return false;
+    }
+
     public static EntityClass GetRootClass(EntityClass cl)
     {
         if (cl == null) return null;
@@ -153,7 +178,7 @@ public class ClassLoader : Loader
         GameObject obj = null;
         SWBFModel ModelMapping = null;
 
-        if (instOrClass.GetProperty("GeometryName", out string geometryName))
+        if (!IsGeometryManuallyInitialized(instOrClass) && instOrClass.GetProperty("GeometryName", out string geometryName))
         {
             if (!instOrClass.GetProperty("OverrideTexture", out string overrideTexture))
             {
@@ -412,6 +437,10 @@ public class ClassLoader : Loader
         */
         return null;
     }
+
+
+
+
 
 
     

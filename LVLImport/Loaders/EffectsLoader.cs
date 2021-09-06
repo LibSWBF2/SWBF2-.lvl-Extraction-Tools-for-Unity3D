@@ -431,7 +431,7 @@ public class EffectsLoader : Loader {
         */
 
         Texture2D tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
-        psR.enabled = tex != null;
+        //psR.enabled = tex != null;
         
         UMaterial mat = null;
 
@@ -442,13 +442,6 @@ public class EffectsLoader : Loader {
         {
             var subEmitterModule = uEmitter.subEmitters;
             subEmitterModule.enabled = true;
-
-            string subEmitterName = scGeometry.GetString("ParticleEmitter");
-
-            if (subEmitterName == "BlackSmoke" && emitter.GetString() == "Explosion_Slow")
-            {
-            	DBG = true;
-            }
 
             //Get subemitters...
             foreach (var subEmitter in UnpackNestedEmitters(scGeometry.GetField("ParticleEmitter")))
@@ -462,8 +455,6 @@ public class EffectsLoader : Loader {
                     subEmitterModule.AddSubEmitter(emPs, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
                 }
             }
-
-            DBG = false;
         }
         // Works in all cases I've seen
         else if (geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
@@ -473,6 +464,7 @@ public class EffectsLoader : Loader {
             if (ModelLoader.Instance.GetMeshesAndMaterialsFromSegments(scGeometry.GetString("Model"), out List<Mesh> Meshes, out List<UMaterial> Mats))
             {
                 psR.renderMode = ParticleSystemRenderMode.Mesh;
+                psR.alignment = ParticleSystemRenderSpace.Local;
                 psR.SetMeshes(Meshes.ToArray()); 
                 psR.sharedMaterials = Mats.ToArray();               
             }
@@ -576,7 +568,7 @@ public class EffectsLoader : Loader {
             // Nothing needed here AFAIK
         }
 
-        if (tex == null)// || geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
+        if (tex == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
         {
             psR.enabled = false;
         }
