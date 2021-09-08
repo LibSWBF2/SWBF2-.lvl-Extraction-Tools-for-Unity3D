@@ -202,7 +202,7 @@ public class EffectsLoader : Loader {
 
         var mainModule = uEmitter.main;
         mainModule.startSpeed = 0f;
-        mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
+        mainModule.simulationSpace = ParticleSystemSimulationSpace.Local;
         mainModule.loop = false;
 
 
@@ -218,31 +218,21 @@ public class EffectsLoader : Loader {
         em.enabled = true;
         em.rateOverTime = 0;
 
+        // No adaptation needed
+        var StartDelay = scEmitter.GetVec2("StartDelay");
+        if (StartDelay.Magnitude() > .0001f)
+        {
+        	mainModule.startDelay = new ParticleSystem.MinMaxCurve(StartDelay.X, StartDelay.Y);
+        }
 
         var maxParticles = scEmitter.GetVec2("MaxParticles").Y;
-        if (maxParticles > 0.0001f)
-        {
-            mainModule.maxParticles = (int) maxParticles;
-        }
-        else if (maxParticles < .0001f && maxParticles > -.0001f)
-        {
-            mainModule.maxParticles = 1;
-        }
-
-        if (scEmitter.GetVec2("StartDelay", out LibVector2 StartDelay))
-        {
-        	if (StartDelay.Magnitude() > .0001f)
-        	{
-        		mainModule.startDelay = new ParticleSystem.MinMaxCurve(StartDelay.X, StartDelay.Y);
-        	}
-        }
 
 
         float repeatInterval = scEmitter.GetVec2("BurstDelay").Y;
 
-        var numRange = scEmitter.GetVec2("BurstCount");
-        short minCount = (short) numRange.X;
-        short maxCount = (short) numRange.Y;
+        var burstRange = scEmitter.GetVec2("BurstCount");
+        short minCount = (short) burstRange.X;
+        short maxCount = (short) burstRange.Y;
 
         if (repeatInterval > 0f && repeatInterval < .01f)
         {
@@ -267,7 +257,7 @@ public class EffectsLoader : Loader {
             {
                 mainModule.maxParticles = (int) maxParticles;
 
-                cycleCount = (int) (maxParticles / numRange.Y);
+                cycleCount = (int) (maxParticles / burstRange.Y) + 1;
                 //Debug.LogFormat("Effect {0} has max bursts {1}", emitter.GetString(), burst.cycleCount);
             }
             else 
@@ -280,8 +270,69 @@ public class EffectsLoader : Loader {
         }
 
 
-        // Calculate MaxParticles for Unity
+        /*
+        DURATION
 
+        - dont need to add StartDelay
+        - SWBF terminates system when MaxParticles lifetimes are exceeded, but Unity starts reusing particles when MaxParticles is exceeded.
+          Therefore we need to use duration to terminate the system.
+        - Need to figure out how emission + duration/maxParticles work in subemitter context
+        */
+
+        float lifeTime = scTransformer.GetFloat("LifeTime");
+        mainModule.startLifetime = lifeTime;
+        mainModule.duration = lifeTime;
+
+        bool HasZeroMaxParticles = maxParticles < .001f && maxParticles > -.001f;
+
+        if (HasZeroMaxParticles)
+        {
+        	// might be more to do here...
+            mainModule.maxParticles = 0;
+	        mainModule.duration = 0f;
+        }
+        // Will need to set duration such that system ends when max particles lifetimes expire
+        else if (maxParticles > 0.001f)
+        {
+        	mainModule.maxParticles = (int) maxParticles;
+
+        	if (repeatInterval == 0) repeatInterval = lifeTime;
+        	float timeOfMaxParticles = ((maxParticles - burstRange.Y) / burstRange.Y) * repeatInterval + lifeTime;
+        	mainModule.duration = timeOfMaxParticles; // timeOfMaxParticles < 0.00000001f ? .001f : timeOfMaxParticles;
+
+        }
+        // Setting loop isn't good enough for negative MaxParticles
+        else
+        {
+        	mainModule.duration = float.PositiveInfinity;
+
+        	// mainModule
+        	if (repeatInterval == 0) repeatInterval = lifeTime;
+
+            mainModule.maxParticles = (int) (burstRange.Y + burstRange.Y * (lifeTime / repeatInterval));
+        }
+
+        // Calculate MaxParticles for Unity
+        /*
+        float maxParticlesNeeded = maxParticles;
+        if (maxParticles < -0.001f)
+        {
+        	maxParticlesNeeded = (int) (lifeTime / repeatInterval + 1f);
+        	mainModule.duration = Mathf.infinity;
+        }
+        else if (maxParticles > -0.0001f && maxParticles < 0.0001f)
+        {
+        	mainModule.duration = Mathf.PositiveInfinity;
+        	maxParticlesNeeded = 1;
+        }
+        else 
+        {
+        	maxParticlesNeeded = maxParticles;
+        	//mainModule.duration = maxParticles * lifeTime
+        }
+        */
+
+        //mainModule.maxParticles = maxParticlesNeeded;
 
 
 
@@ -304,7 +355,10 @@ public class EffectsLoader : Loader {
             velModule.z = VelCurves[2];
             velModule.speedModifier = scaleCurveOut; 
 
-            velModule.space = HasVelTransformation ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local; 
+            // TODO: Velocity at spawn (ie Circle/Spread) is local, but velocity transformation is global!!!
+            // Unless we find a way to avoid using velOverLifetime for starting velocity we'll have to remap the starting
+            // velocities to global axes at play
+            velModule.space = ParticleSystemSimulationSpace.Local; //HasVelTransformation ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local; 
         }
 
         if (!HasVelTransformation)
@@ -333,6 +387,7 @@ public class EffectsLoader : Loader {
         var shapeModule = uEmitter.shape;
         shapeModule.enabled = false;
 
+        UVector3 spreadScale, spreadPos;
         if (!HasEmptySpawner)
         {   
             shapeModule.enabled = true;
@@ -340,14 +395,16 @@ public class EffectsLoader : Loader {
             // This is hard because circles are weighted spawners which saturate their resulting values
             if (scSpawner.GetField("Circle") != null)
             {
+                SpreadToPositionAndScale(scSpawner, out spreadScale, out spreadPos);
                 shapeModule.shapeType = ParticleSystemShapeType.Sphere;
+                shapeModule.position = spreadPos;
                 shapeModule.radius = GetCircleRadius(scSpawner);
             }
             // This is pretty easy to emulate
             else if (scSpawner.GetField("Spread") != null)
             {
                 // Set position distribution from the Offset field
-                SpreadToPositionAndScale(scSpawner, out UVector3 spreadScale, out UVector3 spreadPos);
+                SpreadToPositionAndScale(scSpawner, out spreadScale, out spreadPos);
                 shapeModule.shapeType = ParticleSystemShapeType.Box;
                 shapeModule.scale = spreadScale;
                 shapeModule.position = spreadPos;
@@ -377,15 +434,6 @@ public class EffectsLoader : Loader {
         {
             mainModule.startSize = scSpawner.GetVec3("Size").Z; 
         }
-
-
-        /*
-        DURATION
-        */
-
-        float lifeTime = scTransformer.GetFloat("LifeTime");
-        mainModule.startLifetime = lifeTime;
-        mainModule.duration = lifeTime;
 
 
         /*
@@ -474,6 +522,69 @@ public class EffectsLoader : Loader {
         {
             psR.renderMode = ParticleSystemRenderMode.Stretch;
             psR.velocityScale = scGeometry.GetFloat("SparkLength");
+
+            psR.alignment = ParticleSystemRenderSpace.World;
+
+            mainModule.startRotation3D = true;
+            mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0f,0f);
+
+            var startRotField = scSpawner.GetVec3("StartRotation");
+            float curveMin = startRotField.Y;
+            float curveMax = startRotField.Z;
+
+            float angleMin, angleMax;
+
+            bool InBetween(float val, float min, float max)
+            {
+            	return val >= min && val < max;
+            }
+
+            if (InBetween(curveMin, 0f, 1f))
+            {
+            	angleMin = 90f + curveMin * 360f;
+            	angleMax = 90f + curveMax * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 1f, 2f))
+            {
+            	angleMin = 90f + (curveMin - 1f) * 360f;
+            	angleMax = 90f + (curveMax - 1f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 2f, 3f))
+            {
+            	angleMin = 90f + (curveMin - 2f) * 360f;
+            	angleMax = 90f + (curveMin - 2f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            }
+            else if (InBetween(curveMin, 3f, 4f))
+            {
+            	angleMin = (curveMin - 3f) * 360f;
+            	angleMax = (curveMin - 3f) * 360f;
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 4f, 5f))
+            {
+            	angleMin = (curveMin - 4f) * 360f;
+            	angleMax = (curveMin - 4f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else 
+            {
+            	angleMin = (curveMin - 5f) * 360f;
+            	angleMax = (curveMin - 5f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+
+
+            // We can probably do this safely, since rotational velocity would be weird for billboards in SWBF2
+            var rotModuleBillboard = uEmitter.rotationOverLifetime;
+            rotModuleBillboard.enabled = false;
         }
         // Haven't seen an example yet.  Strangely, com_sfx_ord_exp has an texture sheet anim
         // ("Sparks"), but in the munged file it is missing and replaced by a duplicate of the 
@@ -568,7 +679,7 @@ public class EffectsLoader : Loader {
             // Nothing needed here AFAIK
         }
 
-        if (tex == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase))
+        if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase) || (tex == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase)))
         {
             psR.enabled = false;
         }
