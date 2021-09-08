@@ -441,21 +441,95 @@ public class EffectsLoader : Loader {
         }
 
 
+
+        string geomType = scGeometry.GetString("Type");
+
+
         /*
         ROTATION
         initial rotation + rotation velocity via rotationOverLifeTime module if needed.
 
-        I dont think rotation transformers exist
+        I dont think rotation transformers exist despite being implied by PE...
         */
-        mainModule.startRotation = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
 
-        LibVector3 rotVel = scSpawner.GetVec3("RotationVelocity");
-        if (Mathf.Abs(rotVel.Y) > .001 && Mathf.Abs(rotVel.Z) > .001)
+        if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase) || 
+        	geomType.Equals("SPARK", StringComparison.OrdinalIgnoreCase))
         {
-            var rotModule = uEmitter.rotationOverLifetime;
-            rotModule.enabled = true;
-            rotModule.z = AngleCurveFromVec(rotVel);            
+
+            mainModule.startRotation3D = true;
+            mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
+            mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0f,0f);
+
+            var startRotField = scSpawner.GetVec3("StartRotation");
+            float curveMin = startRotField.Y;
+            float curveMax = startRotField.Z;
+
+            float angleMin, angleMax;
+
+            bool InBetween(float val, float min, float max)
+            {
+            	return val >= min && val < max;
+            }
+
+            if (InBetween(curveMin, 0f, 1f))
+            {
+            	angleMin = 90f + curveMin * 360f;
+            	angleMax = 90f + curveMax * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 1f, 2f))
+            {
+            	angleMin = 90f + (curveMin - 1f) * 360f;
+            	angleMax = 90f + (curveMax - 1f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 2f, 3f))
+            {
+            	angleMin = 90f + (curveMin - 2f) * 360f;
+            	angleMax = 90f + (curveMin - 2f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            }
+            else if (InBetween(curveMin, 3f, 4f))
+            {
+            	angleMin = (curveMin - 3f) * 360f;
+            	angleMax = (curveMin - 3f) * 360f;
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else if (InBetween(curveMin, 4f, 5f))
+            {
+            	angleMin = (curveMin - 4f) * 360f;
+            	angleMax = (curveMin - 4f) * 360f;
+            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+            else 
+            {
+            	angleMin = (curveMin - 5f) * 360f;
+            	angleMax = (curveMin - 5f) * 360f;
+            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
+            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
+            }
+
+            // We can probably do this safely, since rotational velocity would be weird for billboards in SWBF2
+            var rotModuleBillboard = uEmitter.rotationOverLifetime;
+            rotModuleBillboard.enabled = false;
         }
+        else 
+        {
+	        mainModule.startRotation = AngleCurveFromVec(scSpawner.GetVec3("StartRotation"));
+	        
+	        LibVector3 rotVel = scSpawner.GetVec3("RotationVelocity");
+	        if (rotVel.Magnitude() > .0001f)
+	        {
+	            var rotModule = uEmitter.rotationOverLifetime;
+	            rotModule.enabled = true;
+	            rotModule.z = AngleCurveFromVec(rotVel);            
+	        }
+        }
+
+
 
 
 
@@ -470,8 +544,6 @@ public class EffectsLoader : Loader {
         
         UMaterial mat = null;
 
-
-        string geomType = scGeometry.GetString("Type");
 
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
@@ -509,69 +581,7 @@ public class EffectsLoader : Loader {
         {
             psR.renderMode = ParticleSystemRenderMode.Stretch;
             psR.velocityScale = scGeometry.GetFloat("SparkLength");
-
-            psR.alignment = ParticleSystemRenderSpace.World;
-
-            mainModule.startRotation3D = true;
-            mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
-            mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
-            mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0f,0f);
-
-            var startRotField = scSpawner.GetVec3("StartRotation");
-            float curveMin = startRotField.Y;
-            float curveMax = startRotField.Z;
-
-            float angleMin, angleMax;
-
-            bool InBetween(float val, float min, float max)
-            {
-            	return val >= min && val < max;
-            }
-
-            if (InBetween(curveMin, 0f, 1f))
-            {
-            	angleMin = 90f + curveMin * 360f;
-            	angleMax = 90f + curveMax * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 1f, 2f))
-            {
-            	angleMin = 90f + (curveMin - 1f) * 360f;
-            	angleMax = 90f + (curveMax - 1f) * 360f;
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 2f, 3f))
-            {
-            	angleMin = 90f + (curveMin - 2f) * 360f;
-            	angleMax = 90f + (curveMin - 2f) * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            }
-            else if (InBetween(curveMin, 3f, 4f))
-            {
-            	angleMin = (curveMin - 3f) * 360f;
-            	angleMax = (curveMin - 3f) * 360f;
-            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 4f, 5f))
-            {
-            	angleMin = (curveMin - 4f) * 360f;
-            	angleMax = (curveMin - 4f) * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else 
-            {
-            	angleMin = (curveMin - 5f) * 360f;
-            	angleMax = (curveMin - 5f) * 360f;
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-
-
-            // We can probably do this safely, since rotational velocity would be weird for billboards in SWBF2
-            var rotModuleBillboard = uEmitter.rotationOverLifetime;
-            rotModuleBillboard.enabled = false;
+        	psR.alignment = ParticleSystemRenderSpace.World;
         }
         // Haven't seen an example yet.  Strangely, com_sfx_ord_exp has an texture sheet anim
         // ("Sparks"), but in the munged file it is missing and replaced by a duplicate of the 
@@ -593,77 +603,15 @@ public class EffectsLoader : Loader {
         else if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase))
         {
             psR.alignment = ParticleSystemRenderSpace.World;
-
-            mainModule.startRotation3D = true;
-            mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
-            mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
-            mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0f,0f);
-
-            var startRotField = scSpawner.GetVec3("StartRotation");
-            float curveMin = startRotField.Y;
-            float curveMax = startRotField.Z;
-
-            float angleMin, angleMax;
-
-            bool InBetween(float val, float min, float max)
-            {
-            	return val >= min && val < max;
-            }
-
-            if (InBetween(curveMin, 0f, 1f))
-            {
-            	angleMin = 90f + curveMin * 360f;
-            	angleMax = 90f + curveMax * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 1f, 2f))
-            {
-            	angleMin = 90f + (curveMin - 1f) * 360f;
-            	angleMax = 90f + (curveMax - 1f) * 360f;
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 2f, 3f))
-            {
-            	angleMin = 90f + (curveMin - 2f) * 360f;
-            	angleMax = 90f + (curveMin - 2f) * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            }
-            else if (InBetween(curveMin, 3f, 4f))
-            {
-            	angleMin = (curveMin - 3f) * 360f;
-            	angleMax = (curveMin - 3f) * 360f;
-            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else if (InBetween(curveMin, 4f, 5f))
-            {
-            	angleMin = (curveMin - 4f) * 360f;
-            	angleMax = (curveMin - 4f) * 360f;
-            	mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-            else 
-            {
-            	angleMin = (curveMin - 5f) * 360f;
-            	angleMax = (curveMin - 5f) * 360f;
-            	mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0.0174533f * 90f, 0.0174533f * 90f);
-            	mainModule.startRotationZ = new ParticleSystem.MinMaxCurve(0.0174533f * angleMin, 0.0174533f * angleMax);
-            }
-
-
-            // We can probably do this safely, since rotational velocity would be weird for billboards in SWBF2
-            var rotModuleBillboard = uEmitter.rotationOverLifetime;
-            rotModuleBillboard.enabled = false;
-
         }  
         else if (geomType.Equals("STREAK", StringComparison.OrdinalIgnoreCase))
         {
         	// TODO: Needed to for tri-fighter missiles!
         }     
         // PARTICLE    
-        else
+        else 
         {
-            // Nothing needed here AFAIK
+            psR.alignment = ParticleSystemRenderSpace.View;
         }
 
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase) || (tex == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase)))
