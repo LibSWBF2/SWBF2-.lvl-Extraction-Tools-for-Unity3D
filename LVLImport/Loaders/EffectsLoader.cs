@@ -185,7 +185,7 @@ public class EffectsLoader : Loader {
 
 
     // Returns a new GameObject with the input emitter converted to a particle system and attached.
-    private GameObject GetEmitter(Field emitter)
+    private GameObject GetEmitter(Field emitter, int ParentMaxParticles = 1)
     {
         GameObject fxObject = new GameObject(emitter.GetString());
 
@@ -271,7 +271,7 @@ public class EffectsLoader : Loader {
 
 
         /*
-        DURATION
+        DURATION & MAX PARTICLES
 
         - dont need to add StartDelay
         - SWBF terminates system when MaxParticles lifetimes are exceeded, but Unity starts reusing particles when MaxParticles is exceeded.
@@ -285,20 +285,26 @@ public class EffectsLoader : Loader {
 
         bool HasZeroMaxParticles = maxParticles < .001f && maxParticles > -.001f;
 
+
+        int MaxParticlesNeeded = 1; 
+
         if (HasZeroMaxParticles)
         {
-        	// might be more to do here...
-            mainModule.maxParticles = 0;
-	        mainModule.duration = 0f;
+        	// Seems like this is only the case for parent emitters...
+        	MaxParticlesNeeded = (int) burstRange.Y;
+
+            mainModule.maxParticles = (int) burstRange.Y;
+	        mainModule.duration = 0.0001f;
         }
         // Will need to set duration such that system ends when max particles lifetimes expire
         else if (maxParticles > 0.001f)
         {
-        	mainModule.maxParticles = (int) maxParticles;
+        	MaxParticlesNeeded = (int) maxParticles;
+        	//mainModule.maxParticles = (int) maxParticles;
 
         	if (repeatInterval == 0) repeatInterval = lifeTime;
         	float timeOfMaxParticles = ((maxParticles - burstRange.Y) / burstRange.Y) * repeatInterval + lifeTime;
-        	mainModule.duration = timeOfMaxParticles; // timeOfMaxParticles < 0.00000001f ? .001f : timeOfMaxParticles;
+        	mainModule.duration = timeOfMaxParticles;
 
         }
         // Setting loop isn't good enough for negative MaxParticles
@@ -309,32 +315,11 @@ public class EffectsLoader : Loader {
         	// mainModule
         	if (repeatInterval == 0) repeatInterval = lifeTime;
 
-            mainModule.maxParticles = (int) (burstRange.Y + burstRange.Y * (lifeTime / repeatInterval));
+        	MaxParticlesNeeded = (int) (burstRange.Y + burstRange.Y * (lifeTime / repeatInterval));
+            //mainModule.maxParticles = (int) (burstRange.Y + burstRange.Y * (lifeTime / repeatInterval));
         }
 
-        // Calculate MaxParticles for Unity
-        /*
-        float maxParticlesNeeded = maxParticles;
-        if (maxParticles < -0.001f)
-        {
-        	maxParticlesNeeded = (int) (lifeTime / repeatInterval + 1f);
-        	mainModule.duration = Mathf.infinity;
-        }
-        else if (maxParticles > -0.0001f && maxParticles < 0.0001f)
-        {
-        	mainModule.duration = Mathf.PositiveInfinity;
-        	maxParticlesNeeded = 1;
-        }
-        else 
-        {
-        	maxParticlesNeeded = maxParticles;
-        	//mainModule.duration = maxParticles * lifeTime
-        }
-        */
-
-        //mainModule.maxParticles = maxParticlesNeeded;
-
-
+        mainModule.maxParticles = MaxParticlesNeeded * ParentMaxParticles;
 
 
 
@@ -343,7 +328,9 @@ public class EffectsLoader : Loader {
         */
 
         bool HasEmptySpawner = SpawnerIsEmpty(scSpawner);
-        bool HasVelTransformation = HasVelocityTransformation(scTransformer);
+        bool HasStartVelocity = HasStartingVelocity(scSpawner);
+
+        bool HasVelTransformation = HasVelocityTransformation(scTransformer, HasStartVelocity);
 
         if (!HasEmptySpawner || HasVelTransformation)
         {
@@ -358,7 +345,7 @@ public class EffectsLoader : Loader {
             // TODO: Velocity at spawn (ie Circle/Spread) is local, but velocity transformation is global!!!
             // Unless we find a way to avoid using velOverLifetime for starting velocity we'll have to remap the starting
             // velocities to global axes at play
-            velModule.space = ParticleSystemSimulationSpace.Local; //HasVelTransformation ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local; 
+            velModule.space = HasVelTransformation ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local; 
         }
 
         if (!HasVelTransformation)
@@ -494,7 +481,7 @@ public class EffectsLoader : Loader {
             //Get subemitters...
             foreach (var subEmitter in UnpackNestedEmitters(scGeometry.GetField("ParticleEmitter")))
             {
-                var emObj = GetEmitter(subEmitter);
+                var emObj = GetEmitter(subEmitter, MaxParticlesNeeded);
                 if (emObj != null)
                 {
                     emObj.transform.parent = fxObject.transform;
@@ -671,7 +658,7 @@ public class EffectsLoader : Loader {
         }  
         else if (geomType.Equals("STREAK", StringComparison.OrdinalIgnoreCase))
         {
-        	// Haven't seen these yet
+        	// TODO: Needed to for tri-fighter missiles!
         }     
         // PARTICLE    
         else
@@ -754,7 +741,24 @@ public class EffectsLoader : Loader {
     }
 
 
+    // Must adapt for circles...
+    bool HasStartingVelocity(Scope scSpawner)
+    {
+    	var velScale = scSpawner.GetVec2("VelocityScale");
+    	if (velScale.Magnitude() < .00001) return false;
 
+    	Field velSpawn;
+    	if (scSpawner.GetField("Circle", out velSpawn) || scSpawner.GetField("Spread", out velSpawn))
+    	{
+	        var velScope = velSpawn.Scope;
+	        return !(velScope.GetVec2("PositionX").Magnitude() +
+	        		 velScope.GetVec2("PositionY").Magnitude() +
+	        		 velScope.GetVec2("PositionZ").Magnitude() < .00001f);  		
+    	}
+
+    	// Eventually need to handle vortices/rotators
+        return false;
+    }
 
 
 
@@ -1044,16 +1048,8 @@ public class EffectsLoader : Loader {
                 break;
             }
 
-            //if (IsRGB)
-            //{
-	            gradMinColKeys.Add(new GradientColorKey(minColLast, timeIndex));
-	            gradMaxColKeys.Add(new GradientColorKey(maxColLast, timeIndex));
-            //}
-            //else 
-            //{
-	        //    gradMinColKeys.Add(new GradientColorKey(Color.HSVToRGB(minColLast.r, minColLast.g, minColLast.b), timeIndex));
-	        //    gradMaxColKeys.Add(new GradientColorKey(Color.HSVToRGB(maxColLast.r, maxColLast.g, maxColLast.b), timeIndex));            	
-            //}
+	        gradMinColKeys.Add(new GradientColorKey(minColLast, timeIndex));
+	        gradMaxColKeys.Add(new GradientColorKey(maxColLast, timeIndex));
 
             gradMinAlphaKeys.Add(new GradientAlphaKey(minAlphaLast, timeIndex));
             gradMaxAlphaKeys.Add(new GradientAlphaKey(maxAlphaLast, timeIndex));
@@ -1125,23 +1121,34 @@ public class EffectsLoader : Loader {
     VELOCITY
     */
 
-    public bool HasVelocityTransformation(Scope transformerScope)
+    public bool HasVelocityTransformation(Scope transformerScope, bool HasStartingVelocity)
     {
         float TxLifeTime = transformerScope.GetFloat("LifeTime");
 
-        var CurrStage = transformerScope.GetField("Position");
-        var CurrStageTime = CurrStage.Scope.GetFloat("LifeTime");
+        Field curVelKey = transformerScope.GetField("Position"); 
 
-        if (CurrStage.Scope.GetField("Accelerate") == null && 
-            CurrStage.Scope.GetField("Reach") == null &&
-            CurrStage.Scope.GetField("Scale") == null)
+        while (curVelKey != null)
         {
-            return false;
+            var CurrScope = curVelKey.Scope;
+
+            if (CurrScope.GetVec3("Accelerate", out LibVector3 Accel))
+            {
+                if (Accel.Magnitude() > .001f) return true;  
+	                        	
+            }
+            else if (CurrScope.GetFloat("Scale", out float VelScale))
+            {
+            	return true; //if (Mathf.Abs(VelScale) < .00001f && HasStartingVelocity
+            }
+            else if (CurrScope.GetVec3("Reach", out LibVector3 ReachVel))
+            {
+            	return true;
+            }
+
+            curVelKey = CurrScope.GetField("Next");
         }
-        else 
-        {
-            return true;
-        }
+
+        return false;
     }
 
 
@@ -1387,16 +1394,7 @@ public class EffectsLoader : Loader {
             	currYMin = prevYMin * VelScale;
             	currYMax = prevYMax * VelScale;
             	currZMin = prevZMin * VelScale;
-            	currZMax = prevZMax * VelScale;
-	            
-	            /*
-	            animCurveMinX.AddKey(TimeStamp, currXMin);
-	            animCurveMaxX.AddKey(TimeStamp, currXMax);
-                animCurveMinY.AddKey(TimeStamp, currYMin);
-                animCurveMaxY.AddKey(TimeStamp, currYMax);      
-                animCurveMinZ.AddKey(TimeStamp, currZMin);
-                animCurveMaxZ.AddKey(TimeStamp, currZMax); 
-                */  
+            	currZMax = prevZMax * VelScale; 
             }
             else if (CurrScope.GetVec3("Reach", out LibVector3 ReachVel))
             {
@@ -1441,125 +1439,8 @@ public class EffectsLoader : Loader {
     }
 
 
-    
-
-    // From standard particle shader GUI source...
-    private void SetMaterialBlendMode(UMaterial material, BlendMode blendMode)
-    {           
-        switch (blendMode)
-        {
-            case BlendMode.Opaque:
-                material.SetOverrideTag("RenderType", "");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetInt("_ZWrite", 1);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = -1;
-                break;
-            case BlendMode.Cutout:
-                material.SetOverrideTag("RenderType", "TransparentCutout");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetInt("_ZWrite", 1);
-                material.EnableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
-                break;
-            case BlendMode.Fade:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-            case BlendMode.Transparent:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-            case BlendMode.Additive:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-            case BlendMode.Subtractive:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.ReverseSubtract);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-            case BlendMode.Modulate:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.DstColor);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.EnableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
-    }
-
-
-
     float MaxAbsoluteValue(LibVector2 Vec)
     {
     	return Mathf.Max(Mathf.Abs(Vec.X), Mathf.Abs(Vec.Y));
-    }
-
-
-
-    private void SetMaterialBlendModeHDRP(UMaterial material, BlendMode blendMode)
-    {
-        switch (blendMode)
-        {
-            case BlendMode.Additive:
-                material.SetOverrideTag("RenderType", "Transparent");
-                material.SetInt("_BlendOp", (int)UnityEngine.Rendering.BlendOp.Add);
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.DisableKeyword("_ALPHAMODULATE_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
     }
 }
