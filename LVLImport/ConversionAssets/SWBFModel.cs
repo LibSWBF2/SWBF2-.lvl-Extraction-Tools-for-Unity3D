@@ -60,6 +60,7 @@ public class SWBFCollider
         { 's', ECollisionMaskFlags.Soldier},
         { 't', ECollisionMaskFlags.Terrain},
         { 'v', ECollisionMaskFlags.Vehicle},
+        { 'f', ECollisionMaskFlags.Flag},
     };
 
 
@@ -97,7 +98,7 @@ public class SWBFCollider
             }    
             else 
             {
-                Layer = LayerMask.NameToLayer("VehicleAll");                
+                Layer = -1;            
             }            
         }
         else if (GameRole == SWBFGameRole.Building)
@@ -120,7 +121,7 @@ public class SWBFCollider
             } 
             else 
             {
-                Layer = LayerMask.NameToLayer("BuildingAll");                
+                Layer = -1;              
             }
         }
         else if (GameRole == SWBFGameRole.Soldier)
@@ -305,14 +306,14 @@ public class SWBFModel
 
 
     // Make collision mesh convex
-    public void ConvexifyMeshColliders()
+    public void ConvexifyMeshColliders(bool Convex = true)
     {
         foreach (SWBFCollider Collider in Colliders)
         {
             if (Collider.CollisionType == SWBFColliderType.Mesh)
             {
                 MeshCollider MC = Collider.UnityCollider as MeshCollider;
-                MC.convex = true;
+                MC.convex = Convex;
             }
         }
     }
@@ -346,6 +347,19 @@ public class SWBFModel
             if (Collider.CollisionType == SWBFColliderType.Mesh)
             {
                 Collider.UnityCollider.enabled = Enabled;
+                return;
+            }
+        }
+    }
+
+
+    public void ScaleCollisionMesh(float Scale)
+    {
+        foreach (SWBFCollider Collider in Colliders)
+        {
+            if (Collider.CollisionType == SWBFColliderType.Mesh)
+            {
+                Collider.Node.transform.localScale = new Vector3(Scale, Scale, Scale);
                 return;
             }
         }
@@ -508,7 +522,8 @@ public class SWBFModel
 
             if (Layer == -1)
             {
-                Debug.LogErrorFormat("Model: {2} Failed to map collision Role {0} and Layer {1}", GameRole.ToString(), (int) Collider.Mask, Collider.Node.name);
+                //Debug.LogErrorFormat("Model: {2} Failed to map collision Role {0} and Layer {1}", GameRole.ToString(), (int) Collider.Mask, Collider.Node.name);
+                Collider.Node.SetActive(false);
             }
             else 
             {
