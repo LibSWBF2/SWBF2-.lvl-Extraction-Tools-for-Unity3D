@@ -41,6 +41,9 @@ Shader "ConversionAssets/SWBFStandard"
 
         _Cull ("__cull", Float) = 2.0
 
+        _ScrollSpeedU("Scroll Speed U", Range(0.0, 1.0)) = 0.0
+        _ScrollSpeedV("Scroll Speed V", Range(0.0, 1.0)) = 0.0
+
 
 
         // Blending state
@@ -86,6 +89,9 @@ Shader "ConversionAssets/SWBFStandard"
             #pragma shader_feature_local _GLOSSYREFLECTIONS_OFF
             #pragma shader_feature_local _PARALLAXMAP
 
+            #pragma shader_feature_local _USE_VERTEX_COLORS
+
+
             #pragma multi_compile_fwdbase
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
@@ -94,6 +100,10 @@ Shader "ConversionAssets/SWBFStandard"
 
             #pragma vertex vertBase
             #pragma fragment fragBase
+
+            //#include "UnitySWBFStandardInput.cginc"
+
+            #include "UnitySWBFStandardInclude.cginc"
             #include "UnityStandardCoreForward.cginc"
 
             ENDCG
@@ -124,6 +134,9 @@ Shader "ConversionAssets/SWBFStandard"
             #pragma shader_feature_local _DETAIL_MULX2
             #pragma shader_feature_local _PARALLAXMAP
 
+            #pragma shader_feature_local _USE_VERTEX_COLORS
+
+
             #pragma multi_compile_fwdadd_fullshadows
             #pragma multi_compile_fog
             // Uncomment the following line to enable dithering LOD crossfade. Note: there are more in the file to uncomment for other passes.
@@ -131,6 +144,8 @@ Shader "ConversionAssets/SWBFStandard"
 
             #pragma vertex vertAdd
             #pragma fragment fragAdd
+
+            //#include "UnitySWBFStandardInclude.cginc"
             #include "UnityStandardCoreForward.cginc"
 
             ENDCG
@@ -188,6 +203,8 @@ Shader "ConversionAssets/SWBFStandard"
             #pragma shader_feature_local _DETAIL_MULX2
             #pragma shader_feature_local _PARALLAXMAP
 
+            #pragma shader_feature_local _USE_VERTEX_COLORS
+
             #pragma multi_compile_prepassfinal
             #pragma multi_compile_instancing
             // Uncomment the following line to enable dithering LOD crossfade. Note: there are more in the file to uncomment for other passes.
@@ -195,7 +212,8 @@ Shader "ConversionAssets/SWBFStandard"
 
             #pragma vertex vertDeferred
             #pragma fragment fragDeferred
-
+            
+            //#include "UnitySWBFStandardInclude.cginc"
             #include "UnityStandardCore.cginc"
 
             ENDCG
@@ -256,6 +274,8 @@ Shader "ConversionAssets/SWBFStandard"
             // SM2.0: NOT SUPPORTED shader_feature_local _DETAIL_MULX2
             // SM2.0: NOT SUPPORTED shader_feature_local _PARALLAXMAP
 
+            #pragma shader_feature_local _USE_VERTEX_COLORS
+
             #pragma skip_variants SHADOWS_SOFT DIRLIGHTMAP_COMBINED
 
             #pragma multi_compile_fwdbase
@@ -263,6 +283,8 @@ Shader "ConversionAssets/SWBFStandard"
 
             #pragma vertex vertBase
             #pragma fragment fragBase
+
+            #include "UnitySWBFStandardInclude.cginc"
             #include "UnityStandardCoreForward.cginc"
 
             ENDCG
@@ -291,11 +313,15 @@ Shader "ConversionAssets/SWBFStandard"
             // SM2.0: NOT SUPPORTED shader_feature_local _PARALLAXMAP
             #pragma skip_variants SHADOWS_SOFT
 
+            #pragma shader_feature_local _USE_VERTEX_COLORS
+
             #pragma multi_compile_fwdadd_fullshadows
             #pragma multi_compile_fog
 
             #pragma vertex vertAdd
             #pragma fragment fragAdd
+
+            //#include "UnitySWBFStandardInclude.cginc"
             #include "UnityStandardCoreForward.cginc"
 
             ENDCG
