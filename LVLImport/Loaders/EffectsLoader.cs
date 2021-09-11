@@ -331,11 +331,12 @@ public class EffectsLoader : Loader {
         bool HasStartVelocity = HasStartingVelocity(scSpawner);
 
         bool HasVelTransformation = HasVelocityTransformation(scTransformer, HasStartVelocity);
+        
+        var velModule = uEmitter.velocityOverLifetime;
 
         if (!HasEmptySpawner || HasVelTransformation)
         {
             ParticleSystem.MinMaxCurve[] VelCurves = ExtractVelocityOverLifetimeCurves(scEmitter, out ParticleSystem.MinMaxCurve scaleCurveOut);
-            var velModule = uEmitter.velocityOverLifetime;
             velModule.enabled = true;
             velModule.x = VelCurves[0];
             velModule.y = VelCurves[1];
@@ -355,11 +356,11 @@ public class EffectsLoader : Loader {
 
         // Need to add a magnitude func to libvec classes
         var inheritVelRange = scSpawner.GetVec2("InheritVelocityFactor");
+        var inheritVelModule = uEmitter.inheritVelocity;
         if (inheritVelRange.Magnitude() > .001f)
         {
             // This does work in toy examples, but in converted fx it doesn't play 
             // well with velocityOverLifetime...
-            var inheritVelModule = uEmitter.inheritVelocity;
             inheritVelModule.enabled = true;
             inheritVelModule.mode = ParticleSystemInheritVelocityMode.Initial;
 
@@ -544,6 +545,8 @@ public class EffectsLoader : Loader {
         
         UMaterial mat = null;
 
+        bool IsStreak = false;
+
 
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase))
         {
@@ -606,7 +609,19 @@ public class EffectsLoader : Loader {
         }  
         else if (geomType.Equals("STREAK", StringComparison.OrdinalIgnoreCase))
         {
-        	// TODO: Needed to for tri-fighter missiles!
+        	// TODO: Needed to for tri-fighter missiles and contrails
+            var trailsModule = uEmitter.trails;
+            trailsModule.enabled = true;
+            trailsModule.ratio = 1f;
+            trailsModule.inheritParticleColor = true;
+            IsStreak = true;
+
+            inheritVelModule.enabled = true;
+            inheritVelModule.mode = ParticleSystemInheritVelocityMode.Current;
+            inheritVelModule.curve = 1f;
+
+            mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
+            velModule.space = ParticleSystemSimulationSpace.World;
         }     
         // PARTICLE    
         else 
@@ -644,6 +659,10 @@ public class EffectsLoader : Loader {
                 }
 
                 psR.sharedMaterial = mat;
+                if (IsStreak)
+                {
+                    psR.trailMaterial = mat;
+                }
             }
         }
     
