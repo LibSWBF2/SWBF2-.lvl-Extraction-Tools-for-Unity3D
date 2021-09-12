@@ -94,94 +94,7 @@ public class MaterialLoader : Loader
     }
 
 
-public UMaterial LoadParticleMaterial(LibMaterial mat, string overrideTexture=null)
-    {
-        string texName = mat.Textures[0];
-        EMaterialFlags matFlags = mat.MaterialFlags;
-
-        if (!string.IsNullOrEmpty(overrideTexture))
-        {
-            texName = overrideTexture;
-        }
-
-        if (texName == "")
-        {
-            return new UMaterial(GetDefaultMaterial());
-        } 
-        else 
-        {
-            string materialName = texName + "_" + ((uint) matFlags).ToString();
-
-            if (!materialDataBase.ContainsKey(materialName))
-            {
-                UMaterial material = null;
-
-                if (UseHDRP)
-                {
-                    return null;
-                }
-                else
-                {
-                    material = new UMaterial(GetDefaultMaterial());
-
-#if !LVLIMPORT_NO_EDITOR
-                    if (SaveAssets)
-                    {
-                        AssetDatabase.CreateAsset(material, Path.Combine(SaveDirectory, materialName + ".mat"));
-                    }
-#endif
-                    material.SetFloat("_Glossiness", 0.0f);
-
-                    if (matFlags.HasFlag(EMaterialFlags.Hardedged))
-                    {
-                        SetRenderMode(ref material, 1);
-                    }
-                    else if (matFlags.HasFlag(EMaterialFlags.Transparent))
-                    {
-                        SetRenderMode(ref material, 2);
-                    }
-
-                    if (matFlags.HasFlag(EMaterialFlags.Doublesided))
-                    {
-                        material.SetInt("_Cull",(int) UnityEngine.Rendering.CullMode.Off);
-                    }
-
-                    Texture2D importedTex = TextureLoader.Instance.ImportTexture(texName);
-                    if (importedTex != null)
-                    {
-                        material.mainTexture = importedTex;
-                    }
-
-                    if (matFlags.HasFlag(EMaterialFlags.Glow))
-                    {
-                        material.EnableKeyword("_EMISSION");
-                        material.SetTexture("_EmissionMap", importedTex);
-                        material.SetColor("_EmissionColor", Color.white);
-                    }
-
-                    // UV scrolling depends on UV direction it seems.  Will need to implement
-                    // that in shader
-                    material.SetFloat("_ScrollSpeedU", ((float) mat.Param1) / 100f);
-                    material.SetFloat("_ScrollSpeedV", ((float) mat.Param2) / 100f);
-
-                    material.EnableKeyword("_USE_VERTEX_COLORS");
-                }
-
-                material.name = materialName;
-                materialDataBase[materialName] = material;
-            }
-
-#if !LVLIMPORT_NO_EDITOR
-            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-#endif
-            return materialDataBase[materialName];
-        }
-    }
-
-
-
-
-    public UMaterial LoadMaterial(LibMaterial mat, string overrideTexture, bool unlit = false)
+    UMaterial LibMaterialToUnity(LibMaterial mat, string overrideTexture=null, bool unlit=false)
     {
         string texName = mat.Textures[0];
         EMaterialFlags matFlags = mat.MaterialFlags;
@@ -313,9 +226,6 @@ public UMaterial LoadParticleMaterial(LibMaterial mat, string overrideTexture=nu
                         material.SetFloat("_ScrollSpeedU", ((float) mat.Param1) / 100f);
                         material.SetFloat("_ScrollSpeedV", ((float) mat.Param2) / 100f);
                     }
-
-                    material.DisableKeyword("_USE_VERTEX_COLORS");
-
                 }
 
                 material.name = materialName;
@@ -327,7 +237,35 @@ public UMaterial LoadParticleMaterial(LibMaterial mat, string overrideTexture=nu
 #endif
             return materialDataBase[materialName];
         }
+
     }
+
+
+
+
+
+    public UMaterial LoadMeshEffectMaterial(LibMaterial mat, string overrideTexture=null)
+    {
+        UMaterial LoadedMat = LibMaterialToUnity(mat, overrideTexture, true);
+        if (!UseHDRP)
+        {
+            LoadedMat.EnableKeyword("_USE_VERTEX_COLORS");
+        }        
+        return LoadedMat;
+    }
+
+
+
+    public UMaterial LoadMaterial(LibMaterial mat, string overrideTexture, bool unlit = false)
+    {
+        UMaterial LoadedMat = LibMaterialToUnity(mat, overrideTexture, unlit);
+        if (!UseHDRP)
+        {
+            LoadedMat.DisableKeyword("_USE_VERTEX_COLORS");
+        }
+        return LoadedMat;
+    }
+
 
     /*From https://answers.unity.com/questions/1004666/change-material-rendering-mode-in-runtime.html */
     static void SetRenderMode(ref UMaterial standardShaderMaterial, int blendMode)

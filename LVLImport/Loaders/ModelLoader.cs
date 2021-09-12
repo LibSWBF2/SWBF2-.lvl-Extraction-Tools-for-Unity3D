@@ -77,7 +77,7 @@ public class ModelLoader : Loader {
         Meshes = new List<Mesh>();
         foreach (Segment seg in model.GetSegments())
         {
-            Mats.Add(MaterialLoader.Instance.LoadParticleMaterial(seg.Material));
+            Mats.Add(MaterialLoader.Instance.LoadMeshEffectMaterial(seg.Material));
             Meshes.Add(GetMeshFromSegments(new Segment[]{seg}, name, false));
         }  
 

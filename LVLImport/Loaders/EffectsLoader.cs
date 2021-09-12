@@ -616,6 +616,11 @@ public class EffectsLoader : Loader {
             trailsModule.inheritParticleColor = true;
             IsStreak = true;
 
+            /*
+            This will work in almost all cases, but will fail if the Streak is a subemitter 
+            bc Current velocityInheritMode doesn't work with subemitters
+            */
+
             inheritVelModule.enabled = true;
             inheritVelModule.mode = ParticleSystemInheritVelocityMode.Current;
             inheritVelModule.curve = 1f;
