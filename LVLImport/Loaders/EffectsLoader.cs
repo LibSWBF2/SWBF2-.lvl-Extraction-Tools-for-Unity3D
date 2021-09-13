@@ -411,7 +411,7 @@ public class EffectsLoader : Loader {
 
         if (HasScaleTransformation(scTransformer))
         {
-            if (ScaleTransformationToCurve(scTransformer, scSpawner.GetVec3("Size").Z, out ParticleSystem.MinMaxCurve curveOut))
+            if (ScaleTransformationToCurve(scTransformer, 2f * scSpawner.GetVec3("Size").Z, out ParticleSystem.MinMaxCurve curveOut))
             {
                 var scaleModule = uEmitter.sizeOverLifetime;
                 scaleModule.enabled = true;
@@ -420,7 +420,7 @@ public class EffectsLoader : Loader {
         }
         else 
         {
-            mainModule.startSize = scSpawner.GetVec3("Size").Z; 
+            mainModule.startSize = 2f * scSpawner.GetVec3("Size").Z; 
         }
 
 
@@ -456,7 +456,6 @@ public class EffectsLoader : Loader {
         if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase) || 
         	geomType.Equals("SPARK", StringComparison.OrdinalIgnoreCase))
         {
-
             mainModule.startRotation3D = true;
             mainModule.startRotationX = new ParticleSystem.MinMaxCurve(0f,0f);
             mainModule.startRotationY = new ParticleSystem.MinMaxCurve(0f,0f);
@@ -606,6 +605,8 @@ public class EffectsLoader : Loader {
         else if (geomType.Equals("BILLBOARD", StringComparison.OrdinalIgnoreCase))
         {
             psR.alignment = ParticleSystemRenderSpace.World;
+            psR.minParticleSize = .000001f;
+            psR.maxParticleSize = 999999f;
         }  
         else if (geomType.Equals("STREAK", StringComparison.OrdinalIgnoreCase))
         {
@@ -631,7 +632,9 @@ public class EffectsLoader : Loader {
         // PARTICLE    
         else 
         {
-            psR.alignment = ParticleSystemRenderSpace.View;
+            psR.alignment = ParticleSystemRenderSpace.Facing;
+            psR.minParticleSize = .000001f;
+            psR.maxParticleSize = 999999f;
         }
 
         if (geomType.Equals("EMITTER", StringComparison.OrdinalIgnoreCase) || (tex == null && !geomType.Equals("GEOMETRY", StringComparison.OrdinalIgnoreCase)))
@@ -1044,19 +1047,19 @@ public class EffectsLoader : Loader {
 
     public bool HasScaleTransformation(Scope transformerScope)
     {
-        float TxLifeTime = transformerScope.GetFloat("LifeTime");
-
-        var CurrStage = transformerScope.GetField("Size");
-        var CurrStageTime = CurrStage.Scope.GetFloat("LifeTime");
-
-        if (CurrStage.Scope.GetField("Scale") == null)
+        Field curScaleKey = transformerScope.GetField("Size"); 
+        
+        while (curScaleKey != null && curScaleKey.Scope.GetFloat("Scale", out float scaleNext))
         {
-            return false;
+            if (Mathf.Abs(1f - scaleNext) > .000001f) 
+            {
+                return true;
+            }
+
+            curScaleKey = curScaleKey.Scope.GetField("Next");
         }
-        else 
-        {
-            return true;
-        }
+
+        return false;
     }
 
 
