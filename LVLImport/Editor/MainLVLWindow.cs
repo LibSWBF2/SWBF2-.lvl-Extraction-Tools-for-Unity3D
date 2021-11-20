@@ -22,7 +22,7 @@ public class LVLImportWindow : EditorWindow {
 
     bool startLoadWorlds, startLoadClasses, startLoadEffects;
 
-    static bool terrainAsMesh = false;
+    static bool terrainAsMesh = true;
     static bool saveTextures, saveMaterials, saveModels, saveAnims, saveObjects, saveWorld, saveEffects;
 
     static string matFolder = "Materials";
@@ -110,14 +110,13 @@ public class LVLImportWindow : EditorWindow {
 
     private void AddSaveOption(string type, ref bool initStatus, ref string initVal)
     {
-        EditorGUIUtility.labelWidth = 150;
         GUILayout.BeginHorizontal();
         initStatus = EditorGUILayout.Toggle(new GUIContent("Save " + type, ""), initStatus);
 
         if (initStatus)
         {
-            EditorGUIUtility.labelWidth = 105;
-            initVal = EditorGUILayout.TextField(savePathPrefix, initVal,  GUILayout.ExpandWidth(true));
+            EditorGUILayout.LabelField(savePathPrefix);
+            initVal = EditorGUILayout.TextField("", initVal, GUILayout.ExpandWidth(false));
         }
         GUILayout.EndHorizontal();
     }
@@ -142,7 +141,7 @@ public class LVLImportWindow : EditorWindow {
 
     private ImporterAction ExecStateConfiguration()
     {
-        EditorGUIUtility.labelWidth = 150;
+        EditorGUIUtility.labelWidth = 200;
         GUILayout.Label("Import Settings", EditorStyles.boldLabel);
 
         for (int i = 0; i < filesToLoad.Count; i++)
@@ -167,7 +166,10 @@ public class LVLImportWindow : EditorWindow {
 
         AddSpaces(5);
 
-        terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain as Mesh", ""), terrainAsMesh);
+        terrainAsMesh = EditorGUILayout.Toggle(new GUIContent("Import Terrain Mesh as a Mesh", "Import SWBF Terrain data as a Mesh.  Produces the most accurate geometry, but the custom material/shader that is used will probably not export cleanly to other engines/formats."), terrainAsMesh);
+        terrainAsMesh = !EditorGUILayout.Toggle(new GUIContent("Import Terrain Mesh as Terrain", "Import SWBF Terrain data as a Terrain Object.  Not as geometrically accurate as a Mesh, especially if the terrain has holes, but the material will export to other engines/formats more cleanly."), !terrainAsMesh);
+
+
 
 
         if (saveTextures || saveModels || saveMaterials || saveAnims || saveObjects)
@@ -183,6 +185,8 @@ public class LVLImportWindow : EditorWindow {
             savePathPrefix = "Assets/LVLImport";
             UDebug.LogError("Save Path Prefix must start with \"Assets/\"!");
         }
+
+        savePathPrefix = savePathPrefix.EndsWith("/") ? savePathPrefix : savePathPrefix + "/";
 
         AddSaveOption("Textures", ref saveTextures, ref texFolder);
         AddSaveOption("Materials", ref saveMaterials, ref matFolder);
@@ -231,10 +235,12 @@ public class LVLImportWindow : EditorWindow {
         {
             result = ImporterAction.ImportClasses;
         }
+        /*
         else if (GUILayout.Button("Import Effects",GUILayout.Width(100)))
         {
             result = ImporterAction.ImportEffects;
         }
+        */
 
         GUILayout.EndHorizontal();
 
@@ -385,7 +391,7 @@ public class LVLImportWindow : EditorWindow {
         {
             if (ExecStateImporting())
             {
-                //ModelLoader.Instance.DeleteGODB();
+                ModelLoader.Instance.DeleteGODB();
                 TransitionToConfiguration();
             }
         }
