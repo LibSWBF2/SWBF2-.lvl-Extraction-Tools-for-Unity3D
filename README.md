@@ -31,7 +31,7 @@ collision meshes and primitives. <br>
 
 The following are some pesky errors I haven't found consistent fixes for yet.  So far all of them have reported by Windows users only and occur immediately when starting an import with any number of LVL files.  If you have and/or solved these issues or unlisted ones, please drop a note in the libSWBF2 [Discord](https://discord.com/invite/nNUapcU) and be sure to include **your OS**, **Unity version**, a screenshot of the **error log/stacktrace**, [**scripting runtime**](https://docs.unity3d.com/Manual/dotnetProfileSupport.html), and what solution worked if you managed to fix it! 
 
-1. **dllnotfound** exception - All this error means is that Unity had some problem finding or loading the _native dll_ (libLibSWBF2.dylib/so or LibSWBF2.dll).  Unfortuneately this error is quite common and the best solution is yet unknown.
+1. **dllnotfound** exception - All this error means is that Unity had some problem finding or loading the _native dll_ (libLibSWBF2.dylib/so or LibSWBF2.dll).  Unfortuneately this error is quite common and the best solution is yet unknown.  _It is less common on Unity >= 2021_.
 
 2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  The fixes listed for the previous issue might work...    
 
