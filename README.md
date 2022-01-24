@@ -2,7 +2,7 @@
 
 Extract assets contained within ```.lvl``` files to Unity.  This project began as a fork of [Ben1138's modtools importer](https://github.com/Ben1138/Unity-SWBF2-Import), but diverged and conflicted so significantly that it made sense to separate it.  It is one of the many projects under the [LibSWBF2](https://github.com/Ben1138/LibSWBF2) umbrella.
 
-Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10 with Unity 2021.2.7.
+Tested on MacOS Catalina, Ubuntu 18.04, and Windows 10 with Unity 2021.2.7.  **Requires Unity >= 2019!**
 
 ## Features
 - Import multiple .lvl files and automatically resolve references between them
@@ -33,7 +33,8 @@ The following are some pesky errors I haven't found consistent fixes for yet.  S
 
 1. **dllnotfound** exception - All this error means is that Unity had some problem finding or loading the _native dll_ (libLibSWBF2.dylib/so or LibSWBF2.dll).  Unfortuneately this error is quite common and the best solution is yet unknown.  _It is less common on Unity >= 2021_.
 
-2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  The fixes listed for the previous issue might work...    
+2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  
+
 
 ## TODO:
 - More finely grained extraction, eg, per-model, ODF in each ```.lvl``` file
