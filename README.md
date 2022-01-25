@@ -20,6 +20,7 @@ collision meshes and primitives. <br>
 ## Installation
 1. This repo itself should only be cloned if you plan on _contributing_, it does not contain the required native plugin builds (see bottom).  If you wish to simply use the tools, **please download a ZIP release!**
 2. Unzip and place the ```LVLImport``` folder into your ```Assets/``` directory.  If the ```SWBF2``` menu entry doesn't appear, check the error log.
+3. You may have to restart the project for the menu entry and ```.lvl``` import options to display.  If you're using Windows, **please read the issues section**, you will likely encounter the errors mentioned there unless you have the necessary components listed in the fix installed on your machine!
 
 ## Usage
 1. Click on ```SWBF2 --> Import .lvl```.
@@ -34,6 +35,8 @@ The following are some pesky errors I haven't found consistent fixes for yet.  S
 1. **dllnotfound** exception - All this error means is that Unity had some problem finding or loading the _native dll_ (libLibSWBF2.dylib/so or LibSWBF2.dll).  Unfortuneately this error is quite common and the best solution is yet unknown.  _It is less common on Unity >= 2021_.
 
 2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  
+
+If you're using Windows 10 both of these issues will usually be fixed by downloading ```Windows 10 SDK 10.0.18362.1``` and installing the ```Windows SDK Signing Tools for Desktop Apps```, ```Windows SDK for UWP Managed Apps```, ```Windows SDK for UWP C++ Apps```, and ```.NET Framework 4.8 Software Dev Kit```  modules (1.4gb total).  I'm sorry the fix requires extra installs, I'm still learning the ropes of Windows dev and have yet to figure out how to cut these dependencies.
 
 
 ## TODO:
