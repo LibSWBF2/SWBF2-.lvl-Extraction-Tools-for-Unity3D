@@ -20,6 +20,7 @@ collision meshes and primitives. <br>
 ## Installation
 1. This repo itself should only be cloned if you plan on _contributing_, it does not contain the required native plugin builds (see bottom).  If you wish to simply use the tools, **please download a ZIP release!**
 2. Unzip and place the ```LVLImport``` folder into your ```Assets/``` directory.  If the ```SWBF2``` menu entry doesn't appear, check the error log.
+3. You may have to restart the project for the menu entry and ```.lvl``` import options to display.  If you're using Windows, **please read the issues section**, you will likely encounter the errors mentioned there unless you have the necessary components listed in the fix installed on your machine!
 
 ## Usage
 1. Click on ```SWBF2 --> Import .lvl```.
@@ -35,6 +36,8 @@ The following are some pesky errors I haven't found consistent fixes for yet.  S
 
 2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  
 
+If you're using Windows 10 both of these issues will usually be fixed by downloading ```Windows 10 SDK 10.0.18362.1``` and installing the ```Windows SDK Signing Tools for Desktop Apps```, ```Windows SDK for UWP Managed Apps```, ```Windows SDK for UWP C++ Apps```, and ```.NET Framework 4.8 Software Dev Kit```  modules (1.4gb total).  I'm sorry the fix requires extra installs, I'm still learning the ropes of Windows dev and have yet to figure out how to cut these dependencies.
+
 
 ## TODO:
 - More finely grained extraction, eg, per-model, ODF in each ```.lvl``` file
@@ -46,7 +49,7 @@ The following are some pesky errors I haven't found consistent fixes for yet.  S
 
 ## General Notes:
 - This importer relies on native plugins (libLibSWBF2.so/.dylib on Linux/MacOS and LibSWBF2.dll on Windows), which are not included in this repo
-- Munged script data is the focus of [this project](https://github.com/Ben1138/SWBF2UnityRuntime)
+- This project is used by [SWBF2 Phoenix](https://github.com/Ben1138/SWBF2UnityRuntime) for asset loading.  Check it out if you haven't already!
 - LibSWBF2 contains the first working animation unmunger, and thus this importer can import animations correctly, apply them to GameObjects, and save them as clips.  However, SWBF2 animations identify bones simply by name, while Unity requires a full transform path, so some anims may fail to be properly attached.  Moreover, some animation dependencies are hardcoded into the root classes, eg ```soldier```.  These are not handled yet, so unless the imported object's ODF explicitly defines an ```AnimationName``` property, the required animations will not be imported.
 - Many objects depend on common assets defined in ```ingame.lvl```
 
