@@ -874,7 +874,7 @@ public class WorldLoader : Loader
             if (region.Type == "box")
             {
                 BoxCollider coll = regionObj.AddComponent<BoxCollider>();
-                coll.size = new Vector3(sz.X, sz.Y, sz.Z);
+                coll.size = 2f * new Vector3(sz.X, sz.Y, sz.Z);
                 collider = coll;
             }
             else if (region.Type == "sphere")
@@ -888,7 +888,9 @@ public class WorldLoader : Loader
                 MeshCollider coll = regionObj.AddComponent<MeshCollider>();
                 coll.convex = true;
                 coll.sharedMesh = ModelLoader.CylinderCollision;
-                regionObj.transform.localScale = new Vector3(sz.X, sz.Y, sz.Z);
+
+                float rad = Mathf.Max(sz.X, sz.Z) + Mathf.Min(sz.X, sz.Z) / 2f;
+                regionObj.transform.localScale = new Vector3(rad, 2f * sz.Y, rad);
                 collider = coll;
             }
             else
