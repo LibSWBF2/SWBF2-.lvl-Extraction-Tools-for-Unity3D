@@ -878,12 +878,9 @@ public class WorldLoader : Loader
                 MeshCollider coll = regionObj.AddComponent<MeshCollider>();
                 coll.convex = true;
                 coll.sharedMesh = ModelLoader.CylinderCollision;
-                
-                // rad might need to account for Z in some way since ZeroEditor does, though ZE's behaviour is so strange
-                // I can't how X and Z combine.  It isn't exactly additive nor are they averaged nor will
-                // they form an ellipsoid when different...
-                float rad = sz.X; 
-                regionObj.transform.localScale = 2f * new Vector3(rad, sz.Y, rad);
+
+                float r = Mathf.Sqrt(sz.X * sz.X + sz.Z * sz.Z);
+                regionObj.transform.localScale = new Vector3(r, 2f * sz.Y, r);
                 collider = coll;
             }
             else
