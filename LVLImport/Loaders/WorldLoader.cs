@@ -889,8 +889,8 @@ public class WorldLoader : Loader
                 coll.convex = true;
                 coll.sharedMesh = ModelLoader.CylinderCollision;
 
-                float rad = Mathf.Max(sz.X, sz.Z) + Mathf.Min(sz.X, sz.Z) / 2f;
-                regionObj.transform.localScale = new Vector3(rad, 2f * sz.Y, rad);
+                float r = Mathf.Sqrt(sz.X * sz.X + sz.Z * sz.Z);
+                regionObj.transform.localScale = new Vector3(r, 2f * sz.Y, r);
                 collider = coll;
             }
             else
