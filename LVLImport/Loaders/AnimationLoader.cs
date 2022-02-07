@@ -8,6 +8,7 @@ using UnityEditor;
 
 using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
+using LibSWBF2.Types;
 
 
 public class AnimationLoader : Loader {
@@ -185,6 +186,43 @@ public class AnimationLoader : Loader {
     		return null;
     	}
     }
+
+
+    // WORLD ANIMATIONS
+
+    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, bool isRot)
+    {
+        AnimationCurve curveX = new AnimationCurve();
+        AnimationCurve curveY = new AnimationCurve();
+        AnimationCurve curveZ = new AnimationCurve();
+
+        WorldAnimationKey[] keys = isRot ? anim.GetRotationKeys() : anim.GetPositionKeys();
+        if (keys.Length == 0) return null;
+
+        float xMult = isRot ? 180f / Mathf.PI : -1f;
+        float yMult = isRot ? -180f / Mathf.PI : 1f;
+        float zMult = isRot ? 180f / Mathf.PI : 1f;
+
+        foreach (WorldAnimationKey key in keys)
+        {
+            curveX.AddKey(new Keyframe(key.Time, key.Value.X * xMult,0f,0f,0f,0f));
+            curveY.AddKey(new Keyframe(key.Time, key.Value.Y * yMult,0f,0f,0f,0f));
+            curveZ.AddKey(new Keyframe(key.Time, key.Value.Z * zMult,0f,0f,0f,0f));
+        }
+
+        return new AnimationCurve[] {curveX, curveY, curveZ};        
+    }
+
+    public AnimationCurve[] GetWorldAnimationRotationCurves(WorldAnimation anim)
+    {
+        return GetAnimCurves(anim, true);
+    } 
+
+    public AnimationCurve[] GetWorldAnimationPositionCurves(WorldAnimation anim)
+    {
+        return GetAnimCurves(anim, false);
+    } 
+
 
     static AnimationLoader()
     {
