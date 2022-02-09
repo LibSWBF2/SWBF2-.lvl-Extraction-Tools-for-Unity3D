@@ -10,6 +10,9 @@ using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 using LibSWBF2.Types;
 
+using UVector3 = UnityEngine.Vector3;
+
+
 
 public class AnimationLoader : Loader {
 
@@ -190,7 +193,7 @@ public class AnimationLoader : Loader {
 
     // WORLD ANIMATIONS
 
-    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, bool isRot)
+    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, Transform animatedTx, bool isRot)
     {
         AnimationCurve curveX = new AnimationCurve();
         AnimationCurve curveY = new AnimationCurve();
@@ -199,29 +202,36 @@ public class AnimationLoader : Loader {
         WorldAnimationKey[] keys = isRot ? anim.GetRotationKeys() : anim.GetPositionKeys();
         if (keys.Length == 0) return null;
 
-        float xMult = isRot ? 180f / Mathf.PI : -1f;
-        float yMult = isRot ? -180f / Mathf.PI : 1f;
-        float zMult = isRot ? 180f / Mathf.PI : 1f;
+        UVector3 multVec = new UVector3(isRot ? 180f / Mathf.PI : -1f, isRot ? -180f / Mathf.PI : 1f, isRot ? 180f / Mathf.PI : 1f);
 
         foreach (WorldAnimationKey key in keys)
         {
-            curveX.AddKey(new Keyframe(key.Time, key.Value.X * xMult,0f,0f,0f,0f));
-            curveY.AddKey(new Keyframe(key.Time, key.Value.Y * yMult,0f,0f,0f,0f));
-            curveZ.AddKey(new Keyframe(key.Time, key.Value.Z * zMult,0f,0f,0f,0f));
+            UVector3 valueVec = UVector3.Scale(UnityUtils.Vec3FromLib(key.Value), multVec);
+
+            if (!isRot && animatedTx != null)
+            {
+                valueVec = animatedTx.parent.InverseTransformDirection(valueVec);
+            }
+
+            curveX.AddKey(new Keyframe(key.Time, valueVec.x,0f,0f,0f,0f));
+            curveY.AddKey(new Keyframe(key.Time, valueVec.y,0f,0f,0f,0f));
+            curveZ.AddKey(new Keyframe(key.Time, valueVec.z,0f,0f,0f,0f));
         }
 
         return new AnimationCurve[] {curveX, curveY, curveZ};        
     }
 
-    public AnimationCurve[] GetWorldAnimationRotationCurves(WorldAnimation anim)
+    public AnimationCurve[] GetWorldAnimationRotationCurves(WorldAnimation anim, Transform Instance=null)
     {
-        return GetAnimCurves(anim, true);
+        return GetAnimCurves(anim, Instance, true);
     } 
 
-    public AnimationCurve[] GetWorldAnimationPositionCurves(WorldAnimation anim)
+    public AnimationCurve[] GetWorldAnimationPositionCurves(WorldAnimation anim, Transform Instance=null)
     {
-        return GetAnimCurves(anim, false);
+        return GetAnimCurves(anim, Instance, false);
     } 
+
+
 
 
     static AnimationLoader()
