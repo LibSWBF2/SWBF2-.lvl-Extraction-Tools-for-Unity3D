@@ -111,9 +111,6 @@ public class EffectsLoader : Loader {
 
     public static bool UseHDRP = false;
 
-    static bool DBG = false;
-
-
 
     public static EffectsLoader Instance { get; private set; } = null;
     static EffectsLoader()

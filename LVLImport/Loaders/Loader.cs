@@ -82,7 +82,7 @@ public abstract class Loader {
         AnimationLoader.Instance.ResetDB();
         ClassLoader.Instance.ResetDB();
         WorldLoader.Instance.Reset();
-        SoundLoader.ResetDB();
+        SoundLoader.Instance.ResetDB();
     }
 
 
