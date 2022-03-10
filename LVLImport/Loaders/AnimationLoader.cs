@@ -193,6 +193,15 @@ public class AnimationLoader : Loader {
 
     // WORLD ANIMATIONS
 
+    //private AnimationCurve[] GetTranslationCurvesLocal(WorldAnimation anim, Transform animatedTx)
+    //{
+    //    WorldAnimationKey[] translationKeys = anim.GetPositionKeys();
+    //
+    //}
+
+
+
+
     private AnimationCurve[] GetAnimCurves(WorldAnimation anim, Transform animatedTx, bool isRot)
     {
         AnimationCurve curveX = new AnimationCurve();

@@ -66,41 +66,53 @@ public class SoundLoader : Loader
     }
 
 
-
     public AudioClip LoadSound(string soundName)
     {
-        uint nameHash = HashUtils.GetFNV(soundName);
+        AudioClip clip = LoadSound(HashUtils.GetFNV(soundName), soundName);
+        if (clip == null)
+        {
+            Debug.LogWarningFormat("Failed to find sound clip: {0}", soundName);
+        }
+        return clip;
+    }
+
+    public AudioClip LoadSound(uint soundName, string soundNameString = null)
+    {
         uint clipNameHash;
         AudioClip foundClip;
 
 
-        if (NameHashToClipMapping.TryGetValue(HashUtils.GetFNV(soundName), out clipNameHash))
+        if (NameHashToClipMapping.TryGetValue(soundName, out clipNameHash))
         {
             if (SoundDB.TryGetValue(clipNameHash, out foundClip))
             {
                 return foundClip;
             }
         }
-        else if (SoundDB.TryGetValue(nameHash, out foundClip))
+        else if (SoundDB.TryGetValue(soundName, out foundClip))
         {
             return foundClip;
         }
         else
         {
             //Debug.LogWarningFormat("No sound mapping exists for {0}, attempting to get clip by name...", soundName);
-            clipNameHash = nameHash;
+            clipNameHash = soundName;
         }
 
         Sound sound = container.Get<Sound>(clipNameHash);
         if (sound == null)
         {
-            Debug.LogWarningFormat("failed to find sound queried with: {0} (hash key: 0x{1:X})", soundName, clipNameHash);
+            Debug.LogWarningFormat("failed to find sound queried with: {0} (hash key: 0x{1:X})", 
+                                    soundNameString == null ? soundNameString : HashUtils.FNVToString(soundName, false), 
+                                    clipNameHash);
             return null;
         }
 
         if (!sound.GetData(out uint sampleRate, out uint sampleCount, out byte blockAlign, out byte[] data))
         {
-            Debug.LogWarningFormat("Couldn't retrieve sound data of sound '{0}'! (hash key: 0x{1:X})", soundName, clipNameHash);
+            Debug.LogWarningFormat("Couldn't retrieve sound data of sound '{0}'! (hash key: 0x{1:X})", 
+                                    soundNameString == null ? soundNameString : HashUtils.FNVToString(soundName, false), 
+                                    clipNameHash);
             return null;
         }
         
@@ -109,7 +121,7 @@ public class SoundLoader : Loader
 
         float[] pcm = new float[sampleCount];
 
-        AudioClip clip = AudioClip.Create(soundName, (int)sampleCount, 1, (int)sampleRate, false);
+        AudioClip clip = AudioClip.Create(soundName.ToString(), (int)sampleCount, 1, (int)sampleRate, false);
         for (int i = 0; i < sampleCount; ++i)
         {
             pcm[i] = (BitConverter.ToInt16(data, i * sizeof(ushort)) / 32768.0f);
@@ -117,7 +129,9 @@ public class SoundLoader : Loader
         
         if (!clip.SetData(pcm, 0))
         {
-            Debug.LogErrorFormat("Couldn't set sound data of sound '{0}'! (hash key: 0x{1:X})", soundName, clipNameHash);
+            Debug.LogErrorFormat("Couldn't set sound data of sound '{0}'! (hash key: 0x{1:X})", 
+                                soundNameString == null ? soundNameString : HashUtils.FNVToString(soundName, false), 
+                                clipNameHash);
         }
 
         SoundDB.Add(clipNameHash, clip);
