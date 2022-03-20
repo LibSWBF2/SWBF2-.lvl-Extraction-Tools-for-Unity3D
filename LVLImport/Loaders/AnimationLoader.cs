@@ -9,6 +9,7 @@ using UnityEditor;
 using LibSWBF2.Wrappers;
 using LibSWBF2.Utils;
 using LibSWBF2.Types;
+using LibSWBF2.Enums;
 
 using UVector3 = UnityEngine.Vector3;
 
@@ -193,16 +194,7 @@ public class AnimationLoader : Loader {
 
     // WORLD ANIMATIONS
 
-    //private AnimationCurve[] GetTranslationCurvesLocal(WorldAnimation anim, Transform animatedTx)
-    //{
-    //    WorldAnimationKey[] translationKeys = anim.GetPositionKeys();
-    //
-    //}
-
-
-
-
-    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, Transform animatedTx, bool isRot)
+    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, bool isRot, Transform animatedTx)
     {
         AnimationCurve curveX = new AnimationCurve();
         AnimationCurve curveY = new AnimationCurve();
@@ -211,10 +203,14 @@ public class AnimationLoader : Loader {
         WorldAnimationKey[] keys = isRot ? anim.GetRotationKeys() : anim.GetPositionKeys();
         if (keys.Length == 0) return null;
 
-        UVector3 multVec = new UVector3(isRot ? 180f / Mathf.PI : -1f, isRot ? -180f / Mathf.PI : 1f, isRot ? 180f / Mathf.PI : 1f);
+        float xMult = isRot ? 180f / Mathf.PI : -1f;
+        float yMult = isRot ? -180f / Mathf.PI : 1f;
+        float zMult = isRot ? 180f / Mathf.PI : 1f;
+        UVector3 multVec = new UVector3(xMult, yMult, zMult);
 
-        foreach (WorldAnimationKey key in keys)
+        for (int i = 0; i < keys.Length; i++)
         {
+            WorldAnimationKey key = keys[i];
             UVector3 valueVec = UVector3.Scale(UnityUtils.Vec3FromLib(key.Value), multVec);
 
             if (!isRot && animatedTx != null)
@@ -222,9 +218,23 @@ public class AnimationLoader : Loader {
                 valueVec = animatedTx.parent.InverseTransformDirection(valueVec);
             }
 
-            curveX.AddKey(new Keyframe(key.Time, valueVec.x,0f,0f,0f,0f));
-            curveY.AddKey(new Keyframe(key.Time, valueVec.y,0f,0f,0f,0f));
-            curveZ.AddKey(new Keyframe(key.Time, valueVec.z,0f,0f,0f,0f));
+            // SWBF spline: currOut and nextIn -> Unity spline: currIn and currOut
+            UVector3 outTangent = UVector3.zero;// outtangent will be out tangent of curr SWBF key
+            UVector3 inTangent = UVector3.zero; // intangent will be in tangent of prev SWBF key
+            
+            if (key.TransitionType == EWorldAnimKeyTransitionType.Spline)
+            {
+                outTangent = UnityUtils.Vec3FromLib(key.EaseOut);
+            }
+
+            if (i > 0 && keys[i-1].TransitionType == EWorldAnimKeyTransitionType.Spline)
+            {
+                inTangent = UnityUtils.Vec3FromLib(keys[i-1].EaseIn);
+            }
+
+            curveX.AddKey(new Keyframe(key.Time, valueVec.x, inTangent.x, outTangent.x));
+            curveY.AddKey(new Keyframe(key.Time, valueVec.y, inTangent.y, outTangent.y));
+            curveZ.AddKey(new Keyframe(key.Time, valueVec.z, inTangent.z, outTangent.z));
         }
 
         return new AnimationCurve[] {curveX, curveY, curveZ};        
@@ -232,12 +242,12 @@ public class AnimationLoader : Loader {
 
     public AnimationCurve[] GetWorldAnimationRotationCurves(WorldAnimation anim, Transform Instance=null)
     {
-        return GetAnimCurves(anim, Instance, true);
+        return GetAnimCurves(anim, true, Instance);
     } 
 
     public AnimationCurve[] GetWorldAnimationPositionCurves(WorldAnimation anim, Transform Instance=null)
     {
-        return GetAnimCurves(anim, Instance, false);
+        return GetAnimCurves(anim, false, Instance);
     } 
 
 
