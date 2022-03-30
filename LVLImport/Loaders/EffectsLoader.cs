@@ -536,7 +536,8 @@ public class EffectsLoader : Loader {
         TODO: EMITTER almost working perfectly, velocity inheritance is still slightly off
         */
 
-        Texture2D tex = TextureLoader.Instance.ImportTexture(scGeometry.GetString("Texture"));
+        string TexName = scGeometry.GetString("Texture");
+        Texture2D tex = string.IsNullOrEmpty(TexName) ? null : TextureLoader.Instance.ImportTexture(TexName);
         //psR.enabled = tex != null;
         
         UMaterial mat = null;
