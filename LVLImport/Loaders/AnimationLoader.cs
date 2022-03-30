@@ -192,9 +192,86 @@ public class AnimationLoader : Loader {
     }
 
 
-    // WORLD ANIMATIONS
 
-    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, bool isRot, Transform animatedTx)
+
+
+
+
+    /*
+    
+    WORLD ANIMATIONS
+
+    */
+
+    float LocalAnimInterpInterval = 0.5f;
+
+
+    private AnimationCurve[] RemapPositionCurvesToLocal(AnimationCurve[] RotCurves, AnimationCurve[] PosCurves, Transform animatedTx)
+    {
+        float AnimLength = 0f;
+        foreach (var rKey in RotCurves[0].keys)
+        {
+            if (rKey.time > AnimLength)
+            {
+                AnimLength = rKey.time;
+            }
+        }
+
+        foreach (var pKey in PosCurves[0].keys)
+        {
+            if (pKey.time > AnimLength)
+            {
+                AnimLength = pKey.time;
+            }
+        }
+
+        UVector3 GetPosition(float time)
+        {
+            return new UVector3(PosCurves[0].Evaluate(time), PosCurves[1].Evaluate(time), PosCurves[2].Evaluate(time));
+        }
+
+        Quaternion GetRotation(float time)
+        {
+            return Quaternion.Euler(RotCurves[0].Evaluate(time), RotCurves[1].Evaluate(time), RotCurves[2].Evaluate(time));
+        }
+
+
+        AnimationCurve curveX = new AnimationCurve();
+        AnimationCurve curveY = new AnimationCurve();
+        AnimationCurve curveZ = new AnimationCurve();
+
+        UVector3 scale = new UVector3(1f,1f,1f);
+
+        UVector3 pos = GetPosition(0f);
+        UVector3 lastPos = pos;
+
+        for (int i = 0; i < AnimLength / LocalAnimInterpInterval; i++)
+        {
+            float TimeStamp = i * LocalAnimInterpInterval;
+            if (i > 0)
+            {
+                UVector3 currPos = GetPosition(TimeStamp);
+                UVector3 inc = currPos - lastPos;
+                Matrix4x4 mat = Matrix4x4.Rotate(GetRotation(TimeStamp));
+                UVector3 dir = mat.MultiplyPoint3x4(inc);
+
+                pos += dir;//animatedTx.parent.InverseTransformDirection(dir);
+
+                lastPos = currPos;
+            }
+
+            curveX.AddKey(new Keyframe(TimeStamp, pos.x, 0f, 0f, 0f, 0f));
+            curveY.AddKey(new Keyframe(TimeStamp, pos.y, 0f, 0f, 0f, 0f));
+            curveZ.AddKey(new Keyframe(TimeStamp, pos.z, 0f, 0f, 0f, 0f));
+        }
+
+        return new AnimationCurve[] {curveX, curveY, curveZ};
+    }
+
+
+
+
+    private AnimationCurve[] GetAnimCurves(WorldAnimation anim, bool isRot, Transform animatedTx, bool IgnoreParent = false)
     {
         AnimationCurve curveX = new AnimationCurve();
         AnimationCurve curveY = new AnimationCurve();
@@ -213,7 +290,7 @@ public class AnimationLoader : Loader {
             WorldAnimationKey key = keys[i];
             UVector3 valueVec = UVector3.Scale(UnityUtils.Vec3FromLib(key.Value), multVec);
 
-            if (!isRot && animatedTx != null)
+            if (!isRot && animatedTx != null && !IgnoreParent)
             {
                 valueVec = animatedTx.parent.InverseTransformDirection(valueVec);
             }
@@ -221,20 +298,24 @@ public class AnimationLoader : Loader {
             // SWBF spline: currOut and nextIn -> Unity spline: currIn and currOut
             UVector3 outTangent = UVector3.zero;// outtangent will be out tangent of curr SWBF key
             UVector3 inTangent = UVector3.zero; // intangent will be in tangent of prev SWBF key
-            
+            float inWeight = 0f;
+            float outWeight = 0f;
+
             if (key.TransitionType == EWorldAnimKeyTransitionType.Spline)
             {
                 outTangent = UnityUtils.Vec3FromLib(key.EaseOut);
+                outWeight = 1.0f;
             }
 
             if (i > 0 && keys[i-1].TransitionType == EWorldAnimKeyTransitionType.Spline)
             {
                 inTangent = UnityUtils.Vec3FromLib(keys[i-1].EaseIn);
+                inWeight = 1.0f;
             }
 
-            curveX.AddKey(new Keyframe(key.Time, valueVec.x, inTangent.x, outTangent.x));
-            curveY.AddKey(new Keyframe(key.Time, valueVec.y, inTangent.y, outTangent.y));
-            curveZ.AddKey(new Keyframe(key.Time, valueVec.z, inTangent.z, outTangent.z));
+            curveX.AddKey(new Keyframe(key.Time, valueVec.x, inTangent.x, outTangent.x, 0f, 0f));
+            curveY.AddKey(new Keyframe(key.Time, valueVec.y, inTangent.y, outTangent.y, 0f, 0f));
+            curveZ.AddKey(new Keyframe(key.Time, valueVec.z, inTangent.z, outTangent.z, 0f, 0f));
         }
 
         return new AnimationCurve[] {curveX, curveY, curveZ};        
@@ -247,7 +328,15 @@ public class AnimationLoader : Loader {
 
     public AnimationCurve[] GetWorldAnimationPositionCurves(WorldAnimation anim, Transform Instance=null)
     {
-        return GetAnimCurves(anim, false, Instance);
+        if (anim.IsTranslationLocal)
+        {
+            var PosCurves = GetAnimCurves(anim, false, Instance, true);
+            return RemapPositionCurvesToLocal(GetAnimCurves(anim, true, Instance), PosCurves, Instance);
+        }
+        else 
+        {
+            return GetAnimCurves(anim, false, Instance);
+        }
     } 
 
 
