@@ -859,51 +859,75 @@ public class WorldLoader : Loader
 
 
 
+    public GameObject ImportRegion(SWBFRegion region)
+    {
+        string GetRealRegionName(SWBFRegion reg)
+        {
+            string name = reg.Name;
+            reg.GetProperties(out uint[] props, out string[] values);
+            for (int i = 0; i < props.Length; i++)
+            {
+                if (props[i] == HashUtils.GetFNV("Name"))
+                {
+                    name = values[i];
+                }
+            }
+            return name;
+        }
+
+        GameObject regionObj = new GameObject(GetRealRegionName(region));
+        regionObj.transform.position = UnityUtils.Vec3FromLibWorld(region.Position);
+        regionObj.transform.rotation = UnityUtils.QuatFromLibWorld(region.Rotation);
+
+        LibVec3 sz = region.Size;
+
+        Collider collider = null;
+        if (region.Type == "box")
+        {
+            BoxCollider coll = regionObj.AddComponent<BoxCollider>();
+            coll.size = 2f * new Vector3(sz.X, sz.Y, sz.Z);
+            collider = coll;
+        }
+        else if (region.Type == "sphere")
+        {
+            SphereCollider coll = regionObj.AddComponent<SphereCollider>();
+            coll.radius = sz.X;
+            collider = coll;
+        }
+        else if (region.Type == "cylinder")
+        {
+            MeshCollider coll = regionObj.AddComponent<MeshCollider>();
+            coll.convex = true;
+            coll.sharedMesh = ModelLoader.CylinderCollision;
+
+            float r = Mathf.Sqrt(sz.X * sz.X + sz.Z * sz.Z);
+            regionObj.transform.localScale = new Vector3(r, 2f * sz.Y, r);
+            collider = coll;
+        }
+        else
+        {
+            throw new Exception(string.Format("Region implementation needed for '{0}'!", region.Type));
+        }
+
+        collider.isTrigger = true;
+
+        return regionObj;
+    }
+
+
+
     public GameObject ImportRegions(SWBFRegion[] regions)
     {
         GameObject regionsRoot = new GameObject("Regions");
+
         foreach (SWBFRegion region in regions)
         {
-            GameObject regionObj = new GameObject(region.Name);
-            regionObj.transform.position = UnityUtils.Vec3FromLibWorld(region.Position);
-            regionObj.transform.rotation = UnityUtils.QuatFromLibWorld(region.Rotation);
-
-            LibVec3 sz = region.Size;
-
-            Collider collider = null;
-            if (region.Type == "box")
-            {
-                BoxCollider coll = regionObj.AddComponent<BoxCollider>();
-                coll.size = 2f * new Vector3(sz.X, sz.Y, sz.Z);
-                collider = coll;
-            }
-            else if (region.Type == "sphere")
-            {
-                SphereCollider coll = regionObj.AddComponent<SphereCollider>();
-                coll.radius = sz.X;
-                collider = coll;
-            }
-            else if (region.Type == "cylinder")
-            {
-                MeshCollider coll = regionObj.AddComponent<MeshCollider>();
-                coll.convex = true;
-                coll.sharedMesh = ModelLoader.CylinderCollision;
-
-                float r = Mathf.Sqrt(sz.X * sz.X + sz.Z * sz.Z);
-                regionObj.transform.localScale = new Vector3(r, 2f * sz.Y, r);
-                collider = coll;
-            }
-            else
-            {
-                throw new Exception(string.Format("Region implementation needed for '{0}'!", region.Type));
-            }
-
-            collider.isTrigger = true;
+            GameObject regionObj = ImportRegion(region);
             regionObj.transform.parent = regionsRoot.transform;
 
-            if (!LoadedRegions.ContainsKey(region.Name))
+            if (!LoadedRegions.ContainsKey(regionObj.name))
             {
-                LoadedRegions.Add(region.Name, collider);
+                LoadedRegions.Add(regionObj.name, regionObj.GetComponent<Collider>());
             }
         }
 
