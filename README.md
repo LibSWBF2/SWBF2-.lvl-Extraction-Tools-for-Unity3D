@@ -36,7 +36,7 @@ The following are some pesky errors I haven't found consistent fixes for yet.  S
 
 2. **array index out of bounds** exception - This is usually due to some incompatibility between Unity and the _managed dll_ (LibSWBF2.NET.dll).  This issue is rare and as of now there is no known fix.  
 
-If you're using Windows 10 both of these issues will usually be fixed by downloading ```Windows 10 SDK 10.0.18362.1``` and installing the ```Windows SDK Signing Tools for Desktop Apps```, ```Windows SDK for UWP Managed Apps```, ```Windows SDK for UWP C++ Apps```, and ```.NET Framework 4.8 Software Dev Kit```  modules (1.4gb total).  If that doesn't work, installing Visual Studio 2022 with the .NET Desktop and C++ development workloads as well as the .NET  Framework 4.5 Targeting Pack, .NET SDK, and MSBuild components will definitely do the trick.  I'm sorry the fix requires extra installs, I'm still learning the ropes of Windows dev and have yet to figure out how to cut these dependencies.
+If you're using Windows 10 both of these issues will usually be fixed by downloading ```Windows 10 SDK 10.0.18362.1``` and installing the ```Windows SDK Signing Tools for Desktop Apps```, ```Windows SDK for UWP Managed Apps```, ```Windows SDK for UWP C++ Apps```, and ```.NET Framework 4.8 Software Dev Kit```  modules (1.4gb total).  If that doesn't work, installing ```Visual Studio 2022``` with the ```.NET Desktop``` and ```C++ development``` workloads as well as the ```.NET  Framework 4.5 Targeting Pack```, ```.NET SDK```, and ```MSBuild``` components will definitely do the trick.  I'm sorry the fix requires extra installs, I'm still learning the ropes of Windows dev and have yet to figure out how to cut these dependencies.
 
 
 ## TODO:
